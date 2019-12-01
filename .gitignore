@@ -6,7 +6,7 @@ logs/
 
 ### Gradle ###
 .gradle/
-gradle/
+#gradle/
 
 ### Eclipse ###
 .settings
