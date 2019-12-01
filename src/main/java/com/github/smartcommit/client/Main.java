@@ -7,6 +7,8 @@ import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.PropertyConfigurator;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.NodeFinder;
@@ -21,6 +23,9 @@ public class Main {
   private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
   public static void main(String[] args) {
+    PropertyConfigurator.configure("log4j.properties");
+    //    BasicConfigurator.configure();
+
     // given a git repo, get the file-level change set of the working directory
     String REPO_PATH = "/Users/symbolk/coding/dev/IntelliMerge";
     String COMMIT_ID = "53c1c430de96e459fc6b633d20c328eaff7d0374";
