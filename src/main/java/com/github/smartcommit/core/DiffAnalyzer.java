@@ -1,4 +1,4 @@
-package com.github.smartcommit.client;
+package com.github.smartcommit.core;
 
 import org.neo4j.driver.v1.*;
 
