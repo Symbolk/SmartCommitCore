@@ -1,5 +1,11 @@
 package com.github.smartcommit.client;
 
+import com.github.smartcommit.model.DiffFile;
+import com.github.smartcommit.model.DiffFileStatus;
+import com.github.smartcommit.util.GitService;
+import com.github.smartcommit.util.GitServiceCGit;
+import com.github.smartcommit.util.Utils;
+
 import java.io.File;
 import java.util.ArrayList;
 
