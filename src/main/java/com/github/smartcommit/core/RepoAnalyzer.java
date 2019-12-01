@@ -2,14 +2,14 @@ package com.github.smartcommit.core;
 
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
-import com.github.smartcommit.util.GitService;
-import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jdt.core.JavaCore;
-import org.eclipse.jdt.core.dom.*;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,6 +17,9 @@ import java.util.stream.Collectors;
 // import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 
 public class RepoAnalyzer {
+
+  private static final Logger logger = LoggerFactory.getLogger(RepoAnalyzer.class);
+
   private String repoPath;
   private String jrePath;
   private String commitID;
@@ -71,7 +74,7 @@ public class RepoAnalyzer {
     parser.setSource(diffFile.getOldContent().toCharArray());
     CompilationUnit oldCU = (CompilationUnit) parser.createAST(null);
     if (oldCU.getAST().hasBindingsRecovery()) {
-      System.out.println("Old CU binding enabled!");
+      logger.info("Old CU binding enabled!");
     }
 
     parser = initASTParser();
@@ -79,7 +82,7 @@ public class RepoAnalyzer {
     parser.setSource(diffFile.getNewContent().toCharArray());
     CompilationUnit newCU = (CompilationUnit) parser.createAST(null);
     if (newCU.getAST().hasBindingsRecovery()) {
-      System.out.println("New CU binding enabled!");
+      logger.info("New CU binding enabled!");
     }
     return Pair.of(oldCU, newCU);
   }

@@ -10,12 +10,16 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.NodeFinder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /** Main test and debug class */
 public class Main {
+  private static final Logger logger = LoggerFactory.getLogger(Main.class);
+
   public static void main(String[] args) {
     // given a git repo, get the file-level change set of the working directory
     String REPO_PATH = "/Users/symbolk/coding/dev/IntelliMerge";
