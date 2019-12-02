@@ -62,13 +62,17 @@ public class Main {
             NodeFinder nodeFinder = new NodeFinder(cu, startPos, length);
             ASTNode coveredNode = nodeFinder.getCoveredNode();
             if (coveredNode != null) {
+              coveredNode = coveredNode.getParent();
+              // collect data and control flow symbols
               IdentifierVisitor v = new IdentifierVisitor();
               coveredNode.accept(v);
+              v.getInvokedMethods();
             }
           }
         }
-        // resolve symbols to get fully qualified name
-        // build nodes for diff hunks and unchanged nodes
+        // compute the distance matrix
+
+        // build the graph
 
         // visualize the graph
       }
