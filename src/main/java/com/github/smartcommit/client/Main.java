@@ -58,7 +58,7 @@ public class Main {
           int endPos = cu.getPosition(diffHunk.getNewEndLine() + 1, 0);
           int length = endPos - startPos;
           if (length > 0) {
-            NodeFinder nodeFinder = new NodeFinder(CUPair.getLeft(), startPos, length);
+            NodeFinder nodeFinder = new NodeFinder(cu, startPos, length);
             ASTNode coveredNode = nodeFinder.getCoveredNode();
             if (coveredNode != null) {
               IdentifierVisitor v = new IdentifierVisitor();

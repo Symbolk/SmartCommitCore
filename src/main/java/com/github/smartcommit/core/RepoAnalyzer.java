@@ -73,16 +73,16 @@ public class RepoAnalyzer {
     parser.setUnitName(Utils.getFileNameFromPath(diffFile.getOldRelativePath()));
     parser.setSource(diffFile.getOldContent().toCharArray());
     CompilationUnit oldCU = (CompilationUnit) parser.createAST(null);
-    if (oldCU.getAST().hasBindingsRecovery()) {
-      logger.info("Old CU binding enabled!");
+    if (!oldCU.getAST().hasBindingsRecovery()) {
+      logger.error("Binding not enabled: {}", diffFile.getOldRelativePath());
     }
 
     parser = initASTParser();
     parser.setUnitName(Utils.getFileNameFromPath(diffFile.getNewRelativePath()));
     parser.setSource(diffFile.getNewContent().toCharArray());
     CompilationUnit newCU = (CompilationUnit) parser.createAST(null);
-    if (newCU.getAST().hasBindingsRecovery()) {
-      logger.info("New CU binding enabled!");
+    if (!newCU.getAST().hasBindingsRecovery()) {
+      logger.error("Binding not enabled: {}", diffFile.getNewRelativePath());
     }
     return Pair.of(oldCU, newCU);
   }
