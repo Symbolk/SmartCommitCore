@@ -1,5 +1,8 @@
 package com.github.smartcommit.model;
 
+/**
+ * Status of a DiffFile
+ */
 public enum DiffFileStatus {
   UNMODIFIED(" ", "unmodified"),
   MODIFIED("M", "modified"),

@@ -45,6 +45,7 @@ public class Main {
     for (DiffFile diffFile : diffFiles) {
       // get all diff hunks within this file
       List<DiffHunk> diffHunksInFile = repoAnalyzer.getDiffHunksInFile(diffFile, diffHunks);
+      diffFile.setDiffHunks(diffHunksInFile);
       // parse the changed files into ASTs
       Pair<CompilationUnit, CompilationUnit> CUPair = repoAnalyzer.generateCUPair(diffFile);
 
@@ -54,8 +55,8 @@ public class Main {
         CompilationUnit cu = CUPair.getRight();
         for (DiffHunk diffHunk : diffHunksInFile) {
           // find nodes covered or covering by each diff hunk
-          int startPos = cu.getPosition(diffHunk.getNewStartLine(), 0);
-          int endPos = cu.getPosition(diffHunk.getNewEndLine() + 1, 0);
+          int startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
+          int endPos = cu.getPosition(diffHunk.getCurrentEndLine() + 1, 0);
           int length = endPos - startPos;
           if (length > 0) {
             NodeFinder nodeFinder = new NodeFinder(cu, startPos, length);

@@ -1,49 +1,60 @@
 package com.github.smartcommit.model;
 
+import java.util.List;
+
 public class DiffFile {
   private Integer index; // the index of the diff file in the current repo, start from 0
   private DiffFileStatus status;
-  private String oldRelativePath;
-  private String newRelativePath;
-  private String oldContent;
-  private String newContent;
+  private String baseRelativePath;
+  private String currentRelativePath;
+  private String baseContent;
+  private String currentContent;
+  private List<DiffHunk> diffHunks;
 
   public DiffFile(
       Integer index,
       DiffFileStatus status,
-      String oldRelativePath,
-      String newRelativePath,
-      String oldContent,
-      String newContent) {
+      String baseRelativePath,
+      String currentRelativePath,
+      String baseContent,
+      String currentContent) {
     this.index = index;
     this.status = status;
-    this.oldRelativePath = oldRelativePath;
-    this.newRelativePath = newRelativePath;
-    this.oldContent = oldContent;
-    this.newContent = newContent;
+    this.baseRelativePath = baseRelativePath;
+    this.currentRelativePath = currentRelativePath;
+    this.baseContent = baseContent;
+    this.currentContent = currentContent;
   }
 
   public DiffFileStatus getStatus() {
     return status;
   }
 
-  public String getOldRelativePath() {
-    return oldRelativePath;
+  public String getBaseRelativePath() {
+    return baseRelativePath;
   }
 
-  public String getNewRelativePath() {
-    return newRelativePath;
+  public String getCurrentRelativePath() {
+    return currentRelativePath;
   }
 
-  public String getOldContent() {
-    return oldContent;
+  public String getBaseContent() {
+    return baseContent;
   }
 
-  public String getNewContent() {
-    return newContent;
+  public String getCurrentContent() {
+    return currentContent;
   }
 
   public Integer getIndex() {
     return index;
+  }
+
+  public List<DiffHunk> getDiffHunks() {
+    return diffHunks;
+  }
+
+  public void setDiffHunks(List<DiffHunk> diffHunks) {
+    this.diffHunks = diffHunks;
   }
 }

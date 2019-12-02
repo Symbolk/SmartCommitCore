@@ -1,8 +1,8 @@
 package com.github.smartcommit.model;
 
 public enum Version {
-  OLD(0, "base"),
-  NEW(1, "current");
+  BASE(0, "base"),
+  CURRENT(1, "current");
 
   private int index;
   private String label;

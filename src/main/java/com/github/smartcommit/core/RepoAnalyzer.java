@@ -70,19 +70,19 @@ public class RepoAnalyzer {
   public Pair<CompilationUnit, CompilationUnit> generateCUPair(DiffFile diffFile) {
 
     ASTParser parser = initASTParser();
-    parser.setUnitName(Utils.getFileNameFromPath(diffFile.getOldRelativePath()));
-    parser.setSource(diffFile.getOldContent().toCharArray());
+    parser.setUnitName(Utils.getFileNameFromPath(diffFile.getBaseRelativePath()));
+    parser.setSource(diffFile.getBaseContent().toCharArray());
     CompilationUnit oldCU = (CompilationUnit) parser.createAST(null);
     if (!oldCU.getAST().hasBindingsRecovery()) {
-      logger.error("Binding not enabled: {}", diffFile.getOldRelativePath());
+      logger.error("Binding not enabled: {}", diffFile.getBaseRelativePath());
     }
 
     parser = initASTParser();
-    parser.setUnitName(Utils.getFileNameFromPath(diffFile.getNewRelativePath()));
-    parser.setSource(diffFile.getNewContent().toCharArray());
+    parser.setUnitName(Utils.getFileNameFromPath(diffFile.getCurrentRelativePath()));
+    parser.setSource(diffFile.getCurrentContent().toCharArray());
     CompilationUnit newCU = (CompilationUnit) parser.createAST(null);
     if (!newCU.getAST().hasBindingsRecovery()) {
-      logger.error("Binding not enabled: {}", diffFile.getNewRelativePath());
+      logger.error("Binding not enabled: {}", diffFile.getCurrentRelativePath());
     }
     return Pair.of(oldCU, newCU);
   }
@@ -116,15 +116,18 @@ public class RepoAnalyzer {
    * @return
    */
   public List<DiffHunk> getDiffHunksInFile(DiffFile diffFile, List<DiffHunk> diffHunks) {
-    String oldRelativePath = diffFile.getOldRelativePath();
-    String newRelativePath = diffFile.getNewRelativePath();
+    String baseRelativePath = diffFile.getBaseRelativePath();
+    String currentRelativePath = diffFile.getCurrentRelativePath();
 
     List<DiffHunk> results =
         diffHunks.stream()
             .filter(
                 diffHunk ->
-                    diffHunk.getOldRelativePath().contains(oldRelativePath)
-                        && diffHunk.getNewRelativePath().contains(newRelativePath))
+                    diffHunk.getBaseHunk().getRelativeFilePath().contains(baseRelativePath)
+                        && diffHunk
+                            .getCurrentHunk()
+                            .getRelativeFilePath()
+                            .contains(currentRelativePath))
             .collect(Collectors.toList());
     return results;
   }

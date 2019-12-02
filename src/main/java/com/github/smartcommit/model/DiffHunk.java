@@ -3,41 +3,30 @@ package com.github.smartcommit.model;
 public class DiffHunk {
 
   private Integer index; // the index of the diff hunk in the current file diff, start from 0
-  private String oldRelativePath;
-  private String newRelativePath;
-  private Hunk oldHunk;
-  private Hunk newHunk;
+  private Hunk baseHunk;
+  private Hunk currentHunk;
   //  private List<ActionCluster> changeActions;
-  private Integer oldStartLine;
-  private Integer oldEndLine;
-  private Integer newStartLine;
-  private Integer newEndLine;
+  private String description;
+
+  public DiffHunk(Integer index, Hunk baseHunk, Hunk currentHunk, String description) {
+    this.index = index;
+    this.baseHunk = baseHunk;
+    this.currentHunk = currentHunk;
+    this.description = description;
+  }
 
   public Integer getIndex() {
     return index;
   }
 
-  public void setIndex(Integer index) {
-    this.index = index;
+  public Hunk getBaseHunk() {
+    return baseHunk;
   }
 
-  public String getOldRelativePath() {
-    return oldRelativePath;
+  public Hunk getCurrentHunk() {
+    return currentHunk;
   }
-
-  public void setOldRelativePath(String oldRelativePath) {
-    this.oldRelativePath = oldRelativePath;
-  }
-
-  public String getNewRelativePath() {
-    return newRelativePath;
-  }
-
-  public void setNewRelativePath(String newRelativePath) {
-    this.newRelativePath = newRelativePath;
-  }
-
-  //  public List<ActionCluster> getChangeActions() {
+//  public List<ActionCluster> getChangeActions() {
   //    return changeActions;
   //  }
   //
@@ -45,36 +34,20 @@ public class DiffHunk {
   //    this.changeActions = changeActions;
   //  }
 
-  public Integer getOldStartLine() {
-    return oldStartLine;
+  public Integer getBaseStartLine() {
+    return baseHunk.getStartLine();
   }
 
-  public void setOldStartLine(Integer oldStartLine) {
-    this.oldStartLine = oldStartLine;
+  public Integer getBaseEndLine() {
+    return baseHunk.getEndLine();
   }
 
-  public Integer getOldEndLine() {
-    return oldEndLine;
+  public Integer getCurrentStartLine() {
+    return currentHunk.getStartLine();
   }
 
-  public void setOldEndLine(Integer oldEndLine) {
-    this.oldEndLine = oldEndLine;
-  }
-
-  public Integer getNewStartLine() {
-    return newStartLine;
-  }
-
-  public void setNewStartLine(Integer newStartLine) {
-    this.newStartLine = newStartLine;
-  }
-
-  public Integer getNewEndLine() {
-    return newEndLine;
-  }
-
-  public void setNewEndLine(Integer newEndLine) {
-    this.newEndLine = newEndLine;
+  public Integer getCurrentEndLine() {
+    return currentHunk.getEndLine();
   }
 
   //  public void addCodeAction(ActionCluster actionCluster) {

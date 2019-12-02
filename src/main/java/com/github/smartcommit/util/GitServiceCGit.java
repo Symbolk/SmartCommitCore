@@ -3,10 +3,12 @@ package com.github.smartcommit.util;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffFileStatus;
 import com.github.smartcommit.model.DiffHunk;
+import com.github.smartcommit.model.Version;
 import io.reflectoring.diffparser.api.DiffParser;
 import io.reflectoring.diffparser.api.UnifiedDiffParser;
 import io.reflectoring.diffparser.api.model.Diff;
 import io.reflectoring.diffparser.api.model.Hunk;
+import io.reflectoring.diffparser.api.model.Line;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -175,25 +177,50 @@ public class GitServiceCGit implements GitService {
   private List<DiffHunk> generateDiffHunks(List<Diff> diffs) {
     List<DiffHunk> allDiffHunks = new ArrayList<>();
     for (Diff diff : diffs) {
-      // the index of the diff hunk in the current file diff, start from 1
+      // the index of the diff hunk in the current file diff, start from 0
       Integer index = 0;
       for (Hunk hunk : diff.getHunks()) {
-        DiffHunk diffHunk = new DiffHunk();
-        diffHunk.setIndex(index);
-        diffHunk.setOldRelativePath(diff.getFromFileName());
-        diffHunk.setNewRelativePath(diff.getToFileName());
-        // [startLine, endLine]
-        diffHunk.setOldStartLine(hunk.getFromFileRange().getLineStart() + 1);
-        diffHunk.setOldEndLine(
-            hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 2);
-        diffHunk.setNewStartLine(hunk.getToFileRange().getLineStart() + 1);
-        diffHunk.setNewEndLine(
-            hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 2);
+        com.github.smartcommit.model.Hunk baseHunk =
+            new com.github.smartcommit.model.Hunk(
+                diff.getFromFileName(),
+                Version.BASE,
+                hunk.getFromFileRange().getLineStart() + 1,
+                hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 2,
+                getCodeSnippetInHunk(hunk.getLines(), Version.BASE));
+        com.github.smartcommit.model.Hunk currentHunk =
+            new com.github.smartcommit.model.Hunk(
+                diff.getToFileName(),
+                Version.CURRENT,
+                hunk.getToFileRange().getLineStart() + 1,
+                hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 2,
+                getCodeSnippetInHunk(hunk.getLines(), Version.CURRENT));
+        DiffHunk diffHunk = new DiffHunk(index, baseHunk, currentHunk, "");
         allDiffHunks.add(diffHunk);
         index++;
       }
     }
     return allDiffHunks;
+  }
+
+  /**
+   * Get code snippet from lines in Hunk
+   *
+   * @param lines
+   * @param version
+   * @return
+   */
+  private List<String> getCodeSnippetInHunk(List<Line> lines, Version version) {
+    List<String> linesContent = new ArrayList<>();
+    if (version.equals(Version.BASE)) {
+      lines.stream()
+          .filter(line -> line.getLineType().equals(Line.LineType.FROM))
+          .forEach(line -> linesContent.add(line.getContent()));
+    } else if (version.equals(Version.CURRENT)) {
+      lines.stream()
+          .filter(line -> line.getLineType().equals(Line.LineType.TO))
+          .forEach(line -> linesContent.add(line.getContent()));
+    }
+    return linesContent;
   }
 
   /**

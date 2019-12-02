@@ -22,16 +22,16 @@ public class DataCollector {
     // write old/new content to disk
     for (DiffFile filePair : filePairs) {
       // currently only collect MODIFIED Java files
-      if (filePair.getOldRelativePath().endsWith(".java")
+      if (filePair.getBaseRelativePath().endsWith(".java")
           && filePair.getStatus().equals(DiffFileStatus.MODIFIED)) {
         String dir =
             DATA_DIR + File.separator + REPO_NAME + File.separator + commitID + File.separator;
-        String aPath = dir + "a" + File.separator + filePair.getOldRelativePath();
-        String bPath = dir + "b" + File.separator + filePair.getNewRelativePath();
-        boolean aOk = Utils.writeContentToPath(aPath, filePair.getOldContent());
-        boolean bOk = Utils.writeContentToPath(bPath, filePair.getNewContent());
+        String aPath = dir + "a" + File.separator + filePair.getBaseRelativePath();
+        String bPath = dir + "b" + File.separator + filePair.getCurrentRelativePath();
+        boolean aOk = Utils.writeContentToPath(aPath, filePair.getBaseContent());
+        boolean bOk = Utils.writeContentToPath(bPath, filePair.getCurrentContent());
         if (!(aOk && bOk)) {
-          System.out.println("Error with: " + filePair.getOldRelativePath());
+          System.out.println("Error with: " + filePair.getBaseRelativePath());
         } else {
           System.out.println(aPath);
           System.out.println(bPath);
