@@ -4,5 +4,5 @@ public class Hunk {
   private String relativeFilePath;
   private Integer startLine;
   private Integer endLine;
-  private Side side;
+  private Version version;
 }
