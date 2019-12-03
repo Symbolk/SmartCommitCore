@@ -5,13 +5,16 @@ public class DiffHunk {
   private Integer index; // the index of the diff hunk in the current file diff, start from 0
   private Hunk baseHunk;
   private Hunk currentHunk;
+  private ChangeType changeType;
   //  private List<ActionCluster> changeActions;
   private String description;
 
-  public DiffHunk(Integer index, Hunk baseHunk, Hunk currentHunk, String description) {
+  public DiffHunk(
+      Integer index, Hunk baseHunk, Hunk currentHunk, ChangeType changeType, String description) {
     this.index = index;
     this.baseHunk = baseHunk;
     this.currentHunk = currentHunk;
+    this.changeType = changeType;
     this.description = description;
   }
 
@@ -26,7 +29,7 @@ public class DiffHunk {
   public Hunk getCurrentHunk() {
     return currentHunk;
   }
-//  public List<ActionCluster> getChangeActions() {
+  //  public List<ActionCluster> getChangeActions() {
   //    return changeActions;
   //  }
   //

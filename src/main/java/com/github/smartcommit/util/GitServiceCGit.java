@@ -1,9 +1,6 @@
 package com.github.smartcommit.util;
 
-import com.github.smartcommit.model.DiffFile;
-import com.github.smartcommit.model.DiffFileStatus;
-import com.github.smartcommit.model.DiffHunk;
-import com.github.smartcommit.model.Version;
+import com.github.smartcommit.model.*;
 import io.reflectoring.diffparser.api.DiffParser;
 import io.reflectoring.diffparser.api.UnifiedDiffParser;
 import io.reflectoring.diffparser.api.model.Diff;
@@ -180,21 +177,30 @@ public class GitServiceCGit implements GitService {
       // the index of the diff hunk in the current file diff, start from 0
       Integer index = 0;
       for (Hunk hunk : diff.getHunks()) {
+        List<String> baseCodeLines = getCodeSnippetInHunk(hunk.getLines(), Version.BASE);
+        List<String> currentCodeLines = getCodeSnippetInHunk(hunk.getLines(), Version.CURRENT);
         com.github.smartcommit.model.Hunk baseHunk =
             new com.github.smartcommit.model.Hunk(
                 diff.getFromFileName(),
                 Version.BASE,
                 hunk.getFromFileRange().getLineStart() + 1,
                 hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 2,
-                getCodeSnippetInHunk(hunk.getLines(), Version.BASE));
+                baseCodeLines);
         com.github.smartcommit.model.Hunk currentHunk =
             new com.github.smartcommit.model.Hunk(
                 diff.getToFileName(),
                 Version.CURRENT,
                 hunk.getToFileRange().getLineStart() + 1,
                 hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 2,
-                getCodeSnippetInHunk(hunk.getLines(), Version.CURRENT));
-        DiffHunk diffHunk = new DiffHunk(index, baseHunk, currentHunk, "");
+                currentCodeLines);
+        ChangeType changeType = ChangeType.MODIFIED;
+        if (baseCodeLines.isEmpty()) {
+          changeType = ChangeType.ADDED;
+        }
+        if (currentCodeLines.isEmpty()) {
+          changeType = ChangeType.DELETED;
+        }
+        DiffHunk diffHunk = new DiffHunk(index, baseHunk, currentHunk, changeType, "");
         allDiffHunks.add(diffHunk);
         index++;
       }
