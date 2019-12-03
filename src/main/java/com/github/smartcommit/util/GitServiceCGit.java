@@ -11,6 +11,7 @@ import io.reflectoring.diffparser.api.model.Diff;
 import io.reflectoring.diffparser.api.model.Hunk;
 import io.reflectoring.diffparser.api.model.Line;
 
+import javax.swing.plaf.IconUIResource;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.util.ArrayList;
@@ -184,11 +185,11 @@ public class GitServiceCGit implements GitService {
   }
 
   @Override
-  public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath) {
+  public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath, List<DiffFile> diffFiles) {
     String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "-U1");
     DiffParser parser = new UnifiedDiffParser();
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
-    return generateDiffHunks(diffs);
+    return generateDiffHunks(diffs, diffFiles);
   }
 
   /**
@@ -197,30 +198,36 @@ public class GitServiceCGit implements GitService {
    * @param diffs
    * @return
    */
-  private List<DiffHunk> generateDiffHunks(List<Diff> diffs) {
+  private List<DiffHunk> generateDiffHunks(List<Diff> diffs, List<DiffFile> diffFiles) {
     List<DiffHunk> allDiffHunks = new ArrayList<>();
+    // one file, one diff
     for (Diff diff : diffs) {
-      // the index of the diff hunk in the current file diff, start from 0
-      Integer index = 0;
-      for (Hunk hunk : diff.getHunks()) {
-        // currently we only process Java files
-        FileType fileType = FileType.OTHER;
-        if (diff.getFromFileName().endsWith(".java") || diff.getToFileName().endsWith(".java")) {
-          fileType = FileType.JAVA;
-        }
+      // the hunkIndex of the diff hunk in the current file diff, start from 0
+      Integer hunkIndex = 0;
 
+      String baseFilePath = diff.getFromFileName();
+      String currentFilePath = diff.getToFileName();
+      // currently we only process Java files
+      FileType fileType = FileType.OTHER;
+      if (baseFilePath.endsWith(".java") || currentFilePath.endsWith(".java")) {
+        fileType = FileType.JAVA;
+      }
+
+      // collect and save diff hunks into diff files
+      List<DiffHunk> diffHunksInFile = new ArrayList<>();
+      for (Hunk hunk : diff.getHunks()) {
         List<String> baseCodeLines = getCodeSnippetInHunk(hunk.getLines(), Version.BASE);
         List<String> currentCodeLines = getCodeSnippetInHunk(hunk.getLines(), Version.CURRENT);
         com.github.smartcommit.model.Hunk baseHunk =
             new com.github.smartcommit.model.Hunk(
-                diff.getFromFileName(),
+                baseFilePath,
                 Version.BASE,
                 hunk.getFromFileRange().getLineStart() + 1,
                 hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 2,
                 baseCodeLines);
         com.github.smartcommit.model.Hunk currentHunk =
             new com.github.smartcommit.model.Hunk(
-                diff.getToFileName(),
+                currentFilePath,
                 Version.CURRENT,
                 hunk.getToFileRange().getLineStart() + 1,
                 hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 2,
@@ -232,9 +239,17 @@ public class GitServiceCGit implements GitService {
         if (currentCodeLines.isEmpty()) {
           changeType = ChangeType.DELETED;
         }
-        DiffHunk diffHunk = new DiffHunk(index, fileType, changeType, baseHunk, currentHunk, "");
+        DiffHunk diffHunk = new DiffHunk(hunkIndex, fileType, changeType, baseHunk, currentHunk, "");
+        diffHunksInFile.add(diffHunk);
         allDiffHunks.add(diffHunk);
-        index++;
+        hunkIndex++;
+      }
+
+      for (DiffFile diffFile : diffFiles) {
+        if (baseFilePath.contains(diffFile.getBaseRelativePath())
+            && currentFilePath.contains(diffFile.getCurrentRelativePath())) {
+          diffFile.setDiffHunks(diffHunksInFile);
+        }
       }
     }
     return allDiffHunks;
@@ -269,7 +284,8 @@ public class GitServiceCGit implements GitService {
    * @return
    */
   @Override
-  public List<DiffHunk> getDiffHunksAtCommit(String repoPath, String commitID) {
+  public List<DiffHunk> getDiffHunksAtCommit(
+      String repoPath, String commitID, List<DiffFile> diffFiles) {
     // git diff <start_commit> <end_commit>
     // on Windows the ~ character must be used instead of ^
     String diffOutput =
@@ -278,7 +294,7 @@ public class GitServiceCGit implements GitService {
     // TODO fix the bug within the library when parsing diff with only added lines with -U0 or
     // default -U3
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
-    return generateDiffHunks(diffs);
+    return generateDiffHunks(diffs, diffFiles);
   }
 
   /**

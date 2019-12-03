@@ -28,7 +28,7 @@ public interface GitService {
    * @param repoPath
    * @return
    */
-  List<DiffHunk> getDiffHunksInWorkingTree(String repoPath);
+  List<DiffHunk> getDiffHunksInWorkingTree(String repoPath,  List<DiffFile> diffFiles);
 
   /**
    * Get the diff hunks between one commit and its previous commit
@@ -37,7 +37,7 @@ public interface GitService {
    * @param commitID
    * @return
    */
-  List<DiffHunk> getDiffHunksAtCommit(String repoPath, String commitID);
+  List<DiffHunk> getDiffHunksAtCommit(String repoPath, String commitID,  List<DiffFile> diffFiles);
 
   /**
    * Get the file content at HEAD

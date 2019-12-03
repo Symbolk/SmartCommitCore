@@ -36,6 +36,10 @@ public class DiffFile {
     return status;
   }
 
+  public FileType getFileType() {
+    return fileType;
+  }
+
   public String getBaseRelativePath() {
     return baseRelativePath;
   }

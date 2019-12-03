@@ -4,6 +4,7 @@ import com.github.smartcommit.core.IdentifierVisitor;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
+import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import org.apache.commons.lang3.tuple.Pair;
@@ -27,8 +28,8 @@ public class Main {
     //    BasicConfigurator.configure();
 
     // given a git repo, get the file-level change set of the working directory
-    String REPO_PATH = "/Users/symbolk/coding/data/IntelliMerge";
-    String COMMIT_ID = "0ca0e3d3a9de1dce0ae579c176402f8aa075279d";
+    String REPO_PATH = "/Users/symbolk/coding/data/nomulus";
+    String COMMIT_ID = "906b054f4b7a2e38681fd03282996955406afd65";
     String JRE_PATH =
         "/Library/Java/JavaVirtualMachines/jdk1.8.0_231.jdk/Contents/Home/jre/lib/rt.jar";
     GitService gitService = new GitServiceCGit();
@@ -36,45 +37,46 @@ public class Main {
     // collect the changed files and diff hunks
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
     //        ArrayList<DiffFile> diffFiles = gitService.getChangedFilesInWorkingTree(REPO_PATH);
-    List<DiffHunk> diffHunks = gitService.getDiffHunksAtCommit(REPO_PATH, COMMIT_ID);
+    List<DiffHunk> diffHunks = gitService.getDiffHunksAtCommit(REPO_PATH, COMMIT_ID, diffFiles);
     //        List<DiffHunk> diffHunks = gitService.getDiffHunksInWorkingTree(REPO_PATH);
     repoAnalyzer.setDiffFiles(diffFiles);
     repoAnalyzer.setDiffHunks(diffHunks);
 
     // find the AST nodes covered by each diff hunk
     for (DiffFile diffFile : diffFiles) {
-      // get all diff hunks within this file
-      List<DiffHunk> diffHunksInFile = repoAnalyzer.getDiffHunksInFile(diffFile, diffHunks);
-      diffFile.setDiffHunks(diffHunksInFile);
-      // parse the changed files into ASTs
-      Pair<CompilationUnit, CompilationUnit> CUPair = repoAnalyzer.generateCUPair(diffFile);
+      if (diffFile.getFileType().equals(FileType.JAVA)) {
+        // get all diff hunks within this file
+        List<DiffHunk> diffHunksInFile = diffFile.getDiffHunks();
+        // parse the changed files into ASTs
+        Pair<CompilationUnit, CompilationUnit> CUPair = repoAnalyzer.generateCUPair(diffFile);
 
-      // extract change stems of each diff hunk, resolve symbols to get qualified name as the
-      // feature of the diff hunk
-      if (CUPair.getRight() != null) {
-        CompilationUnit cu = CUPair.getRight();
-        for (DiffHunk diffHunk : diffHunksInFile) {
-          // find nodes covered or covering by each diff hunk
-          int startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
-          int endPos = cu.getPosition(diffHunk.getCurrentEndLine() + 1, 0);
-          int length = endPos - startPos;
-          if (length > 0) {
-            NodeFinder nodeFinder = new NodeFinder(cu, startPos, length);
-            ASTNode coveredNode = nodeFinder.getCoveredNode();
-            if (coveredNode != null) {
-              coveredNode = coveredNode.getParent();
-              // collect data and control flow symbols
-              IdentifierVisitor v = new IdentifierVisitor();
-              coveredNode.accept(v);
-              v.getInvokedMethods();
+        // extract change stems of each diff hunk, resolve symbols to get qualified name as the
+        // feature of the diff hunk
+        if (CUPair.getRight() != null) {
+          CompilationUnit cu = CUPair.getRight();
+          for (DiffHunk diffHunk : diffHunksInFile) {
+            // find nodes covered or covering by each diff hunk
+            int startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
+            int endPos = cu.getPosition(diffHunk.getCurrentEndLine() + 1, 0);
+            int length = endPos - startPos;
+            if (length > 0) {
+              NodeFinder nodeFinder = new NodeFinder(cu, startPos, length);
+              ASTNode coveredNode = nodeFinder.getCoveredNode();
+              if (coveredNode != null) {
+                coveredNode = coveredNode.getParent();
+                // collect data and control flow symbols
+                IdentifierVisitor v = new IdentifierVisitor();
+                coveredNode.accept(v);
+                v.getInvokedMethods();
+              }
             }
           }
+          // compute the distance matrix
+
+          // build the graph
+
+          // visualize the graph
         }
-        // compute the distance matrix
-
-        // build the graph
-
-        // visualize the graph
       }
     }
   }

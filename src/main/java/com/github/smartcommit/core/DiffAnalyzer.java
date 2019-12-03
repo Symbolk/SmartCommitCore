@@ -19,7 +19,7 @@ public class DiffAnalyzer {
     Map<String, Object> params = new HashMap<>();
     //        params.put("operation", rootAction.getName());
     //        params.put("nodeType", rootAction.getNode().getType().name);
-    //        params.put("label", rootAction.getNode().getLabel());
+    //        params.put("label", rootActcion.getNode().getLabel());
     //        params.put("startLine", rootAction.getNode().getStartLine());
     //        params.put("endLine", rootAction.getNode().getEndLine());
     session.run(

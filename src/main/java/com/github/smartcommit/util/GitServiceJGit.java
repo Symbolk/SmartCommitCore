@@ -19,12 +19,13 @@ public class GitServiceJGit implements GitService {
   }
 
   @Override
-  public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath) {
+  public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath, List<DiffFile> diffFiles) {
     return null;
   }
 
   @Override
-  public List<DiffHunk> getDiffHunksAtCommit(String repoPath, String commitID) {
+  public List<DiffHunk> getDiffHunksAtCommit(
+      String repoPath, String commitID, List<DiffFile> diffFiles) {
     return null;
   }
 
