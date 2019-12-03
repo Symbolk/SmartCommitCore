@@ -1,17 +1,27 @@
 package com.github.smartcommit.model;
 
+import com.github.smartcommit.model.constant.ChangeType;
+import com.github.smartcommit.model.constant.FileType;
+
 public class DiffHunk {
 
   private Integer index; // the index of the diff hunk in the current file diff, start from 0
   private Hunk baseHunk;
   private Hunk currentHunk;
+  private FileType fileType;
   private ChangeType changeType;
   //  private List<ActionCluster> changeActions;
   private String description;
 
   public DiffHunk(
-      Integer index, Hunk baseHunk, Hunk currentHunk, ChangeType changeType, String description) {
+      Integer index,
+      FileType fileType,
+      ChangeType changeType,
+      Hunk baseHunk,
+      Hunk currentHunk,
+      String description) {
     this.index = index;
+    this.fileType = fileType;
     this.baseHunk = baseHunk;
     this.currentHunk = currentHunk;
     this.changeType = changeType;

@@ -1,6 +1,10 @@
 package com.github.smartcommit.util;
 
 import com.github.smartcommit.model.*;
+import com.github.smartcommit.model.constant.ChangeType;
+import com.github.smartcommit.model.constant.FileStatus;
+import com.github.smartcommit.model.constant.FileType;
+import com.github.smartcommit.model.constant.Version;
 import io.reflectoring.diffparser.api.DiffParser;
 import io.reflectoring.diffparser.api.UnifiedDiffParser;
 import io.reflectoring.diffparser.api.model.Diff;
@@ -32,7 +36,7 @@ public class GitServiceCGit implements GitService {
       String symbol = temp[0];
       String relativePath = temp[1];
       String absolutePath = repoDir + File.separator + relativePath;
-      DiffFileStatus status = Utils.convertSymbolToStatus(symbol);
+      FileStatus status = Utils.convertSymbolToStatus(symbol);
       DiffFile DiffFile = null;
       switch (status) {
         case MODIFIED:
@@ -98,7 +102,7 @@ public class GitServiceCGit implements GitService {
       String symbol = temp[0];
       String relativePath = temp[1];
       //            String absolutePath = repoDir + File.separator + relativePath;
-      DiffFileStatus status = Utils.convertSymbolToStatus(symbol);
+      FileStatus status = Utils.convertSymbolToStatus(symbol);
       DiffFile DiffFile = null;
       switch (status) {
         case MODIFIED:
@@ -177,6 +181,12 @@ public class GitServiceCGit implements GitService {
       // the index of the diff hunk in the current file diff, start from 0
       Integer index = 0;
       for (Hunk hunk : diff.getHunks()) {
+        // currently we only process Java files
+        FileType fileType = FileType.OTHER;
+        if (diff.getFromFileName().endsWith(".java") || diff.getToFileName().endsWith(".java")) {
+          fileType = FileType.JAVA;
+        }
+
         List<String> baseCodeLines = getCodeSnippetInHunk(hunk.getLines(), Version.BASE);
         List<String> currentCodeLines = getCodeSnippetInHunk(hunk.getLines(), Version.CURRENT);
         com.github.smartcommit.model.Hunk baseHunk =
@@ -200,7 +210,7 @@ public class GitServiceCGit implements GitService {
         if (currentCodeLines.isEmpty()) {
           changeType = ChangeType.DELETED;
         }
-        DiffHunk diffHunk = new DiffHunk(index, baseHunk, currentHunk, changeType, "");
+        DiffHunk diffHunk = new DiffHunk(index, fileType, changeType, baseHunk, currentHunk, "");
         allDiffHunks.add(diffHunk);
         index++;
       }

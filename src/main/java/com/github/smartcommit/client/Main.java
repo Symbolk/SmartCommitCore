@@ -27,8 +27,8 @@ public class Main {
     //    BasicConfigurator.configure();
 
     // given a git repo, get the file-level change set of the working directory
-    String REPO_PATH = "/Users/symbolk/coding/dev/IntelliMerge";
-    String COMMIT_ID = "53c1c430de96e459fc6b633d20c328eaff7d0374";
+    String REPO_PATH = "/Users/symbolk/coding/data/IntelliMerge";
+    String COMMIT_ID = "0ca0e3d3a9de1dce0ae579c176402f8aa075279d";
     String JRE_PATH =
         "/Library/Java/JavaVirtualMachines/jdk1.8.0_231.jdk/Contents/Home/jre/lib/rt.jar";
     GitService gitService = new GitServiceCGit();

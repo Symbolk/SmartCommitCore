@@ -1,10 +1,12 @@
 package com.github.smartcommit.model;
 
+import com.github.smartcommit.model.constant.FileStatus;
+
 import java.util.List;
 
 public class DiffFile {
   private Integer index; // the index of the diff file in the current repo, start from 0
-  private DiffFileStatus status;
+  private FileStatus status;
   private String baseRelativePath;
   private String currentRelativePath;
   private String baseContent;
@@ -13,7 +15,7 @@ public class DiffFile {
 
   public DiffFile(
       Integer index,
-      DiffFileStatus status,
+      FileStatus status,
       String baseRelativePath,
       String currentRelativePath,
       String baseContent,
@@ -26,7 +28,7 @@ public class DiffFile {
     this.currentContent = currentContent;
   }
 
-  public DiffFileStatus getStatus() {
+  public FileStatus getStatus() {
     return status;
   }
 

@@ -1,4 +1,4 @@
-package com.github.smartcommit.model;
+package com.github.smartcommit.model.constant;
 
 public enum Version {
   BASE(0, "base"),

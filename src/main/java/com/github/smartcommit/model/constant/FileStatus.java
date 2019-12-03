@@ -1,9 +1,9 @@
-package com.github.smartcommit.model;
+package com.github.smartcommit.model.constant;
 
 /**
  * Status of a DiffFile
  */
-public enum DiffFileStatus {
+public enum FileStatus {
   UNMODIFIED(" ", "unmodified"),
   MODIFIED("M", "modified"),
   ADDED("A", "added"),
@@ -17,7 +17,7 @@ public enum DiffFileStatus {
   public String symbol;
   public String label;
 
-  DiffFileStatus(String symbol, String label) {
+  FileStatus(String symbol, String label) {
     this.symbol = symbol;
     this.label = label;
   }

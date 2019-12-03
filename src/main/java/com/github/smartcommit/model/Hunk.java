@@ -1,5 +1,7 @@
 package com.github.smartcommit.model;
 
+import com.github.smartcommit.model.constant.Version;
+
 import java.util.List;
 
 public class Hunk {

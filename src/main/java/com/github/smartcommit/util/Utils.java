@@ -1,6 +1,6 @@
 package com.github.smartcommit.util;
 
-import com.github.smartcommit.model.DiffFileStatus;
+import com.github.smartcommit.model.constant.FileStatus;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -51,13 +51,13 @@ public class Utils {
    * @param symbol
    * @return
    */
-  public static DiffFileStatus convertSymbolToStatus(String symbol) {
-    for (DiffFileStatus status : DiffFileStatus.values()) {
+  public static FileStatus convertSymbolToStatus(String symbol) {
+    for (FileStatus status : FileStatus.values()) {
       if (symbol.equals(status.symbol)) {
         return status;
       }
     }
-    return DiffFileStatus.UNMODIFIED;
+    return FileStatus.UNMODIFIED;
   }
 
   /**

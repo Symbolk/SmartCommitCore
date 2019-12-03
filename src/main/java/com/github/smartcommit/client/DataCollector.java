@@ -1,7 +1,7 @@
 package com.github.smartcommit.client;
 
 import com.github.smartcommit.model.DiffFile;
-import com.github.smartcommit.model.DiffFileStatus;
+import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
@@ -23,7 +23,7 @@ public class DataCollector {
     for (DiffFile filePair : filePairs) {
       // currently only collect MODIFIED Java files
       if (filePair.getBaseRelativePath().endsWith(".java")
-          && filePair.getStatus().equals(DiffFileStatus.MODIFIED)) {
+          && filePair.getStatus().equals(FileStatus.MODIFIED)) {
         String dir =
             DATA_DIR + File.separator + REPO_NAME + File.separator + commitID + File.separator;
         String aPath = dir + "a" + File.separator + filePair.getBaseRelativePath();

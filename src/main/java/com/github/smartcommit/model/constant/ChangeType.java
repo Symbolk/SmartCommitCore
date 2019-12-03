@@ -1,4 +1,4 @@
-package com.github.smartcommit.model;
+package com.github.smartcommit.model.constant;
 
 /**
  * Change type of a DiffHunk
