@@ -35,6 +35,10 @@ public class GitServiceCGit implements GitService {
       String temp[] = lines[i].trim().split("\\s+");
       String symbol = temp[0];
       String relativePath = temp[1];
+      FileType fileType = FileType.OTHER;
+      if (relativePath.endsWith(".java")) {
+        fileType = FileType.JAVA;
+      }
       String absolutePath = repoDir + File.separator + relativePath;
       FileStatus status = Utils.convertSymbolToStatus(symbol);
       DiffFile DiffFile = null;
@@ -44,6 +48,7 @@ public class GitServiceCGit implements GitService {
               new DiffFile(
                   i,
                   status,
+                  fileType,
                   relativePath,
                   relativePath,
                   getContentAtHEAD(repoDir, relativePath),
@@ -51,12 +56,20 @@ public class GitServiceCGit implements GitService {
           break;
         case ADDED:
         case UNTRACKED:
-          DiffFile = new DiffFile(i, status, "", relativePath, "", readFileToString(absolutePath));
+          DiffFile =
+              new DiffFile(
+                  i, status, fileType, "", relativePath, "", readFileToString(absolutePath));
           break;
         case DELETED:
           DiffFile =
               new DiffFile(
-                  i, status, relativePath, "", getContentAtHEAD(repoDir, relativePath), "");
+                  i,
+                  status,
+                  fileType,
+                  relativePath,
+                  "",
+                  getContentAtHEAD(repoDir, relativePath),
+                  "");
           break;
         case RENAMED:
         case COPIED:
@@ -68,6 +81,7 @@ public class GitServiceCGit implements GitService {
                 new DiffFile(
                     i,
                     status,
+                    fileType,
                     oldPath,
                     newPath,
                     getContentAtHEAD(repoDir, oldPath),
@@ -101,6 +115,10 @@ public class GitServiceCGit implements GitService {
       String temp[] = lines[i].trim().split("\\s+");
       String symbol = temp[0];
       String relativePath = temp[1];
+      FileType fileType = FileType.OTHER;
+      if (relativePath.endsWith(".java")) {
+        fileType = FileType.JAVA;
+      }
       //            String absolutePath = repoDir + File.separator + relativePath;
       FileStatus status = Utils.convertSymbolToStatus(symbol);
       DiffFile DiffFile = null;
@@ -110,6 +128,7 @@ public class GitServiceCGit implements GitService {
               new DiffFile(
                   i,
                   status,
+                  fileType,
                   relativePath,
                   relativePath,
                   getContentAtCommit(repoDir, relativePath, commitID + "~"),
@@ -121,6 +140,7 @@ public class GitServiceCGit implements GitService {
               new DiffFile(
                   i,
                   status,
+                  fileType,
                   "",
                   relativePath,
                   "",
@@ -131,6 +151,7 @@ public class GitServiceCGit implements GitService {
               new DiffFile(
                   i,
                   status,
+                  fileType,
                   relativePath,
                   "",
                   getContentAtCommit(repoDir, relativePath, commitID + "~"),
@@ -145,6 +166,7 @@ public class GitServiceCGit implements GitService {
                 new DiffFile(
                     i,
                     status,
+                    fileType,
                     oldPath,
                     newPath,
                     getContentAtCommit(repoDir, oldPath, commitID + "~"),
