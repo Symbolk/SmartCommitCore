@@ -1,5 +1,6 @@
 package com.github.smartcommit.util;
 
+import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
 
@@ -7,6 +8,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /** Helper functions to operate the file and the system. */
@@ -179,5 +181,32 @@ public class Utils {
       fileType = FileType.JAVA;
     }
     return fileType;
+  }
+
+  /**
+   * Check the content type of hunk
+   *
+   * @param codeLines
+   * @return
+   */
+  public static ContentType checkContentType(List<String> codeLines) {
+    if (codeLines.isEmpty()) {
+      return ContentType.EMPTY;
+    }
+    ContentType contentType = ContentType.CODE;
+    boolean isAllEmpty = true;
+    for (String line : codeLines) {
+      String trimmedLine = line.trim();
+      if (trimmedLine.length() > 0) {
+        isAllEmpty = false;
+      }
+      if (trimmedLine.startsWith("import")) {
+        contentType = ContentType.IMPORT;
+      } else {
+        // TODO check for pure comments here
+
+      }
+    }
+    return isAllEmpty ? ContentType.EMPTY : contentType;
   }
 }

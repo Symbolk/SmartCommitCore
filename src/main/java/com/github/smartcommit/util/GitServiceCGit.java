@@ -216,6 +216,7 @@ public class GitServiceCGit implements GitService {
                 Version.BASE,
                 hunk.getFromFileRange().getLineStart() + 1,
                 hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 2,
+                Utils.checkContentType(baseCodeLines),
                 baseCodeLines);
         com.github.smartcommit.model.Hunk currentHunk =
             new com.github.smartcommit.model.Hunk(
@@ -223,6 +224,7 @@ public class GitServiceCGit implements GitService {
                 Version.CURRENT,
                 hunk.getToFileRange().getLineStart() + 1,
                 hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 2,
+                Utils.checkContentType(currentCodeLines),
                 currentCodeLines);
         ChangeType changeType = ChangeType.MODIFIED;
         if (baseCodeLines.isEmpty()) {

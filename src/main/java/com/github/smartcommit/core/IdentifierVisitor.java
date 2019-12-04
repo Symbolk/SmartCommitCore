@@ -32,6 +32,8 @@ public class IdentifierVisitor extends ASTVisitor {
       if (typeBinding.isFromSource()) {
         this.invokedMethods.add(typeBinding.getQualifiedName() + ":" + binding.toString());
       }
+    } else {
+      this.invokedMethods.add(invocation.getExpression().toString()+"."+invocation.getName().toString());
     }
     return true;
   }
@@ -99,15 +101,6 @@ public class IdentifierVisitor extends ASTVisitor {
     }
     return true;
   }
-
-  //  @Override
-  //  public boolean visit(SimpleName node) {
-  //    System.out.println(node.getIdentifier());
-  //    System.out.println(node.resolveBinding());
-  //    System.out.println(node.resolveTypeBinding());
-  //    System.out.println("--------------");
-  //    return true;
-  //  }
 
   public List<String> getInvokedMethods() {
     return invokedMethods;

@@ -34,7 +34,7 @@ public class Main {
         "/Library/Java/JavaVirtualMachines/jdk1.8.0_231.jdk/Contents/Home/jre/lib/rt.jar";
     GitService gitService = new GitServiceCGit();
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(JRE_PATH, REPO_PATH, COMMIT_ID);
-    // collect the changed files and diff hunks
+    // collect the changed files and all diff hunks
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
     //        ArrayList<DiffFile> diffFiles = gitService.getChangedFilesInWorkingTree(REPO_PATH);
     List<DiffHunk> diffHunks = gitService.getDiffHunksAtCommit(REPO_PATH, COMMIT_ID, diffFiles);
@@ -63,7 +63,7 @@ public class Main {
               NodeFinder nodeFinder = new NodeFinder(cu, startPos, length);
               ASTNode coveredNode = nodeFinder.getCoveredNode();
               if (coveredNode != null) {
-                coveredNode = coveredNode.getParent();
+//                coveredNode = coveredNode.getParent();
                 // collect data and control flow symbols
                 IdentifierVisitor v = new IdentifierVisitor();
                 coveredNode.accept(v);
