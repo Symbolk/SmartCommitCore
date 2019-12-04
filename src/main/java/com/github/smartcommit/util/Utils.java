@@ -1,6 +1,7 @@
 package com.github.smartcommit.util;
 
 import com.github.smartcommit.model.constant.FileStatus;
+import com.github.smartcommit.model.constant.FileType;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -165,5 +166,18 @@ public class Utils {
    */
   public static String getFileNameFromPath(String path) {
     return path.substring(path.lastIndexOf("/") + 1);
+  }
+
+  /**
+   * Check the file type by file path
+   *
+   * @return
+   */
+  public static FileType checkFileType(String filePath) {
+    FileType fileType = FileType.OTHER;
+    if (filePath.endsWith(".java")) {
+      fileType = FileType.JAVA;
+    }
+    return fileType;
   }
 }

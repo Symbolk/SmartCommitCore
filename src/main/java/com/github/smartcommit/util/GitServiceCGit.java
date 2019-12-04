@@ -1,6 +1,7 @@
 package com.github.smartcommit.util;
 
-import com.github.smartcommit.model.*;
+import com.github.smartcommit.model.DiffFile;
+import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.ChangeType;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
@@ -11,7 +12,6 @@ import io.reflectoring.diffparser.api.model.Diff;
 import io.reflectoring.diffparser.api.model.Hunk;
 import io.reflectoring.diffparser.api.model.Line;
 
-import javax.swing.plaf.IconUIResource;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.util.ArrayList;
@@ -36,10 +36,7 @@ public class GitServiceCGit implements GitService {
       String temp[] = lines[i].trim().split("\\s+");
       String symbol = temp[0];
       String relativePath = temp[1];
-      FileType fileType = FileType.OTHER;
-      if (relativePath.endsWith(".java")) {
-        fileType = FileType.JAVA;
-      }
+      FileType fileType = Utils.checkFileType(relativePath);
       String absolutePath = repoDir + File.separator + relativePath;
       FileStatus status = Utils.convertSymbolToStatus(symbol);
       DiffFile DiffFile = null;
@@ -116,10 +113,7 @@ public class GitServiceCGit implements GitService {
       String temp[] = lines[i].trim().split("\\s+");
       String symbol = temp[0];
       String relativePath = temp[1];
-      FileType fileType = FileType.OTHER;
-      if (relativePath.endsWith(".java")) {
-        fileType = FileType.JAVA;
-      }
+      FileType fileType = Utils.checkFileType(relativePath);
       //            String absolutePath = repoDir + File.separator + relativePath;
       FileStatus status = Utils.convertSymbolToStatus(symbol);
       DiffFile DiffFile = null;
@@ -208,10 +202,8 @@ public class GitServiceCGit implements GitService {
       String baseFilePath = diff.getFromFileName();
       String currentFilePath = diff.getToFileName();
       // currently we only process Java files
-      FileType fileType = FileType.OTHER;
-      if (baseFilePath.endsWith(".java") || currentFilePath.endsWith(".java")) {
-        fileType = FileType.JAVA;
-      }
+      FileType fileType = Utils.checkFileType(baseFilePath);
+      fileType = Utils.checkFileType(currentFilePath);
 
       // collect and save diff hunks into diff files
       List<DiffHunk> diffHunksInFile = new ArrayList<>();
@@ -239,7 +231,8 @@ public class GitServiceCGit implements GitService {
         if (currentCodeLines.isEmpty()) {
           changeType = ChangeType.DELETED;
         }
-        DiffHunk diffHunk = new DiffHunk(hunkIndex, fileType, changeType, baseHunk, currentHunk, "");
+        DiffHunk diffHunk =
+            new DiffHunk(hunkIndex, fileType, changeType, baseHunk, currentHunk, "");
         diffHunksInFile.add(diffHunk);
         allDiffHunks.add(diffHunk);
         hunkIndex++;
