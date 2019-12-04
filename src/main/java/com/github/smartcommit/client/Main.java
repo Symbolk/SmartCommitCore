@@ -2,6 +2,7 @@ package com.github.smartcommit.client;
 
 import com.github.smartcommit.core.IdentifierVisitor;
 import com.github.smartcommit.core.RepoAnalyzer;
+import com.github.smartcommit.core.SimpleVisitor;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.FileType;
@@ -37,10 +38,10 @@ public class Main {
     // collect the changed files and all diff hunks
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
     //        ArrayList<DiffFile> diffFiles = gitService.getChangedFilesInWorkingTree(REPO_PATH);
-    List<DiffHunk> diffHunks = gitService.getDiffHunksAtCommit(REPO_PATH, COMMIT_ID, diffFiles);
-    //        List<DiffHunk> diffHunks = gitService.getDiffHunksInWorkingTree(REPO_PATH);
+    List<DiffHunk> allDiffHunks = gitService.getDiffHunksAtCommit(REPO_PATH, COMMIT_ID, diffFiles);
+    //        List<DiffHunk> allDiffHunks = gitService.getDiffHunksInWorkingTree(REPO_PATH);
     repoAnalyzer.setDiffFiles(diffFiles);
-    repoAnalyzer.setDiffHunks(diffHunks);
+    repoAnalyzer.setDiffHunks(allDiffHunks);
 
     // find the AST nodes covered by each diff hunk
     for (DiffFile diffFile : diffFiles) {
@@ -65,19 +66,23 @@ public class Main {
               if (coveredNode != null) {
 //                coveredNode = coveredNode.getParent();
                 // collect data and control flow symbols
-                IdentifierVisitor v = new IdentifierVisitor();
+//                IdentifierVisitor v = new IdentifierVisitor();
+                SimpleVisitor v = new SimpleVisitor();
                 coveredNode.accept(v);
-                v.getInvokedMethods();
+//                v.getInvokedMethods();
+                diffHunk.setSimpleTypes(v.getSimpleTypes());
+                diffHunk.setSimpleNames(v.getSimpleNames());
               }
             }
           }
-          // compute the distance matrix
-
-          // build the graph
-
-          // visualize the graph
         }
       }
     }
+    // compute the distance matrix
+    // build the graph
+    for(DiffHunk diffHunk : allDiffHunks){
+
+    }
+    // visualize the graph
   }
 }

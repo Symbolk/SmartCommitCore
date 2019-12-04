@@ -202,8 +202,10 @@ public class GitServiceCGit implements GitService {
       String baseFilePath = diff.getFromFileName();
       String currentFilePath = diff.getToFileName();
       // currently we only process Java files
-      FileType fileType = Utils.checkFileType(baseFilePath);
-      fileType = Utils.checkFileType(currentFilePath);
+      FileType fileType =
+          baseFilePath.contains("/dev/null")
+              ? Utils.checkFileType(currentFilePath)
+              : Utils.checkFileType(baseFilePath);
 
       // collect and save diff hunks into diff files
       List<DiffHunk> diffHunksInFile = new ArrayList<>();
@@ -243,6 +245,7 @@ public class GitServiceCGit implements GitService {
       for (DiffFile diffFile : diffFiles) {
         if (baseFilePath.contains(diffFile.getBaseRelativePath())
             && currentFilePath.contains(diffFile.getCurrentRelativePath())) {
+          diffHunksInFile.forEach(diffHunk -> diffHunk.setFileIndex(diffFile.getIndex()));
           diffFile.setDiffHunks(diffHunksInFile);
         }
       }
