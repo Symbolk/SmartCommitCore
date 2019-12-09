@@ -12,6 +12,7 @@ repositories {
 }
 
 dependencies {
+    compile fileTree(dir: 'lib', include: ['*.jar'])
     compile group: 'org.eclipse.jdt', name: 'org.eclipse.jdt.core', version: '3.16.0'
     compile group: 'io.reflectoring.diffparser', name: 'diffparser', version: '1.4'
     compile group: 'org.jgrapht', name: 'jgrapht-core', version: '1.3.0'
