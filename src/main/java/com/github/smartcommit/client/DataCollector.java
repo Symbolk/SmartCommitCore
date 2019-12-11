@@ -12,20 +12,20 @@ import java.util.ArrayList;
 /** Collect and write the diff file content into temp folders */
 public class DataCollector {
   public static void main(String[] args) {
-    String REPO_NAME = "guava";
-    String REPO_DIR = "D:\\github\\repos\\" + REPO_NAME;
-    String DATA_DIR = "D:\\commit_data";
-    String commitID = "dcf63a6c97dfde";
+    String REPO_NAME = "nomulus";
+    String REPO_PATH = "/Users/symbolk/coding/data/" + REPO_NAME;
+    String DATA_DIR = "/Users/symbolk/coding/data/temp";
+    String COMMIT_ID = "906b054f4b7a2e38681fd03282996955406afd65";
     GitService gitService = new GitServiceCGit();
 
-    ArrayList<DiffFile> filePairs = gitService.getChangedFilesAtCommit(REPO_DIR, commitID);
+    ArrayList<DiffFile> filePairs = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
     // write old/new content to disk
     for (DiffFile filePair : filePairs) {
       // currently only collect MODIFIED Java files
       if (filePair.getBaseRelativePath().endsWith(".java")
           && filePair.getStatus().equals(FileStatus.MODIFIED)) {
         String dir =
-            DATA_DIR + File.separator + REPO_NAME + File.separator + commitID + File.separator;
+            DATA_DIR + File.separator + REPO_NAME + File.separator + COMMIT_ID + File.separator;
         String aPath = dir + "a" + File.separator + filePair.getBaseRelativePath();
         String bPath = dir + "b" + File.separator + filePair.getCurrentRelativePath();
         boolean aOk = Utils.writeContentToPath(aPath, filePair.getBaseContent());
@@ -35,7 +35,7 @@ public class DataCollector {
         } else {
           System.out.println(aPath);
           System.out.println(bPath);
-        }
+          }
       }
     }
   }
