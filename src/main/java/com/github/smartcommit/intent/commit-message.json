@@ -1,0 +1,16 @@
+{
+	"feature": "Add visit methods to collect data/control flow symbols.",
+	"refactor": "Refactor the project structure to be compatible with UI.",
+	"refactor": " Rename Side to Version.",
+	"fix": " Fix wrong assignment of CU.",
+	"config": " Add configuration file for log4j.",     
+	"chore": " Replace printing with logger.",     
+	"fix": " Add missing imports in DataCollector.",     
+	"chore": " Add gradle wrapper.",     
+	"chore": " Add the source folder for the intent classifying.",     
+	"refactor": " Extract the test main method into the Main.java.",
+	"config": " Add dependencier for slf4j and log4j.",     
+	"feature": " Migrate programs from the test field.",
+	"config": " Add dependencies for JDT, jgrapht, and neo4j.",     
+	"init": " Initialize the project structure."
+}

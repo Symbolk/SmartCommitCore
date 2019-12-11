@@ -1,3 +1,4 @@
+
 package com.github.smartcommit.intent;
 
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
@@ -13,8 +14,9 @@ import java.io.IOException;
 
 public class Example {
     public static void main(String[] args) {
-        String body1 = " double similarity = 0D; return similarity;";
-        String body2 = " double similarity = 0D; if(similarity != 0) {return similarity;}";
+        String body1 = " double similarity = 0D; if(similarity == 0) return similarity;";
+        String body2 = " double similarity = 0D; if(similarity != 0) return similarity;";
+        System.out.println("the score is ");
         System.out.println(bodyAST(body1, body2));
     }
 
