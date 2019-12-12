@@ -27,14 +27,14 @@ public class Main {
     PropertyConfigurator.configure("log4j.properties");
     //    BasicConfigurator.configure();
 
-    // given a git repo, get the file-level change set of the working directory
-    String REPO_PATH = "/Users/symbolk/coding/data/nomulus";
-    String COMMIT_ID = "906b054f4b7a2e38681fd03282996955406afd65";
-    String JRE_PATH =
-        "/Library/Java/JavaVirtualMachines/jdk1.8.0_231.jdk/Contents/Home/jre/lib/rt.jar";
+    String REPO_PATH = Config.REPO_PATH;
+    String COMMIT_ID = Config.COMMIT_ID;
+    String JRE_PATH = Config.JRE_PATH;
     GitService gitService = new GitServiceCGit();
     JDTService jdtService = new JDTService(REPO_PATH, JRE_PATH);
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_PATH, COMMIT_ID);
+
+    // given a git repo, get the file-level change set of the working directory
     // collect the changed files and all diff hunks
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
     //        ArrayList<DiffFile> diffFiles = gitService.getChangedFilesInWorkingTree(REPO_PATH);
