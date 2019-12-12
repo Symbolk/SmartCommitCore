@@ -1,6 +1,5 @@
 package com.github.smartcommit.client;
 
-import com.github.smartcommit.core.IdentifierVisitor;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.core.SimpleVisitor;
 import com.github.smartcommit.model.DiffFile;
@@ -8,14 +7,15 @@ import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
+import com.github.smartcommit.util.JDTService;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.PropertyConfigurator;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.NodeFinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,7 +33,8 @@ public class Main {
     String JRE_PATH =
         "/Library/Java/JavaVirtualMachines/jdk1.8.0_231.jdk/Contents/Home/jre/lib/rt.jar";
     GitService gitService = new GitServiceCGit();
-    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(JRE_PATH, REPO_PATH, COMMIT_ID);
+    JDTService jdtService = new JDTService(REPO_PATH, JRE_PATH);
+    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_PATH, COMMIT_ID);
     // collect the changed files and all diff hunks
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
     //        ArrayList<DiffFile> diffFiles = gitService.getChangedFilesInWorkingTree(REPO_PATH);
@@ -48,7 +49,7 @@ public class Main {
         // get all diff hunks within this file
         List<DiffHunk> diffHunksInFile = diffFile.getDiffHunks();
         // parse the changed files into ASTs
-        Pair<CompilationUnit, CompilationUnit> CUPair = repoAnalyzer.generateCUPair(diffFile);
+        Pair<CompilationUnit, CompilationUnit> CUPair = jdtService.generateCUPair(diffFile);
 
         // extract change stems of each diff hunk, resolve symbols to get qualified name as the
         // feature of the diff hunk
@@ -63,12 +64,12 @@ public class Main {
               NodeFinder nodeFinder = new NodeFinder(cu, startPos, length);
               ASTNode coveredNode = nodeFinder.getCoveredNode();
               if (coveredNode != null) {
-//                coveredNode = coveredNode.getParent();
+                //                coveredNode = coveredNode.getParent();
                 // collect data and control flow symbols
-//                IdentifierVisitor v = new IdentifierVisitor();
+                //                IdentifierVisitor v = new IdentifierVisitor();
                 SimpleVisitor v = new SimpleVisitor();
                 coveredNode.accept(v);
-//                v.getInvokedMethods();
+                //                v.getInvokedMethods();
                 diffHunk.setSimpleTypes(v.getSimpleTypes());
                 diffHunk.setSimpleNames(v.getSimpleNames());
               }
@@ -79,9 +80,8 @@ public class Main {
     }
     // compute the distance matrix
     // build the graph
-    for(DiffHunk diffHunk : allDiffHunks){
+    for (DiffHunk diffHunk : allDiffHunks) {}
 
-    }
     // visualize the graph
   }
 }
