@@ -25,7 +25,7 @@ public enum EdgeType {
     this.label = label;
   }
 
-  public String getLabel() {
+  public String asString() {
     return this.label;
   }
 }

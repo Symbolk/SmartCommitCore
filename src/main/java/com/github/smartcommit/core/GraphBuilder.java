@@ -42,6 +42,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
    */
   @Override
   public Graph<Node, Edge> call() {
+    Graph<Node, Edge> graph = initGraph();
     // parse diff java files into CUs
     final Map<ICompilationUnit, ASTNode> parsedCompilationUnits =
         new HashMap<ICompilationUnit, ASTNode>();
@@ -81,9 +82,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           @Override
           public void acceptAST(String sourceFilePath, CompilationUnit cu) {
             try {
-              System.out.println(sourceFilePath + ":" + cu.types().get(0));
-              //                    javaUnit.accept(new JavaASTVisitor(elementInfoPool,
-              // FileUtils.readFileToString(new File(sourceFilePath))));
+              cu.accept(new MemberVisitor(graph));
             } catch (Exception e) {
               e.printStackTrace();
             }
@@ -94,6 +93,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     // visit members to build graph
 
     // expand or highlight diff subtrees
-    return initGraph();
+    return graph;
   }
 }

@@ -9,6 +9,8 @@ import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
 import org.jgrapht.Graph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -18,7 +20,10 @@ import java.util.concurrent.Future;
 
 /** Collect and write the diff file content into temp folders */
 public class DataCollector {
+  private static final Logger logger = LoggerFactory.getLogger(DataCollector.class);
+
   public static void main(String[] args) {
+
     String REPO_NAME = Config.REPO_NAME;
     String REPO_PATH = Config.REPO_PATH;
     String TEMP_DIR = Config.TEMP_DIR; // temp folder to collect diff files
@@ -29,6 +34,7 @@ public class DataCollector {
 
     ArrayList<DiffFile> filePairs = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
     // collect the diff files into the data dir
+    int count = 0;
     for (DiffFile filePair : filePairs) {
       // currently only collect MODIFIED Java files
       if (filePair.getBaseRelativePath().endsWith(".java")
@@ -38,13 +44,16 @@ public class DataCollector {
         String bPath = currentDir + filePair.getCurrentRelativePath();
         boolean aOk = Utils.writeContentToPath(aPath, filePair.getBaseContent());
         boolean bOk = Utils.writeContentToPath(bPath, filePair.getCurrentContent());
-        if (!(aOk && bOk)) {
-          System.out.println("Error with: " + filePair.getBaseRelativePath());
+        if (aOk && bOk) {
+          count ++;
+//          System.out.println(aPath);
         } else {
-          System.out.println(aPath);
+          logger.error("Error with: " + filePair.getBaseRelativePath());
         }
       }
     }
+
+    System.out.println("Java Files: " + count);
 
     // build the graph
     ExecutorService executorService = Executors.newFixedThreadPool(1);

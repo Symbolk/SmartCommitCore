@@ -1,5 +1,8 @@
 package com.github.smartcommit.model.graph;
 
+/**
+ * Node declarations
+ */
 public enum NodeType {
   COMPILATION_UNIT("compilation_unit"), // logical node to represent file
 
@@ -25,7 +28,7 @@ public enum NodeType {
     this.label = label;
   }
 
-  public String getLabel() {
+  public String asString() {
     return this.label;
   }
 }

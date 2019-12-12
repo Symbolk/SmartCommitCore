@@ -64,7 +64,7 @@ public class Utils {
   }
 
   /**
-   * Read the content of a given file.
+   * Read the content of a given file (Use FileUtils.readFileToString from commons-io instead)
    *
    * @param path to be read
    * @return string content of the file, or null in case of errors.
