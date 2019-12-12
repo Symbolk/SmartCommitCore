@@ -1,0 +1,31 @@
+package com.github.smartcommit.model.graph;
+
+public enum EdgeType {
+  /** file&folder level edges * */
+  CONTAIN("contains"), // physical relation
+  IMPORT("imports"),
+  EXTEND("extends"),
+  IMPLEMENT("implements"),
+  /** inside-file edges * */
+  // define field/terminal/constructor/inner type/constant
+  DEFINE("defines"),
+  /** across-node edges * */
+  // inter-field/terminal edges
+  READ("reads field"),
+  WRITE("writes field"),
+  // call terminal/constructor
+  CALL("calls terminal"),
+  // declare/initialize object
+  DECLARE("declares object"),
+  INITIALIZE("initializes object");
+
+  String label;
+
+  EdgeType(String label) {
+    this.label = label;
+  }
+
+  public String getLabel() {
+    return this.label;
+  }
+}
