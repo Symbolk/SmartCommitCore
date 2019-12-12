@@ -12,4 +12,20 @@ public class Node {
         this.identifier = identifier;
         this.qualifiedName = qualifiedName;
     }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public NodeType getType() {
+        return type;
+    }
+
+    public String getIdentifier() {
+        return identifier;
+    }
+
+    public String getQualifiedName() {
+        return qualifiedName;
+    }
 }

@@ -87,6 +87,37 @@ public class Utils {
   }
 
   /**
+   * Writes the given content into a file of the given file path, overwrite by default
+   *
+   * @param filePath
+   * @param content
+   * @return boolean indicating the success of the write operation.
+   */
+  public static boolean writeStringToFile(String filePath, String content, boolean append) {
+    try {
+      File file = new File(filePath);
+      if (file.exists() && !append) {
+        file.delete();
+      }
+      if (!file.exists()) {
+        file.getParentFile().mkdirs();
+        file.createNewFile();
+      }
+      FileWriter fileWriter = new FileWriter(filePath, append);
+      BufferedWriter writer = new BufferedWriter(fileWriter);
+      writer.write(content);
+      writer.flush();
+      writer.close();
+    } catch (NullPointerException ne) {
+      ne.printStackTrace();
+    } catch (Exception e) {
+      e.printStackTrace();
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Writes the given content in the file of the given file path.
    *
    * @param filePath

@@ -9,4 +9,12 @@ public class Edge {
     this.id = id;
     this.type = type;
   }
+
+  public Integer getId() {
+    return id;
+  }
+
+  public EdgeType getType() {
+    return type;
+  }
 }
