@@ -1,9 +1,8 @@
 package com.github.smartcommit.model.graph;
 
-/**
- * Node declarations
- */
+/** Node declarations */
 public enum NodeType {
+  PACKAGE("package"),
   COMPILATION_UNIT("compilation_unit"), // logical node to represent file
 
   // nonterminal

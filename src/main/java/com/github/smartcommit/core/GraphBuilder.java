@@ -1,5 +1,6 @@
 package com.github.smartcommit.core;
 
+import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import org.apache.commons.io.FileUtils;
@@ -83,16 +84,15 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           public void acceptAST(String sourceFilePath, CompilationUnit cu) {
             try {
               cu.accept(new MemberVisitor(graph));
+              System.out.println(cu.getAST().hasBindingsRecovery());
             } catch (Exception e) {
               e.printStackTrace();
             }
           }
         },
         null);
-
-    // visit members to build graph
-
     // expand or highlight diff subtrees
+    String graphDotString = GraphExporter.exportAsDotWithType(graph);
     return graph;
   }
 }
