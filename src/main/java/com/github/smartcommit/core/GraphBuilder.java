@@ -2,7 +2,11 @@ package com.github.smartcommit.core;
 
 import com.github.smartcommit.core.visitor.MemberVisitor;
 import com.github.smartcommit.io.GraphExporter;
+import com.github.smartcommit.model.EntityPool;
+import com.github.smartcommit.model.entity.FieldInfo;
+import com.github.smartcommit.model.entity.MethodInfo;
 import com.github.smartcommit.model.graph.Edge;
+import com.github.smartcommit.model.graph.EdgeType;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.JDTService;
 import org.apache.commons.io.FileUtils;
@@ -18,10 +22,10 @@ import java.util.concurrent.Callable;
 
 public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
-  private String tempDirPath;
+  private String srcDir;
 
-  public GraphBuilder(String tempDirPath) {
-    this.tempDirPath = tempDirPath;
+  public GraphBuilder(String srcDir) {
+    this.srcDir = srcDir;
   }
 
   /**
@@ -45,14 +49,14 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
    */
   @Override
   public Graph<Node, Edge> call() {
+    EntityPool entityPool = new EntityPool(srcDir);
     Graph<Node, Edge> graph = initGraph();
     // parse diff java files into CUs
     final Map<ICompilationUnit, ASTNode> parsedCompilationUnits =
         new HashMap<ICompilationUnit, ASTNode>();
     ASTParser parser = ASTParser.newParser(AST.JLS9);
 
-    Collection<File> javaFiles =
-        FileUtils.listFiles(new File(tempDirPath), new String[] {"java"}, true);
+    Collection<File> javaFiles = FileUtils.listFiles(new File(srcDir), new String[] {"java"}, true);
     Set<String> srcPathSet = new HashSet<>();
     Set<String> srcFolderSet = new HashSet<>();
     for (File javaFile : javaFiles) {
@@ -77,6 +81,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     options.put(JavaCore.COMPILER_DOC_COMMENT_SUPPORT, JavaCore.ENABLED);
     parser.setCompilerOptions(options);
     parser.setBindingsRecovery(true);
+    // Vertex: create nodes when visiting the ASTs
     parser.createASTs(
         srcPaths,
         null,
@@ -87,7 +92,9 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
             try {
               cu.accept(
                   new MemberVisitor(
-                      graph, new JDTService(FileUtils.readFileToString(new File(sourceFilePath)))));
+                      entityPool,
+                      graph,
+                      new JDTService(FileUtils.readFileToString(new File(sourceFilePath)))));
               System.out.println(cu.getAST().hasBindingsRecovery());
             } catch (Exception e) {
               e.printStackTrace();
@@ -95,8 +102,28 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           }
         },
         null);
-    // expand or highlight diff subtrees
     String graphDotString = GraphExporter.exportAsDotWithType(graph);
+
+    // Edge: create inter-entity edges with the EntityPool and EntityInfo
+    int edgeCount = graph.edgeSet().size();
+    Map<String, MethodInfo> methodDecMap = new HashMap<>();
+    Map<String, FieldInfo> fieldDecMap = new HashMap<>();
+    Map<IMethodBinding, MethodInfo> methodBindingMap = new HashMap<>();
+    for (MethodInfo methodInfo : entityPool.methodInfoMap.values()) {
+      methodDecMap.put(methodInfo.uniqueName(), methodInfo);
+      methodBindingMap.put(methodInfo.methodBinding, methodInfo);
+    }
+
+    for (MethodInfo methodInfo : methodDecMap.values()) {
+      Set<IMethodBinding> methodCalls = methodInfo.methodCalls;
+      for (IMethodBinding methodCall : methodCalls) {
+        MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
+        if (targetMethodInfo != null) {
+          graph.addEdge(
+              methodInfo.node, targetMethodInfo.node, new Edge(edgeCount++, EdgeType.CALL));
+        }
+      }
+    }
     return graph;
   }
 }

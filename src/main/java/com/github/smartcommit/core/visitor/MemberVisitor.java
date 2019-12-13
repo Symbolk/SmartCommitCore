@@ -1,5 +1,6 @@
 package com.github.smartcommit.core.visitor;
 
+import com.github.smartcommit.model.EntityPool;
 import com.github.smartcommit.model.entity.MethodInfo;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;
@@ -13,10 +14,12 @@ import java.util.List;
 import java.util.Optional;
 
 public class MemberVisitor extends ASTVisitor {
+  private EntityPool entityPool;
   private Graph<Node, Edge> graph;
   private JDTService service;
 
-  public MemberVisitor(Graph<Node, Edge> graph, JDTService service) {
+  public MemberVisitor(EntityPool entityPool, Graph<Node, Edge> graph, JDTService service) {
+    this.entityPool = entityPool;
     this.graph = graph;
     this.service = service;
   }
@@ -56,6 +59,7 @@ public class MemberVisitor extends ASTVisitor {
                 qualifiedNameForType + ":" + fragment.getName().getFullyQualifiedName());
         graph.addVertex(fieldNode);
         graph.addEdge(typeNode, fieldNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
       }
     }
 
@@ -69,9 +73,10 @@ public class MemberVisitor extends ASTVisitor {
               qualifiedNameForType + ":" + methodDeclaration.getName().getFullyQualifiedName());
       graph.addVertex(methodNode);
       graph.addEdge(typeNode, methodNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
       MethodInfo methodInfo = service.createMethodInfo(methodDeclaration, qualifiedNameForType);
-      System.out.println(methodInfo);
-      // build edges on graph
+      methodInfo.node = methodNode;
+      entityPool.methodInfoMap.put(methodInfo.uniqueName(), methodInfo);
     }
 
     return true;

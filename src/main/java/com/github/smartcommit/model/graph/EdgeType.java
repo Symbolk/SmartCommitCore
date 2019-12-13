@@ -14,7 +14,7 @@ public enum EdgeType {
   READ("reads field"),
   WRITE("writes field"),
   // call terminal/constructor
-  CALL("calls terminal"),
+  CALL("calls method"),
   // declare/initialize object
   DECLARE("declares object"),
   INITIALIZE("initializes object");

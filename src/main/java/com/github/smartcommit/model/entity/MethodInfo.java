@@ -1,5 +1,6 @@
 package com.github.smartcommit.model.entity;
 
+import com.github.smartcommit.model.graph.Node;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 
 import java.util.HashSet;
@@ -27,9 +28,11 @@ public class MethodInfo {
   public Set<String> fieldUses = new HashSet<>();
   public Set<String> exceptionThrows = new HashSet<>();
 
+  public Node node;
+
   public IMethodBinding methodBinding;
 
-  public String hashName() {
+  public String uniqueName() {
     return belongTo + "." + name + "(" + paramString + ")";
   }
 }
