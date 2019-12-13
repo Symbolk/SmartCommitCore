@@ -4,11 +4,13 @@ import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.model.DiffFile;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jdt.core.JavaCore;
-import org.eclipse.jdt.core.dom.ASTParser;
-import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public class JDTService {
@@ -66,5 +68,50 @@ public class JDTService {
     String[] classpath = {this.jrePath}; // local java runtime (rt.jar) path
     parser.setEnvironment(classpath, sources, new String[] {"UTF-8"}, true);
     return parser;
+  }
+
+  /**
+   * Get all declaration descendants of an ASTNode
+   *
+   * @param node
+   * @return
+   */
+  public List<BodyDeclaration> getDescendants(ASTNode node) {
+    List<BodyDeclaration> descendants = new ArrayList<BodyDeclaration>();
+    List list = node.structuralPropertiesForType();
+    for (int i = 0; i < list.size(); i++) {
+      Object child = node.getStructuralProperty((StructuralPropertyDescriptor) list.get(i));
+      if (child instanceof List) {
+        for (Iterator it = ((List) child).listIterator(); it.hasNext(); ) {
+          Object child2 = it.next();
+          if (child2 instanceof BodyDeclaration) {
+            descendants.add((BodyDeclaration) child2);
+            descendants.addAll(getDescendants((ASTNode) child2));
+          }
+        }
+      }
+      if (child instanceof BodyDeclaration) {
+        descendants.add((BodyDeclaration) child);
+      }
+    }
+    return descendants;
+  }
+
+  /**
+   * Get only the direct children of an ASTNode
+   *
+   * @param node
+   * @return
+   */
+  public List<ASTNode> getChildren(ASTNode node) {
+    List<ASTNode> children = new ArrayList<ASTNode>();
+    List list = node.structuralPropertiesForType();
+    for (int i = 0; i < list.size(); i++) {
+      Object child = node.getStructuralProperty((StructuralPropertyDescriptor) list.get(i));
+      if (child instanceof ASTNode) {
+        children.add((ASTNode) child);
+      }
+    }
+    return children;
   }
 }

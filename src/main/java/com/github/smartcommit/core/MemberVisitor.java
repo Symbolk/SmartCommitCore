@@ -65,6 +65,7 @@ public class MemberVisitor extends ASTVisitor {
               qualifiedName + ":" + methodDeclaration.getName().getFullyQualifiedName());
       graph.addVertex(methodNode);
       graph.addEdge(typeNode, methodNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+      methodDeclaration.getBody().statements();
     }
 
     return true;

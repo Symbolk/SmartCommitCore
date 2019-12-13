@@ -55,6 +55,7 @@ public class Main {
         // feature of the diff hunk
         if (CUPair.getRight() != null) {
           CompilationUnit cu = CUPair.getRight();
+//          List<BodyDeclaration> declarations = jdtService.getDescendants(cu);
           for (DiffHunk diffHunk : diffHunksInFile) {
             // find nodes covered or covering by each diff hunk
             int startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
