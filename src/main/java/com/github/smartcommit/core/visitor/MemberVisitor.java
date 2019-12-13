@@ -1,5 +1,6 @@
 package com.github.smartcommit.core.visitor;
 
+import com.github.smartcommit.model.entity.MethodInfo;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;
 import com.github.smartcommit.model.graph.Node;
@@ -13,9 +14,11 @@ import java.util.Optional;
 
 public class MemberVisitor extends ASTVisitor {
   private Graph<Node, Edge> graph;
+  private JDTService service;
 
-  public MemberVisitor(Graph<Node, Edge> graph) {
+  public MemberVisitor(Graph<Node, Edge> graph, JDTService service) {
     this.graph = graph;
+    this.service = service;
   }
 
   @Override
@@ -27,14 +30,14 @@ public class MemberVisitor extends ASTVisitor {
   @Override
   public boolean visit(TypeDeclaration type) {
     NodeType nodeType = type.isInterface() ? NodeType.INTERFACE : NodeType.CLASS;
-    String qualifiedName = JDTService.getQualifiedNameForType(type);
+    String qualifiedNameForType = service.getQualifiedNameForType(type);
     Node typeNode =
-        new Node(generateNodeID(), nodeType, type.getName().getIdentifier(), qualifiedName);
+        new Node(generateNodeID(), nodeType, type.getName().getIdentifier(), qualifiedNameForType);
     //            type.getName().getFullyQualifiedName());
     graph.addVertex(typeNode);
 
     // find and link with the package node
-    String packageName = JDTService.getPackageName(type);
+    String packageName = service.getPackageName(type);
     if (!packageName.isEmpty()) {
       Node pkgNode = getOrCreatePkgNode(packageName);
       graph.addEdge(pkgNode, typeNode, new Edge(generateEdgeID(), EdgeType.CONTAIN));
@@ -50,7 +53,7 @@ public class MemberVisitor extends ASTVisitor {
                 generateNodeID(),
                 NodeType.FIELD,
                 fragment.getName().getIdentifier(),
-                qualifiedName + ":" + fragment.getName().getFullyQualifiedName());
+                qualifiedNameForType + ":" + fragment.getName().getFullyQualifiedName());
         graph.addVertex(fieldNode);
         graph.addEdge(typeNode, fieldNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
       }
@@ -63,14 +66,11 @@ public class MemberVisitor extends ASTVisitor {
               generateNodeID(),
               NodeType.METHOD,
               methodDeclaration.getName().getFullyQualifiedName(),
-              qualifiedName + ":" + methodDeclaration.getName().getFullyQualifiedName());
+              qualifiedNameForType + ":" + methodDeclaration.getName().getFullyQualifiedName());
       graph.addVertex(methodNode);
       graph.addEdge(typeNode, methodNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
-      List statements = methodDeclaration.getBody().statements();
-      // extract all expressions
-
-      // parse the target relations
-
+      MethodInfo methodInfo = service.createMethodInfo(methodDeclaration, qualifiedNameForType);
+      System.out.println(methodInfo);
       // build edges on graph
     }
 

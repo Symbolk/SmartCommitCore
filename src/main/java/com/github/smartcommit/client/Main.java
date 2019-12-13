@@ -7,7 +7,7 @@ import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
-import com.github.smartcommit.util.JDTService;
+import com.github.smartcommit.util.JDTParser;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.PropertyConfigurator;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -31,7 +31,7 @@ public class Main {
     String COMMIT_ID = Config.COMMIT_ID;
     String JRE_PATH = Config.JRE_PATH;
     GitService gitService = new GitServiceCGit();
-    JDTService jdtService = new JDTService(REPO_PATH, JRE_PATH);
+    JDTParser jdtParser = new JDTParser(REPO_PATH, JRE_PATH);
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_PATH, COMMIT_ID);
 
     // given a git repo, get the file-level change set of the working directory
@@ -49,7 +49,7 @@ public class Main {
         // get all diff hunks within this file
         List<DiffHunk> diffHunksInFile = diffFile.getDiffHunks();
         // parse the changed files into ASTs
-        Pair<CompilationUnit, CompilationUnit> CUPair = jdtService.generateCUPair(diffFile);
+        Pair<CompilationUnit, CompilationUnit> CUPair = jdtParser.generateCUPair(diffFile);
 
         // extract change stems of each diff hunk, resolve symbols to get qualified name as the
         // feature of the diff hunk

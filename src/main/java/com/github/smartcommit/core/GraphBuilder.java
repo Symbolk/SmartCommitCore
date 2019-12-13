@@ -4,6 +4,7 @@ import com.github.smartcommit.core.visitor.MemberVisitor;
 import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
+import com.github.smartcommit.util.JDTService;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.JavaCore;
@@ -84,7 +85,9 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           @Override
           public void acceptAST(String sourceFilePath, CompilationUnit cu) {
             try {
-              cu.accept(new MemberVisitor(graph));
+              cu.accept(
+                  new MemberVisitor(
+                      graph, new JDTService(FileUtils.readFileToString(new File(sourceFilePath)))));
               System.out.println(cu.getAST().hasBindingsRecovery());
             } catch (Exception e) {
               e.printStackTrace();
