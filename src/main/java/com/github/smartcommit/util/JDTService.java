@@ -114,4 +114,40 @@ public class JDTService {
     }
     return children;
   }
+
+  /**
+   * Get the fully qualified name of a type declaration
+   *
+   * @param type
+   * @return
+   */
+  public static String getQualifiedNameForType(TypeDeclaration type) {
+    String name = type.getName().getIdentifier();
+    ASTNode parent = type.getParent();
+    // resolve full name e.g.: A.B
+    while (parent != null && parent.getClass() == TypeDeclaration.class) {
+      name = ((TypeDeclaration) parent).getName().getIdentifier() + "." + name;
+      parent = parent.getParent();
+    }
+    // resolve fully qualified name e.g.: some.package.A.B
+    if (type.getRoot().getClass() == CompilationUnit.class) {
+      name = getPackageName(type) + "." + name;
+    }
+    return name;
+  }
+
+  /**
+   * Get the package name of a type, if it has
+   *
+   * @param decl
+   * @return
+   */
+  public static String getPackageName(TypeDeclaration decl) {
+    CompilationUnit root = (CompilationUnit) decl.getRoot();
+    if (root.getPackage() != null) {
+      PackageDeclaration pack = root.getPackage();
+      return pack.getName().getFullyQualifiedName();
+    }
+    return "";
+  }
 }
