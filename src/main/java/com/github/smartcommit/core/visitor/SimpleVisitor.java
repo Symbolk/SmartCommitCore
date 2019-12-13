@@ -1,4 +1,4 @@
-package com.github.smartcommit.core;
+package com.github.smartcommit.core.visitor;
 
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.ITypeBinding;

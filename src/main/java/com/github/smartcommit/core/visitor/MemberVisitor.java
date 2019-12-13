@@ -1,4 +1,4 @@
-package com.github.smartcommit.core;
+package com.github.smartcommit.core.visitor;
 
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;

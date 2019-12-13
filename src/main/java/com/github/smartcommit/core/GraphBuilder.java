@@ -1,5 +1,6 @@
 package com.github.smartcommit.core;
 
+import com.github.smartcommit.core.visitor.MemberVisitor;
 import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;

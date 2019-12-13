@@ -1,7 +1,7 @@
 package com.github.smartcommit.client;
 
 import com.github.smartcommit.core.RepoAnalyzer;
-import com.github.smartcommit.core.SimpleVisitor;
+import com.github.smartcommit.core.visitor.SimpleVisitor;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.FileType;
