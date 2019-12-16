@@ -22,7 +22,9 @@ public class TypeProvider implements ComponentAttributeProvider {
     if (component instanceof Edge) {
       Edge edge = (Edge) component;
       Map<String, Attribute> map = new HashMap<>();
-      map.put("type", new EdgeAttribute(edge));
+      map.put("type", new EdgeTypeAttribute(edge));
+      map.put("color", new EdgeColorAttribute(edge));
+      map.put("style", new EdgeStyleAttribute(edge));
       return map;
     }
     return null;
@@ -42,7 +44,7 @@ class NodeShapeAttribute implements Attribute {
       case PACKAGE:
         return "folder";
       case CLASS:
-//        return "circle";
+        //        return "circle";
         return "component";
       case METHOD:
         return "ellipse";
@@ -77,16 +79,52 @@ class NodeTypeAttribute implements Attribute {
   }
 }
 
-class EdgeAttribute implements Attribute {
+class EdgeTypeAttribute implements Attribute {
   private Edge edge;
 
-  public EdgeAttribute(Edge edge) {
+  public EdgeTypeAttribute(Edge edge) {
     this.edge = edge;
   }
 
   @Override
   public String getValue() {
     return edge.getType().asString();
+  }
+
+  @Override
+  public AttributeType getType() {
+    return AttributeType.STRING;
+  }
+}
+
+class EdgeColorAttribute implements Attribute {
+  private Edge edge;
+
+  public EdgeColorAttribute(Edge edge) {
+    this.edge = edge;
+  }
+
+  @Override
+  public String getValue() {
+    return edge.getType().isStructural() ? "black" : "red";
+  }
+
+  @Override
+  public AttributeType getType() {
+    return AttributeType.STRING;
+  }
+}
+
+class EdgeStyleAttribute implements Attribute {
+  private Edge edge;
+
+  public EdgeStyleAttribute(Edge edge) {
+    this.edge = edge;
+  }
+
+  @Override
+  public String getValue() {
+    return edge.getType().isStructural() ? "solid" : "dashed";
   }
 
   @Override
