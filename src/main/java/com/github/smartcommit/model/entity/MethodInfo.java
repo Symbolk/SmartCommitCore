@@ -28,6 +28,7 @@ public class MethodInfo {
   public Set<String> fieldUses = new HashSet<>();
   public Set<String> exceptionThrows = new HashSet<>();
 
+  // corresponding node in the graph
   public Node node;
 
   public IMethodBinding methodBinding;

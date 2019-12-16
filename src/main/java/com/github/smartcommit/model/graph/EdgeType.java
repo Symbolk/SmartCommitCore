@@ -11,8 +11,9 @@ public enum EdgeType {
   DEFINE("defines"),
   /** across-node edges * */
   // inter-field/terminal edges
-  READ("reads field"),
-  WRITE("writes field"),
+  ACCESS("access_field"),
+  //  READ("reads field"),
+  //  WRITE("writes field"),
   // call terminal/constructor
   CALL("calls method"),
   // declare/initialize object

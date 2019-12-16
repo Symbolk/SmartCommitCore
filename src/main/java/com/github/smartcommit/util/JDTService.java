@@ -1,5 +1,6 @@
 package com.github.smartcommit.util;
 
+import com.github.smartcommit.model.entity.FieldInfo;
 import com.github.smartcommit.model.entity.MethodInfo;
 import org.eclipse.jdt.core.dom.*;
 
@@ -91,6 +92,44 @@ public class JDTService {
       return pack.getName().getFullyQualifiedName();
     }
     return "";
+  }
+
+  /**
+   * Collect information from a FieldDeclaration. Each FieldDeclaration can declare multiple fields
+   *
+   * @param node
+   * @param belongTo
+   * @return
+   */
+  public List<FieldInfo> createFieldInfos(FieldDeclaration node, String belongTo) {
+    List<FieldInfo> fieldInfos = new ArrayList<>();
+    Type type = node.getType();
+    Set<String> types = getTypes(type);
+    String typeString = type.toString();
+    String visibility = getVisibility(node);
+    boolean isStatic = isStatic(node);
+    boolean isFinal = isFinal(node);
+    String comment = "";
+    if (node.getJavadoc() != null)
+      comment =
+          sourceContent.substring(
+              node.getJavadoc().getStartPosition(),
+              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    List<VariableDeclarationFragment> fragments = node.fragments();
+    for (VariableDeclarationFragment fragment : fragments) {
+
+      FieldInfo fieldInfo = new FieldInfo();
+      fieldInfo.belongTo = belongTo;
+      fieldInfo.name = fragment.getName().getFullyQualifiedName();
+      fieldInfo.typeString = typeString;
+      fieldInfo.types = types;
+      fieldInfo.visibility = visibility;
+      fieldInfo.isFinal = isFinal;
+      fieldInfo.isStatic = isStatic;
+      fieldInfo.comment = comment;
+      fieldInfos.add(fieldInfo);
+    }
+    return fieldInfos;
   }
 
   /**
