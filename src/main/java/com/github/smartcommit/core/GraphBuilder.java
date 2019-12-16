@@ -9,6 +9,7 @@ import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.JDTService;
+import com.github.smartcommit.util.NameResolver;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
@@ -64,6 +65,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
     String[] srcPaths = new String[srcPathSet.size()];
     srcPathSet.toArray(srcPaths);
+    NameResolver.setSrcPathSet(srcPathSet);
     String[] srcFolderPaths = new String[srcFolderSet.size()];
     srcFolderSet.toArray(srcFolderPaths);
 
