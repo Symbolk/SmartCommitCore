@@ -29,7 +29,7 @@ public class MemberVisitor extends ASTVisitor {
 
   @Override
   public boolean visit(PackageDeclaration node) {
-    Node pkgNode = getOrCreatePkgNode(node.getName().getFullyQualifiedName());
+    getOrCreatePkgNode(node.getName().getFullyQualifiedName());
     return true;
   }
 

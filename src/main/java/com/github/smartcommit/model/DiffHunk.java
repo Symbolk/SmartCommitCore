@@ -1,6 +1,7 @@
 package com.github.smartcommit.model;
 
 import com.github.smartcommit.model.constant.ChangeType;
+import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
 
 import java.util.List;
@@ -99,4 +100,9 @@ public class DiffHunk {
   //    }
   //    this.changeActions.add(actionCluster);
   //  }
+
+  public boolean containsCode() {
+    return baseHunk.getContentType().equals(ContentType.CODE)
+        || currentHunk.getContentType().equals(ContentType.CODE);
+  }
 }

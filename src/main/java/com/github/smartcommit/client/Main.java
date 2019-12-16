@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /** Main test and debug class */
 public class Main {
@@ -47,16 +48,18 @@ public class Main {
     for (DiffFile diffFile : diffFiles) {
       if (diffFile.getFileType().equals(FileType.JAVA)) {
         // get all diff hunks within this file
-        List<DiffHunk> diffHunksInFile = diffFile.getDiffHunks();
+        List<DiffHunk> diffHunksContainCode =
+            diffFile.getDiffHunks().stream()
+                .filter(diffHunk -> diffHunk.containsCode())
+                .collect(Collectors.toList());
         // parse the changed files into ASTs
         Pair<CompilationUnit, CompilationUnit> CUPair = jdtParser.generateCUPair(diffFile);
 
-        // extract change stems of each diff hunk, resolve symbols to get qualified name as the
-        // feature of the diff hunk
+        // use gumtree to compare change stem subtrees
         if (CUPair.getRight() != null) {
           CompilationUnit cu = CUPair.getRight();
-//          List<BodyDeclaration> declarations = jdtService.getDescendants(cu);
-          for (DiffHunk diffHunk : diffHunksInFile) {
+          //          List<BodyDeclaration> declarations = jdtService.getDescendants(cu);
+          for (DiffHunk diffHunk : diffHunksContainCode) {
             // find nodes covered or covering by each diff hunk
             int startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
             int endPos = cu.getPosition(diffHunk.getCurrentEndLine() + 1, 0);

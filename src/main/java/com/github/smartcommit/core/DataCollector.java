@@ -1,6 +1,7 @@
 package com.github.smartcommit.core;
 
 import com.github.smartcommit.client.Config;
+import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
@@ -59,11 +60,11 @@ public class DataCollector {
     // build the graph
     ExecutorService executorService = Executors.newFixedThreadPool(1);
     Future<Graph<Node, Edge>> baseBuilder = executorService.submit(new GraphBuilder(baseDir));
-//    Future<Graph<Node, Edge>> currentBuilder =executorService.submit(new GraphBuilder(currentDir));
+    Future<Graph<Node, Edge>> currentBuilder =executorService.submit(new GraphBuilder(currentDir));
     try{
       Graph<Node, Edge> baseGraph = baseBuilder.get();
-//      Graph<Node, Edge> currentGraph = currentBuilder.get();
-
+      Graph<Node, Edge> currentGraph = currentBuilder.get();
+      String graphDotString = GraphExporter.exportAsDotWithType(baseGraph);
     }catch (Exception e){
       e.printStackTrace();
     }

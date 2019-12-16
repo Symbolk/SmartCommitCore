@@ -1,7 +1,6 @@
 package com.github.smartcommit.core;
 
 import com.github.smartcommit.core.visitor.MemberVisitor;
-import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.EntityPool;
 import com.github.smartcommit.model.entity.FieldInfo;
 import com.github.smartcommit.model.entity.MethodInfo;
@@ -114,6 +113,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     }
 
     for (MethodInfo methodInfo : methodDecMap.values()) {
+      // method invocation
       Set<IMethodBinding> methodCalls = methodInfo.methodCalls;
       for (IMethodBinding methodCall : methodCalls) {
         MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
@@ -123,6 +123,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         }
       }
 
+      // field access
       Set<String> fieldUses = methodInfo.fieldUses;
       for (String fieldUse : fieldUses) {
         FieldInfo targetFieldInfo = fieldDecMap.get(fieldUse);
@@ -132,8 +133,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         }
       }
     }
-
-    String graphDotString = GraphExporter.exportAsDotWithType(graph);
 
     return graph;
   }
