@@ -15,7 +15,8 @@ public class TypeProvider implements ComponentAttributeProvider {
     if (component instanceof Node) {
       Node node = (Node) component;
       Map<String, Attribute> map = new HashMap<>();
-      map.put("type", new NodeAttribute(node));
+      map.put("type", new NodeTypeAttribute(node));
+      map.put("shape", new NodeShapeAttribute(node));
       return map;
     }
     if (component instanceof Edge) {
@@ -28,10 +29,40 @@ public class TypeProvider implements ComponentAttributeProvider {
   }
 }
 
-class NodeAttribute implements Attribute {
+class NodeShapeAttribute implements Attribute {
   private Node node;
 
-  public NodeAttribute(Node node) {
+  public NodeShapeAttribute(Node node) {
+    this.node = node;
+  }
+
+  @Override
+  public String getValue() {
+    switch (node.getType()) {
+      case PACKAGE:
+        return "folder";
+      case CLASS:
+//        return "circle";
+        return "component";
+      case METHOD:
+        return "ellipse";
+      case FIELD:
+        return "box";
+      default:
+        return "";
+    }
+  }
+
+  @Override
+  public AttributeType getType() {
+    return AttributeType.STRING;
+  }
+}
+
+class NodeTypeAttribute implements Attribute {
+  private Node node;
+
+  public NodeTypeAttribute(Node node) {
     this.node = node;
   }
 

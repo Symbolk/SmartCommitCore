@@ -38,8 +38,9 @@ public class GraphExporter {
       // use helper classes to define how vertices should be rendered,
       // adhering to the DOT language restrictions
       ComponentNameProvider<Node> vertexIdProvider = node -> node.getId().toString();
-      ComponentAttributeProvider<Node> vertexAttributeProvider = new TypeProvider();
       ComponentNameProvider<Node> vertexLabelProvider = node -> node.getIdentifier();
+      ComponentAttributeProvider<Node> vertexAttributeProvider = new TypeProvider();
+
       ComponentAttributeProvider<Edge> edgeAttributeProvider = new TypeProvider();
       ComponentNameProvider<Edge> edgeLabelProvider = edge -> edge.getType().asString();
       org.jgrapht.io.GraphExporter<Node, Edge> exporter =
