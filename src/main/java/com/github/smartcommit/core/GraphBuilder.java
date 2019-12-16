@@ -79,7 +79,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     parser.setCompilerOptions(options);
     parser.setBindingsRecovery(true);
 
-    // Vertex: create nodes when visiting the ASTs
+    // Vertex: create nodes and nesting edges while visiting the ASTs
     parser.createASTs(
         srcPaths,
         null,

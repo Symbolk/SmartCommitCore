@@ -2,6 +2,7 @@ package com.github.smartcommit.model.graph;
 
 /** Node declarations */
 public enum NodeType {
+  PROJECT("project"), // unused
   PACKAGE("package"),
   COMPILATION_UNIT("compilation_unit"), // logical node to represent file
 
