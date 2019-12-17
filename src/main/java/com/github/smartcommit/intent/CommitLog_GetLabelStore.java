@@ -7,6 +7,8 @@ import com.github.smartcommit.util.Utils;
 
 import java.util.List;
 import java.util.ArrayList;
+import org.apache.commons.io.FileUtils;
+import java.io.File;
 
 // Example
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
@@ -38,14 +40,15 @@ public class CommitLog_GetLabelStore {
         List<String> commitAuthors =new ArrayList<String>();
         List<String> commitDates =new ArrayList<String>();
         List<String> commitMessages =new ArrayList<String>();
-        List<String> commitIndents =new ArrayList<String>();
-        System.out.println("Get? " + getIt(REPO_DIR, commitLog, commitIDs, commitAuthors, commitDates, commitMessages));
-        System.out.println("Label? " + lableIt(REPO_NAME, REPO_DIR, commitID));
-        System.out.println("Store? " + storeIt(REPO_NAME, REPO_DIR, commitLog, commitIDs));
+        List<String> commitIntents =new ArrayList<String>();
+        System.out.println("Get Succeed? " + getIt(REPO_DIR, commitLog, commitIDs, commitAuthors, commitDates, commitMessages));
+        System.out.println("Label Succeed? " + lableIt(REPO_DIR, commitMessages, commitIntents));
+        System.out.println("Store Succeed? " + storeIt(REPO_NAME, commitIDs, commitAuthors,
+                commitDates, commitMessages, commitIntents));
     }
     // Get All commit Messages
-    public static boolean getIt(String REPO_DIR, List commitLog,
-                                List commitIDs, List commitAuthors, List commitDates, List commitMessages) {
+    public static boolean getIt(String REPO_DIR, List<String> commitLog, List<String> commitIDs,
+                                List<String> commitAuthors, List<String> commitDates, List<String> commitMessages) {
         GitService gitService = new GitServiceCGit();
 
         // Just get ID and msg
@@ -78,32 +81,30 @@ public class CommitLog_GetLabelStore {
         return true;
     }
     // Cluster to get label using gumtree
-    public static boolean lableIt(String REPO_NAME, String REPO_DIR, String commitID) {
-        try{
-            double similarity = 0D;
-            JdtTreeGenerator generator = new JdtTreeGenerator();
-            generator.setKind(ASTParser.K_STATEMENTS);
-            TreeContext baseContext = generator.generateFrom().string(commitID);
-            TreeContext othersContext = generator.generateFrom().string(commitID);
-            ITree baseRoot = baseContext.getRoot();
-            ITree othersRoot = othersContext.getRoot();
-            Matcher matcher = Matchers.getInstance().getMatcher();
-            MappingStore mappings = matcher.match(baseRoot, othersRoot);
-            similarity = SimilarityMetrics.diceSimilarity(baseRoot, othersRoot, mappings);
-            if(Double.isNaN(similarity)){
-                System.out.println("NaN");
-            } else {
-                System.out.println("Similarity: "+ similarity);
+    public static boolean lableIt(String REPO_DIR, List<String> commitMessages, List<String> commitIntents) {
+        try {
+            List<String> intents;
+            intents = FileUtils.readLines(new File(REPO_DIR +File.separator+"intents-selected.txt"));
+            for (String msg : commitMessages) {
+                for (String intent : intents) {
+                    if(msg.contains(intent)) {
+                         commitIntents.add(intent);
+                         break;
+                    }
+                }
+                commitIntents.add("unknown");
             }
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
         }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        //System.out.println("Intent1 : " + commitIntents.get(1));
+        return true;
     }
 
     // Store the label and message into mongodb
-    public static boolean storeIt(String REPO_NAME, String REPO_DIR, List<String> commitLog, List<String> commitIDs) {
+    public static boolean storeIt(String REPO_NAME, List<String> commitIDs, List<String> commitAuthors,
+                                  List<String> commitDates, List<String> commitMessages, List<String> commitIntents) {
         MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
         MongoClient mongoClient = new MongoClient(connectionString);
         MongoDatabase sampleDB = mongoClient.getDatabase("samples");
@@ -115,10 +116,10 @@ public class CommitLog_GetLabelStore {
             Document sampleDoc = new Document("repo_name", REPO_NAME);
             sampleDoc
                     .append("commit_id", commitIDs.get(i))
-                    .append("commit_msg", commitLog.get(i))
-            //        .append("author", "non-known")
-            //        .append("email", "non-known")
-            //        .append("intent", "non-known")
+                    .append("commit_msg", commitMessages.get(i))
+                    .append("author", commitAuthors.get(i))
+                    .append("date", commitDates.get(i))
+                    .append("intent", commitIntents.get(i))
             ;
             repoCol.insertOne(sampleDoc);
         }
