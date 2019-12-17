@@ -38,26 +38,46 @@ public class LabelCollector {
         String commitID = "f4b3f611c4e49ecaded58dcb49262f55e56a3322";
         List<String> commitLog =new ArrayList<String>();
         List<String> commitIDs =new ArrayList<String>();
+        List<String> commitAuthors =new ArrayList<String>();
+        List<String> commitDates =new ArrayList<String>();
         List<String> commitMessages =new ArrayList<String>();
-        System.out.println("Get? " + getLog(REPO_DIR, commitLog, commitIDs, commitMessages));
+        List<String> commitIndents =new ArrayList<String>();
+        System.out.println("Get? " + getLog(REPO_DIR, commitLog, commitIDs, commitAuthors, commitDates, commitMessages));
         System.out.println("Label? " + gumtree(REPO_NAME, REPO_DIR, commitID));
         System.out.println("Store? " + mongodb(REPO_NAME, REPO_DIR, commitLog, commitIDs));
     }
     // Get All commit Messages
-    public static boolean getLog(String REPO_DIR, List commitLog, List commitIDs, List commitMessages) {
+    public static boolean getLog(String REPO_DIR, List commitLog,
+                                 List commitIDs, List commitAuthors, List commitDates,  List commitMessages) {
         GitService gitService = new GitServiceCGit();
 
         // Just get ID and msg
         // String log = Utils.runSystemCommand(REPO_DIR, "git", "log", "--oneline");
+        /*
         String log = Utils.runSystemCommand(REPO_DIR, "git", "log", "--pretty=oneline");
         String lines[] = log.split("\\r?\\n"), body[];
-        for (String line : lines){
+        for (String line : lines) {
             commitLog.add(line);
             body = line.split(" ");
             commitIDs.add(body[0]);
             commitMessages.add(body[1]);
         }
-        System.out.println("Log0: " + commitIDs.get(0));
+
+         */
+        //System.out.println("Log0: " + commitIDs.get(0));
+
+        // get all the commit details
+        String log = Utils.runSystemCommand(REPO_DIR, "git", "log");
+        String parts[] = log.split("\\ncommit"), body[];
+        for (String part : parts) {
+            commitLog.add(part);
+            body = part.split("\\nAuthor:|\\nDate:|\\n\\n");
+            commitIDs.add(body[0]);
+            commitAuthors.add(body[1]);
+            commitDates.add(body[2]);
+            commitMessages.add(body[3]);
+        }
+        //System.out.println("Log0: " + commitMessages.get(1));
         return true;
     }
     // Cluster to get label using gumtree
