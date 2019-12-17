@@ -87,7 +87,7 @@ public class CommitLog_GetLabelStore {
             intents = FileUtils.readLines(new File(REPO_DIR +File.separator+"intents-selected.txt"));
             for (String msg : commitMessages) {
                 for (String intent : intents) {
-                    if(msg.contains(intent)) {
+                    if(msg.toLowerCase().contains(intent)) {
                          commitIntents.add(intent);
                          break;
                     }
