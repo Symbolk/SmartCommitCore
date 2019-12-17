@@ -6,7 +6,8 @@ import java.util.List;
 public class ClassInfo {
 
   public String name;
-  public String belongTo;
+  //  public String belongTo;
+  public String fullName;
   public String visibility = "package";
   public boolean isAbstract = false;
   public boolean isFinal = false;
@@ -16,6 +17,7 @@ public class ClassInfo {
   public String content;
 
   public String uniqueName() {
-    return belongTo + "." + name;
+    //    return belongTo + "." + name;
+    return fullName;
   }
 }

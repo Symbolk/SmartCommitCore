@@ -1,8 +1,10 @@
 package com.github.smartcommit.core;
 
 import com.github.smartcommit.client.Config;
+import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.constant.FileStatus;
+import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.GitService;
@@ -32,23 +34,23 @@ public class DataCollector {
     String baseDir = TEMP_DIR + File.separator + REPO_NAME + File.separator + COMMIT_ID + File.separator + "a" + File.separator;
     String currentDir = TEMP_DIR + File.separator + REPO_NAME + File.separator + COMMIT_ID + File.separator + "b" + File.separator;
 
-    ArrayList<DiffFile> filePairs = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
+    ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
     // collect the diff files into the data dir
     int count = 0;
-    for (DiffFile filePair : filePairs) {
+    for (DiffFile diffFile : diffFiles) {
       // currently only collect MODIFIED Java files
-      if (filePair.getBaseRelativePath().endsWith(".java")
-          && filePair.getStatus().equals(FileStatus.MODIFIED)) {
+      if (diffFile.getFileType().equals(FileType.JAVA)
+          && diffFile.getStatus().equals(FileStatus.MODIFIED)) {
 
-        String aPath = baseDir + filePair.getBaseRelativePath();
-        String bPath = currentDir + filePair.getCurrentRelativePath();
-        boolean aOk = Utils.writeContentToPath(aPath, filePair.getBaseContent());
-        boolean bOk = Utils.writeContentToPath(bPath, filePair.getCurrentContent());
+        String aPath = baseDir + diffFile.getBaseRelativePath();
+        String bPath = currentDir + diffFile.getCurrentRelativePath();
+        boolean aOk = Utils.writeContentToPath(aPath, diffFile.getBaseContent());
+        boolean bOk = Utils.writeContentToPath(bPath, diffFile.getCurrentContent());
         if (aOk && bOk) {
           count ++;
 //          System.out.println(aPath);
         } else {
-          logger.error("Error with: " + filePair.getBaseRelativePath());
+          logger.error("Error with: " + diffFile.getBaseRelativePath());
         }
       }
     }
@@ -57,12 +59,12 @@ public class DataCollector {
 
     // build the graph
     ExecutorService executorService = Executors.newFixedThreadPool(1);
-    Future<Graph<Node, Edge>> baseBuilder =executorService.submit(new GraphBuilder(baseDir));
-//    Future<Graph<Node, Edge>> currentBuilder =executorService.submit(new GraphBuilder(currentDir));
+    Future<Graph<Node, Edge>> baseBuilder = executorService.submit(new GraphBuilder(baseDir));
+    Future<Graph<Node, Edge>> currentBuilder =executorService.submit(new GraphBuilder(currentDir));
     try{
       Graph<Node, Edge> baseGraph = baseBuilder.get();
-//      Graph<Node, Edge> currentGraph = currentBuilder.get();
-
+      Graph<Node, Edge> currentGraph = currentBuilder.get();
+      String graphDotString = GraphExporter.exportAsDotWithType(baseGraph);
     }catch (Exception e){
       e.printStackTrace();
     }

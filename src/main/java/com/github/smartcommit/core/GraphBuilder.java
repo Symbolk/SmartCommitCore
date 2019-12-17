@@ -1,7 +1,6 @@
 package com.github.smartcommit.core;
 
 import com.github.smartcommit.core.visitor.MemberVisitor;
-import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.EntityPool;
 import com.github.smartcommit.model.entity.FieldInfo;
 import com.github.smartcommit.model.entity.MethodInfo;
@@ -9,8 +8,8 @@ import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.JDTService;
+import com.github.smartcommit.util.NameResolver;
 import org.apache.commons.io.FileUtils;
-import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
 import org.jgrapht.Graph;
@@ -51,11 +50,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
   public Graph<Node, Edge> call() {
     EntityPool entityPool = new EntityPool(srcDir);
     Graph<Node, Edge> graph = initGraph();
-    // parse diff java files into CUs
-    final Map<ICompilationUnit, ASTNode> parsedCompilationUnits =
-        new HashMap<ICompilationUnit, ASTNode>();
-    ASTParser parser = ASTParser.newParser(AST.JLS9);
 
+    // get all java files by extension in the source directory
     Collection<File> javaFiles = FileUtils.listFiles(new File(srcDir), new String[] {"java"}, true);
     Set<String> srcPathSet = new HashSet<>();
     Set<String> srcFolderSet = new HashSet<>();
@@ -68,9 +64,11 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
     String[] srcPaths = new String[srcPathSet.size()];
     srcPathSet.toArray(srcPaths);
+    NameResolver.setSrcPathSet(srcPathSet);
     String[] srcFolderPaths = new String[srcFolderSet.size()];
     srcFolderSet.toArray(srcFolderPaths);
 
+    ASTParser parser = ASTParser.newParser(AST.JLS9);
     //        parser.setProject(WorkspaceUtilities.javaProject);
     parser.setKind(ASTParser.K_COMPILATION_UNIT);
     parser.setEnvironment(null, srcFolderPaths, null, true);
@@ -81,7 +79,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     options.put(JavaCore.COMPILER_DOC_COMMENT_SUPPORT, JavaCore.ENABLED);
     parser.setCompilerOptions(options);
     parser.setBindingsRecovery(true);
-    // Vertex: create nodes when visiting the ASTs
+
+    // Vertex: create nodes and nesting edges while visiting the ASTs
     parser.createASTs(
         srcPaths,
         null,
@@ -102,19 +101,19 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           }
         },
         null);
-    String graphDotString = GraphExporter.exportAsDotWithType(graph);
 
     // Edge: create inter-entity edges with the EntityPool and EntityInfo
     int edgeCount = graph.edgeSet().size();
-    Map<String, MethodInfo> methodDecMap = new HashMap<>();
-    Map<String, FieldInfo> fieldDecMap = new HashMap<>();
+    Map<String, MethodInfo> methodDecMap = entityPool.methodInfoMap;
+    Map<String, FieldInfo> fieldDecMap = entityPool.fieldInfoMap;
     Map<IMethodBinding, MethodInfo> methodBindingMap = new HashMap<>();
+    // create nodes for type/field/method
     for (MethodInfo methodInfo : entityPool.methodInfoMap.values()) {
-      methodDecMap.put(methodInfo.uniqueName(), methodInfo);
       methodBindingMap.put(methodInfo.methodBinding, methodInfo);
     }
 
     for (MethodInfo methodInfo : methodDecMap.values()) {
+      // method invocation
       Set<IMethodBinding> methodCalls = methodInfo.methodCalls;
       for (IMethodBinding methodCall : methodCalls) {
         MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
@@ -123,7 +122,18 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               methodInfo.node, targetMethodInfo.node, new Edge(edgeCount++, EdgeType.CALL));
         }
       }
+
+      // field access
+      Set<String> fieldUses = methodInfo.fieldUses;
+      for (String fieldUse : fieldUses) {
+        FieldInfo targetFieldInfo = fieldDecMap.get(fieldUse);
+        if (targetFieldInfo != null) {
+          graph.addEdge(
+              methodInfo.node, targetFieldInfo.node, new Edge(edgeCount++, EdgeType.ACCESS));
+        }
+      }
     }
+
     return graph;
   }
 }

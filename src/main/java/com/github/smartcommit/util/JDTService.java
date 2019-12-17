@@ -1,5 +1,8 @@
 package com.github.smartcommit.util;
 
+import com.github.smartcommit.model.entity.ClassInfo;
+import com.github.smartcommit.model.entity.FieldInfo;
+import com.github.smartcommit.model.entity.InterfaceInfo;
 import com.github.smartcommit.model.entity.MethodInfo;
 import org.eclipse.jdt.core.dom.*;
 
@@ -94,9 +97,104 @@ public class JDTService {
   }
 
   /**
+   * Collect information from interface declaration
+   *
+   * @param node
+   * @return
+   */
+  public InterfaceInfo createInterfaceInfo(TypeDeclaration node) {
+    InterfaceInfo interfaceInfo = new InterfaceInfo();
+    interfaceInfo.name = node.getName().getFullyQualifiedName();
+    interfaceInfo.fullName = NameResolver.getFullName(node);
+    interfaceInfo.visibility = getVisibility(node);
+    List<Type> superInterfaceList = node.superInterfaceTypes();
+    for (Type superInterface : superInterfaceList)
+      interfaceInfo.superInterfaceTypeList.add(NameResolver.getFullName(superInterface));
+    if (node.getJavadoc() != null)
+      interfaceInfo.comment =
+          sourceContent.substring(
+              node.getJavadoc().getStartPosition(),
+              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    interfaceInfo.content =
+        sourceContent.substring(
+            node.getStartPosition(), node.getStartPosition() + node.getLength());
+    return interfaceInfo;
+  }
+
+  /**
+   * Collect information from class declaration
+   *
+   * @param node
+   * @return
+   */
+  public ClassInfo createClassInfo(TypeDeclaration node) {
+    ClassInfo classInfo = new ClassInfo();
+    classInfo.name = node.getName().getFullyQualifiedName();
+    classInfo.fullName = NameResolver.getFullName(node);
+    classInfo.visibility = getVisibility(node);
+    classInfo.isAbstract = isAbstract(node);
+    classInfo.isFinal = isFinal(node);
+    classInfo.superClassType =
+        node.getSuperclassType() == null
+            ? "java.lang.Object"
+            : NameResolver.getFullName(node.getSuperclassType());
+    List<Type> superInterfaceList = node.superInterfaceTypes();
+    for (Type superInterface : superInterfaceList) {
+      classInfo.superInterfaceTypeList.add(NameResolver.getFullName(superInterface));
+    }
+    if (node.getJavadoc() != null) {
+      classInfo.comment =
+          sourceContent.substring(
+              node.getJavadoc().getStartPosition(),
+              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+      classInfo.content =
+          sourceContent.substring(
+              node.getStartPosition(), node.getStartPosition() + node.getLength());
+    }
+    return classInfo;
+  }
+  /**
+   * Collect information from a FieldDeclaration. Each FieldDeclaration can declare multiple fields
+   *
+   * @param node
+   * @param belongTo
+   * @return
+   */
+  public List<FieldInfo> createFieldInfos(FieldDeclaration node, String belongTo) {
+    List<FieldInfo> fieldInfos = new ArrayList<>();
+    Type type = node.getType();
+    Set<String> types = getTypes(type);
+    String typeString = type.toString();
+    String visibility = getVisibility(node);
+    boolean isStatic = isStatic(node);
+    boolean isFinal = isFinal(node);
+    String comment = "";
+    if (node.getJavadoc() != null)
+      comment =
+          sourceContent.substring(
+              node.getJavadoc().getStartPosition(),
+              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    List<VariableDeclarationFragment> fragments = node.fragments();
+    for (VariableDeclarationFragment fragment : fragments) {
+
+      FieldInfo fieldInfo = new FieldInfo();
+      fieldInfo.belongTo = belongTo;
+      fieldInfo.name = fragment.getName().getFullyQualifiedName();
+      fieldInfo.typeString = typeString;
+      fieldInfo.types = types;
+      fieldInfo.visibility = visibility;
+      fieldInfo.isFinal = isFinal;
+      fieldInfo.isStatic = isStatic;
+      fieldInfo.comment = comment;
+      fieldInfos.add(fieldInfo);
+    }
+    return fieldInfos;
+  }
+
+  /**
    * Collect information from a MethodDeclaration
    *
-   * @borrowed_from https://github.com/linzeqipku/SnowGraph
+   * @thanks_to https://github.com/linzeqipku/SnowGraph
    * @param node
    * @param belongTo
    * @return
@@ -145,7 +243,7 @@ public class JDTService {
   /**
    * Parse the method body block to collect useful information
    *
-   * @borrowed_from https://github.com/linzeqipku/SnowGraph
+   * @thanks_to https://github.com/linzeqipku/SnowGraph
    * @param methodBody
    */
   public void parseMethodBody(MethodInfo methodInfo, Block methodBody) {
@@ -285,7 +383,7 @@ public class JDTService {
   /**
    * Parse the expressions to get method calls and filed uses
    *
-   * @borrowed_from https://github.com/linzeqipku/SnowGraph
+   * @thanks_to https://github.com/linzeqipku/SnowGraph
    * @param expression
    */
   private void parseExpression(MethodInfo methodInfo, Expression expression) {

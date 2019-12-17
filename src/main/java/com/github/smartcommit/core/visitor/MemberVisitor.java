@@ -1,6 +1,9 @@
 package com.github.smartcommit.core.visitor;
 
 import com.github.smartcommit.model.EntityPool;
+import com.github.smartcommit.model.entity.ClassInfo;
+import com.github.smartcommit.model.entity.FieldInfo;
+import com.github.smartcommit.model.entity.InterfaceInfo;
 import com.github.smartcommit.model.entity.MethodInfo;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;
@@ -16,31 +19,38 @@ import java.util.Optional;
 public class MemberVisitor extends ASTVisitor {
   private EntityPool entityPool;
   private Graph<Node, Edge> graph;
-  private JDTService service;
+  private JDTService jdtService;
 
-  public MemberVisitor(EntityPool entityPool, Graph<Node, Edge> graph, JDTService service) {
+  public MemberVisitor(EntityPool entityPool, Graph<Node, Edge> graph, JDTService jdtService) {
     this.entityPool = entityPool;
     this.graph = graph;
-    this.service = service;
+    this.jdtService = jdtService;
   }
 
   @Override
   public boolean visit(PackageDeclaration node) {
-    Node pkgNode = getOrCreatePkgNode(node.getName().getFullyQualifiedName());
+    getOrCreatePkgNode(node.getName().getFullyQualifiedName());
     return true;
   }
 
   @Override
   public boolean visit(TypeDeclaration type) {
+    if (type.isInterface()) {
+      InterfaceInfo interfaceInfo = jdtService.createInterfaceInfo(type);
+      entityPool.interfaceInfoMap.put(interfaceInfo.fullName, interfaceInfo);
+    } else {
+      ClassInfo classInfo = jdtService.createClassInfo(type);
+      entityPool.classInfoMap.put(classInfo.fullName, classInfo);
+    }
+    // create the node for the current type declaration
     NodeType nodeType = type.isInterface() ? NodeType.INTERFACE : NodeType.CLASS;
-    String qualifiedNameForType = service.getQualifiedNameForType(type);
+    String qualifiedNameForType = jdtService.getQualifiedNameForType(type);
     Node typeNode =
         new Node(generateNodeID(), nodeType, type.getName().getIdentifier(), qualifiedNameForType);
-    //            type.getName().getFullyQualifiedName());
     graph.addVertex(typeNode);
 
     // find and link with the package node
-    String packageName = service.getPackageName(type);
+    String packageName = jdtService.getPackageName(type);
     if (!packageName.isEmpty()) {
       Node pkgNode = getOrCreatePkgNode(packageName);
       graph.addEdge(pkgNode, typeNode, new Edge(generateEdgeID(), EdgeType.CONTAIN));
@@ -49,17 +59,18 @@ public class MemberVisitor extends ASTVisitor {
     // process the members inside the current type
     FieldDeclaration[] fieldDeclarations = type.getFields();
     for (FieldDeclaration fieldDeclaration : fieldDeclarations) {
-      List<VariableDeclarationFragment> fragments = fieldDeclaration.fragments();
-      for (VariableDeclarationFragment fragment : fragments) {
+      // each field declaration can declare multiple fields with the common properties
+      List<FieldInfo> fieldInfos =
+          jdtService.createFieldInfos(fieldDeclaration, qualifiedNameForType);
+      for (FieldInfo fieldInfo : fieldInfos) {
         Node fieldNode =
-            new Node(
-                generateNodeID(),
-                NodeType.FIELD,
-                fragment.getName().getIdentifier(),
-                qualifiedNameForType + ":" + fragment.getName().getFullyQualifiedName());
+            new Node(generateNodeID(), NodeType.FIELD, fieldInfo.name, fieldInfo.uniqueName());
         graph.addVertex(fieldNode);
         graph.addEdge(typeNode, fieldNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
 
+        fieldInfo.node = fieldNode;
+
+        entityPool.fieldInfoMap.put(fieldInfo.uniqueName(), fieldInfo);
       }
     }
 
@@ -74,7 +85,7 @@ public class MemberVisitor extends ASTVisitor {
       graph.addVertex(methodNode);
       graph.addEdge(typeNode, methodNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
 
-      MethodInfo methodInfo = service.createMethodInfo(methodDeclaration, qualifiedNameForType);
+      MethodInfo methodInfo = jdtService.createMethodInfo(methodDeclaration, qualifiedNameForType);
       methodInfo.node = methodNode;
       entityPool.methodInfoMap.put(methodInfo.uniqueName(), methodInfo);
     }
