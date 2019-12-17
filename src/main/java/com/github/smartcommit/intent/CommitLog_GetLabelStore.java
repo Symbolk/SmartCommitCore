@@ -1,13 +1,10 @@
 package com.github.smartcommit.intent;
 
 // DataCollector
-import com.github.smartcommit.model.DiffFile;
-import com.github.smartcommit.model.DiffHunk;
-import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
-import java.io.File;
+
 import java.util.List;
 import java.util.ArrayList;
 
@@ -31,7 +28,7 @@ import org.bson.Document;
 
 
 // Commit message:  Get, Label, Store
-public class LabelCollector {
+public class CommitLog_GetLabelStore {
     public static void main(String[] args) {
         String REPO_NAME = "guava";
         String REPO_DIR = "/Users/Chuncen/IdeaProjects/" + REPO_NAME;
@@ -42,13 +39,13 @@ public class LabelCollector {
         List<String> commitDates =new ArrayList<String>();
         List<String> commitMessages =new ArrayList<String>();
         List<String> commitIndents =new ArrayList<String>();
-        System.out.println("Get? " + getLog(REPO_DIR, commitLog, commitIDs, commitAuthors, commitDates, commitMessages));
-        System.out.println("Label? " + gumtree(REPO_NAME, REPO_DIR, commitID));
-        System.out.println("Store? " + mongodb(REPO_NAME, REPO_DIR, commitLog, commitIDs));
+        System.out.println("Get? " + getIt(REPO_DIR, commitLog, commitIDs, commitAuthors, commitDates, commitMessages));
+        System.out.println("Label? " + lableIt(REPO_NAME, REPO_DIR, commitID));
+        System.out.println("Store? " + storeIt(REPO_NAME, REPO_DIR, commitLog, commitIDs));
     }
     // Get All commit Messages
-    public static boolean getLog(String REPO_DIR, List commitLog,
-                                 List commitIDs, List commitAuthors, List commitDates,  List commitMessages) {
+    public static boolean getIt(String REPO_DIR, List commitLog,
+                                List commitIDs, List commitAuthors, List commitDates, List commitMessages) {
         GitService gitService = new GitServiceCGit();
 
         // Just get ID and msg
@@ -81,7 +78,7 @@ public class LabelCollector {
         return true;
     }
     // Cluster to get label using gumtree
-    public static boolean gumtree(String REPO_NAME, String REPO_DIR, String commitID) {
+    public static boolean lableIt(String REPO_NAME, String REPO_DIR, String commitID) {
         try{
             double similarity = 0D;
             JdtTreeGenerator generator = new JdtTreeGenerator();
@@ -106,7 +103,7 @@ public class LabelCollector {
     }
 
     // Store the label and message into mongodb
-    public static boolean mongodb(String REPO_NAME, String REPO_DIR, List<String> commitLog, List<String> commitIDs) {
+    public static boolean storeIt(String REPO_NAME, String REPO_DIR, List<String> commitLog, List<String> commitIDs) {
         MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
         MongoClient mongoClient = new MongoClient(connectionString);
         MongoDatabase sampleDB = mongoClient.getDatabase("samples");
