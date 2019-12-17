@@ -33,7 +33,7 @@ public class GumtreeExample {
 
     String projectPath = System.getProperty("user.dir");
     String fileRelativePath1 = "src/main/java/com/github/smartcommit/intent/GumtreeExample.java";
-    String fileRelativePath2 = "src/main/java/com/github/smartcommit/intent/Getlabel.java";
+    String fileRelativePath2 = "src/main/java/com/github/smartcommit/intent/LabelCollector.java";
     EditScript editScript =
         generateEditScript(
             FileUtils.readFileToString(new File(fileRelativePath1)),
