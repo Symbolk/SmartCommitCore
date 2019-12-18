@@ -1,7 +1,7 @@
 package com.github.smartcommit.client;
 
 import com.github.smartcommit.core.RepoAnalyzer;
-import com.github.smartcommit.core.visitor.SimpleVisitor;
+import com.github.smartcommit.core.visitor.MyNodeFinder;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.FileType;
@@ -11,8 +11,9 @@ import com.github.smartcommit.util.JDTParser;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.PropertyConfigurator;
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.NodeFinder;
+import org.eclipse.jdt.core.dom.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,26 +59,35 @@ public class Main {
         // use gumtree to compare change stem subtrees
         if (CUPair.getRight() != null) {
           CompilationUnit cu = CUPair.getRight();
-          //          List<BodyDeclaration> declarations = jdtService.getDescendants(cu);
           for (DiffHunk diffHunk : diffHunksContainCode) {
+            List<ASTNode> coveredNodes = new ArrayList<>();
             // find nodes covered or covering by each diff hunk
             int startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
             int endPos = cu.getPosition(diffHunk.getCurrentEndLine() + 1, 0);
             int length = endPos - startPos;
             if (length > 0) {
-              NodeFinder nodeFinder = new NodeFinder(cu, startPos, length);
-              ASTNode coveredNode = nodeFinder.getCoveredNode();
-              if (coveredNode != null) {
-                //                coveredNode = coveredNode.getParent();
-                // collect data and control flow symbols
-                //                IdentifierVisitor v = new IdentifierVisitor();
-                SimpleVisitor v = new SimpleVisitor();
-                coveredNode.accept(v);
-                //                v.getInvokedMethods();
-                diffHunk.setSimpleTypes(v.getSimpleTypes());
-                diffHunk.setSimpleNames(v.getSimpleNames());
+              MyNodeFinder nodeFinder = new MyNodeFinder(cu, startPos, length);
+              List<ASTNode> nodes = nodeFinder.getCoveredNodes();
+              for (ASTNode node : nodes) {
+                while (node != null
+                    && !(node instanceof Statement || node instanceof BodyDeclaration)) {
+                  node = node.getParent();
+                }
+                coveredNodes.add(node);
+                System.out.println(node);
               }
             }
+            //              if (node != null) {
+            //                //                node = node.getParent();
+            //                // collect data and control flow symbols
+            //                //                IdentifierVisitor v = new IdentifierVisitor();
+            //                SimpleVisitor v = new SimpleVisitor();
+            //                node.accept(v);
+            //                //                v.getInvokedMethods();
+            //                diffHunk.setSimpleTypes(v.getSimpleTypes());
+            //                diffHunk.setSimpleNames(v.getSimpleNames());
+            //              }
+            //            }
           }
         }
       }
