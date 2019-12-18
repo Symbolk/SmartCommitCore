@@ -35,19 +35,22 @@ public class MemberVisitor extends ASTVisitor {
 
   @Override
   public boolean visit(TypeDeclaration type) {
-    if (type.isInterface()) {
-      InterfaceInfo interfaceInfo = jdtService.createInterfaceInfo(type);
-      entityPool.interfaceInfoMap.put(interfaceInfo.fullName, interfaceInfo);
-    } else {
-      ClassInfo classInfo = jdtService.createClassInfo(type);
-      entityPool.classInfoMap.put(classInfo.fullName, classInfo);
-    }
     // create the node for the current type declaration
     NodeType nodeType = type.isInterface() ? NodeType.INTERFACE : NodeType.CLASS;
     String qualifiedNameForType = jdtService.getQualifiedNameForType(type);
     Node typeNode =
         new Node(generateNodeID(), nodeType, type.getName().getIdentifier(), qualifiedNameForType);
     graph.addVertex(typeNode);
+
+    if (type.isInterface()) {
+      InterfaceInfo interfaceInfo = jdtService.createInterfaceInfo(type);
+      interfaceInfo.node = typeNode;
+      entityPool.interfaceInfoMap.put(interfaceInfo.fullName, interfaceInfo);
+    } else {
+      ClassInfo classInfo = jdtService.createClassInfo(type);
+      classInfo.node = typeNode;
+      entityPool.classInfoMap.put(classInfo.fullName, classInfo);
+    }
 
     // find and link with the package node
     String packageName = jdtService.getPackageName(type);

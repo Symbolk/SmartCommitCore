@@ -1,8 +1,11 @@
 package com.github.smartcommit.core;
 
 import com.github.smartcommit.core.visitor.MemberVisitor;
+import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.EntityPool;
+import com.github.smartcommit.model.entity.ClassInfo;
 import com.github.smartcommit.model.entity.FieldInfo;
+import com.github.smartcommit.model.entity.InterfaceInfo;
 import com.github.smartcommit.model.entity.MethodInfo;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;
@@ -88,13 +91,17 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         new FileASTRequestor() {
           @Override
           public void acceptAST(String sourceFilePath, CompilationUnit cu) {
+            // get all diff hunks in the current file
+            // get all covered statement nodes in each diff hunk
+            // create nodes for statements in the graph
+            // create edges for statements
             try {
               cu.accept(
                   new MemberVisitor(
                       entityPool,
                       graph,
                       new JDTService(FileUtils.readFileToString(new File(sourceFilePath)))));
-              System.out.println(cu.getAST().hasBindingsRecovery());
+              //              System.out.println(cu.getAST().hasBindingsRecovery());
             } catch (Exception e) {
               e.printStackTrace();
             }
@@ -104,36 +111,100 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
     // Edge: create inter-entity edges with the EntityPool and EntityInfo
     int edgeCount = graph.edgeSet().size();
+    Map<String, ClassInfo> classDecMap = entityPool.classInfoMap;
+    Map<String, InterfaceInfo> interfaceDecMap = entityPool.interfaceInfoMap;
     Map<String, MethodInfo> methodDecMap = entityPool.methodInfoMap;
     Map<String, FieldInfo> fieldDecMap = entityPool.fieldInfoMap;
     Map<IMethodBinding, MethodInfo> methodBindingMap = new HashMap<>();
-    // create nodes for type/field/method
     for (MethodInfo methodInfo : entityPool.methodInfoMap.values()) {
       methodBindingMap.put(methodInfo.methodBinding, methodInfo);
     }
 
+    // edges from method declaration
     for (MethodInfo methodInfo : methodDecMap.values()) {
+      Node methodDeclNode = methodInfo.node;
       // method invocation
-      Set<IMethodBinding> methodCalls = methodInfo.methodCalls;
-      for (IMethodBinding methodCall : methodCalls) {
+      for (IMethodBinding methodCall : methodInfo.methodCalls) {
         MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
         if (targetMethodInfo != null) {
           graph.addEdge(
-              methodInfo.node, targetMethodInfo.node, new Edge(edgeCount++, EdgeType.CALL));
+              methodDeclNode, targetMethodInfo.node, new Edge(edgeCount++, EdgeType.CALL));
         }
       }
 
       // field access
-      Set<String> fieldUses = methodInfo.fieldUses;
-      for (String fieldUse : fieldUses) {
+      for (String fieldUse : methodInfo.fieldUses) {
         FieldInfo targetFieldInfo = fieldDecMap.get(fieldUse);
         if (targetFieldInfo != null) {
           graph.addEdge(
-              methodInfo.node, targetFieldInfo.node, new Edge(edgeCount++, EdgeType.ACCESS));
+              methodDeclNode, targetFieldInfo.node, new Edge(edgeCount++, EdgeType.ACCESS));
+        }
+      }
+
+      // param type
+      for (String param : methodInfo.paramTypes) {
+        ClassInfo targetClassInfo = classDecMap.get(param);
+        if (targetClassInfo != null) {
+          graph.addEdge(
+              methodDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.PARAM));
+        }
+        InterfaceInfo interfaceInfo = interfaceDecMap.get(param);
+        if (interfaceInfo != null) {
+          graph.addEdge(methodDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.PARAM));
+        }
+      }
+
+      // local var type
+      for (String localVarType : methodInfo.localVarTypes) {
+        ClassInfo targetClassInfo = classDecMap.get(localVarType);
+        if (targetClassInfo != null) {
+          graph.addEdge(
+              methodDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+        }
+        InterfaceInfo interfaceInfo = interfaceDecMap.get(localVarType);
+        if (interfaceInfo != null) {
+          graph.addEdge(methodDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
         }
       }
     }
 
+    // edges from field declaration
+    for (FieldInfo fieldInfo : fieldDecMap.values()) {
+      Node fieldDeclNode = fieldInfo.node;
+      // field type
+      for (String type : fieldInfo.types) {
+        ClassInfo targetClassInfo = classDecMap.get(type);
+        if (targetClassInfo != null) {
+          graph.addEdge(fieldDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.TYPE));
+        }
+        InterfaceInfo interfaceInfo = interfaceDecMap.get(type);
+        if (interfaceInfo != null) {
+          graph.addEdge(fieldDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.TYPE));
+        }
+      }
+
+      // method invocation
+      for (IMethodBinding methodCall : fieldInfo.methodCalls) {
+        MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
+        if (targetMethodInfo != null) {
+          graph.addEdge(fieldDeclNode, targetMethodInfo.node, new Edge(edgeCount++, EdgeType.CALL));
+        }
+      }
+
+      // type instance creation
+      for (String localVarType : fieldInfo.typeInitializes) {
+        ClassInfo targetClassInfo = classDecMap.get(localVarType);
+        if (targetClassInfo != null) {
+          graph.addEdge(fieldDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+        }
+        InterfaceInfo interfaceInfo = interfaceDecMap.get(localVarType);
+        if (interfaceInfo != null) {
+          graph.addEdge(fieldDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+        }
+      }
+    }
+
+    String graphDotString = GraphExporter.exportAsDotWithType(graph);
     return graph;
   }
 }

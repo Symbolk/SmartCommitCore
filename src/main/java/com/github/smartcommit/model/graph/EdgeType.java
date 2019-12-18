@@ -2,23 +2,25 @@ package com.github.smartcommit.model.graph;
 
 public enum EdgeType {
   /** file&folder level edges * */
-  CONTAIN(true, "contains"), // physical relation
-  IMPORT(false, "imports"),
-  EXTEND(false, "extends"),
-  IMPLEMENT(false, "implements"),
+  CONTAIN(true, "contain"), // physical relation
+  IMPORT(false, "import"),
+  EXTEND(false, "extend"),
+  IMPLEMENT(false, "implement"),
   /** inside-file edges * */
   // define field/terminal/constructor/inner type/constant
-  DEFINE(true, "defines"),
+  DEFINE(true, "define"),
   /** across-node edges * */
   // inter-field/terminal edges
   ACCESS(false, "access_field"),
   //  READ("reads field"),
   //  WRITE("writes field"),
-  // call terminal/constructor
-  CALL(false, "calls method"),
+  // call method
+  CALL(false, "call_method"),
   // declare/initialize object
-  DECLARE(false, "declares object"),
-  INITIALIZE(false, "initializes object");
+  DECLARE(false, "declare_object"),
+  PARAM(false, "parameter_type"),
+  TYPE(false, "field_type"),
+  INITIALIZE(false, "initialize");
 
   Boolean isStructural;
   String label;
