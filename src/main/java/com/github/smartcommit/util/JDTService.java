@@ -176,7 +176,6 @@ public class JDTService {
               node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
     List<VariableDeclarationFragment> fragments = node.fragments();
     for (VariableDeclarationFragment fragment : fragments) {
-
       FieldInfo fieldInfo = new FieldInfo();
       fieldInfo.belongTo = belongTo;
       fieldInfo.name = fragment.getName().getFullyQualifiedName();
@@ -186,6 +185,8 @@ public class JDTService {
       fieldInfo.isFinal = isFinal;
       fieldInfo.isStatic = isStatic;
       fieldInfo.comment = comment;
+      parseFieldInitializer(fieldInfo, fragment.getInitializer());
+
       fieldInfos.add(fieldInfo);
     }
     return fieldInfos;
@@ -241,18 +242,95 @@ public class JDTService {
   }
 
   /**
+   * Parse the field initializer expression to collect useful information.
+   *
+   * @param fieldInfo
+   * @param expression
+   */
+  public void parseFieldInitializer(FieldInfo fieldInfo, Expression expression) {
+    if (expression == null) {
+      return;
+    }
+    //    System.out.println(
+    //        expression.toString() + " : " +
+    // Annotation.nodeClassForType(expression.getNodeType()));
+    if (expression.getNodeType() == ASTNode.ARRAY_INITIALIZER) {
+      List<Expression> expressions = ((ArrayInitializer) expression).expressions();
+      for (Expression expression2 : expressions) {
+        parseFieldInitializer(fieldInfo, expression2);
+      }
+    }
+    if (expression.getNodeType() == ASTNode.CAST_EXPRESSION) {
+      parseFieldInitializer(fieldInfo, ((CastExpression) expression).getExpression());
+    }
+    if (expression.getNodeType() == ASTNode.CONDITIONAL_EXPRESSION) {
+      parseFieldInitializer(fieldInfo, ((ConditionalExpression) expression).getExpression());
+      parseFieldInitializer(fieldInfo, ((ConditionalExpression) expression).getElseExpression());
+      parseFieldInitializer(fieldInfo, ((ConditionalExpression) expression).getThenExpression());
+    }
+    if (expression.getNodeType() == ASTNode.INFIX_EXPRESSION) {
+      parseFieldInitializer(fieldInfo, ((InfixExpression) expression).getLeftOperand());
+      parseFieldInitializer(fieldInfo, ((InfixExpression) expression).getRightOperand());
+    }
+    if (expression.getNodeType() == ASTNode.INSTANCEOF_EXPRESSION) {
+      parseFieldInitializer(fieldInfo, ((InstanceofExpression) expression).getLeftOperand());
+    }
+    if (expression.getNodeType() == ASTNode.PARENTHESIZED_EXPRESSION) {
+      parseFieldInitializer(fieldInfo, ((ParenthesizedExpression) expression).getExpression());
+    }
+    if (expression.getNodeType() == ASTNode.POSTFIX_EXPRESSION) {
+      parseFieldInitializer(fieldInfo, ((PostfixExpression) expression).getOperand());
+    }
+    if (expression.getNodeType() == ASTNode.PREFIX_EXPRESSION) {
+      parseFieldInitializer(fieldInfo, ((PrefixExpression) expression).getOperand());
+    }
+    if (expression.getNodeType() == ASTNode.THIS_EXPRESSION) {
+      parseFieldInitializer(fieldInfo, ((ThisExpression) expression).getQualifier());
+    }
+    if (expression.getNodeType() == ASTNode.METHOD_INVOCATION) {
+      List<Expression> arguments = ((MethodInvocation) expression).arguments();
+      IMethodBinding methodBinding = ((MethodInvocation) expression).resolveMethodBinding();
+      if (methodBinding != null) fieldInfo.methodCalls.add(methodBinding);
+      for (Expression exp : arguments) parseFieldInitializer(fieldInfo, exp);
+      parseFieldInitializer(fieldInfo, ((MethodInvocation) expression).getExpression());
+    }
+    if (expression.getNodeType() == ASTNode.CLASS_INSTANCE_CREATION) {
+      IMethodBinding constructorBinding =
+          ((ClassInstanceCreation) expression).resolveConstructorBinding();
+      if (constructorBinding != null) {
+        fieldInfo.typeInitializes.add(constructorBinding.getDeclaringClass().getQualifiedName());
+      }
+    }
+    if (expression.getNodeType() == ASTNode.ASSIGNMENT) {
+      parseFieldInitializer(fieldInfo, ((Assignment) expression).getLeftHandSide());
+      parseFieldInitializer(fieldInfo, ((Assignment) expression).getRightHandSide());
+    }
+    if (expression.getNodeType() == ASTNode.QUALIFIED_NAME) {
+      if (((QualifiedName) expression).getQualifier().resolveTypeBinding() != null) {
+        String name =
+            ((QualifiedName) expression).getQualifier().resolveTypeBinding().getQualifiedName()
+                + "."
+                + ((QualifiedName) expression).getName().getIdentifier();
+        fieldInfo.fieldUses.add(name);
+      }
+      parseFieldInitializer(fieldInfo, ((QualifiedName) expression).getQualifier());
+    }
+  }
+
+  /**
    * Parse the method body block to collect useful information
    *
    * @thanks_to https://github.com/linzeqipku/SnowGraph
    * @param methodBody
    */
-  public void parseMethodBody(MethodInfo methodInfo, Block methodBody) {
+  private void parseMethodBody(MethodInfo methodInfo, Block methodBody) {
     if (methodBody == null) return;
     List<Statement> statementList = methodBody.statements();
     List<Statement> statements = new ArrayList<>();
     for (int i = 0; i < statementList.size(); i++) {
       statements.add(statementList.get(i));
     }
+
     for (int i = 0; i < statements.size(); i++) {
 
       if (statements.get(i).getNodeType() == ASTNode.BLOCK) {
@@ -377,6 +455,14 @@ public class JDTService {
           statements.add(i + 1, whileBody);
         }
       }
+
+      if (statements.get(i).getNodeType() == ASTNode.CONSTRUCTOR_INVOCATION) {
+        IMethodBinding constructorBinding =
+            ((ConstructorInvocation) statements.get(i)).resolveConstructorBinding();
+        if (constructorBinding != null) {
+          methodInfo.localVarTypes.add(constructorBinding.getDeclaringClass().getQualifiedName());
+        }
+      }
     }
   }
 
@@ -390,8 +476,9 @@ public class JDTService {
     if (expression == null) {
       return;
     }
-    System.out.println(
-        expression.toString() + " : " + Annotation.nodeClassForType(expression.getNodeType()));
+    //    System.out.println(
+    //        expression.toString() + " : " +
+    // Annotation.nodeClassForType(expression.getNodeType()));
     if (expression.getNodeType() == ASTNode.ARRAY_INITIALIZER) {
       List<Expression> expressions = ((ArrayInitializer) expression).expressions();
       for (Expression expression2 : expressions) {
@@ -424,6 +511,13 @@ public class JDTService {
     }
     if (expression.getNodeType() == ASTNode.THIS_EXPRESSION) {
       parseExpression(methodInfo, ((ThisExpression) expression).getQualifier());
+    }
+    if (expression.getNodeType() == ASTNode.CLASS_INSTANCE_CREATION) {
+      IMethodBinding constructorBinding =
+          ((ClassInstanceCreation) expression).resolveConstructorBinding();
+      if (constructorBinding != null) {
+        methodInfo.localVarTypes.add(constructorBinding.getDeclaringClass().getQualifiedName());
+      }
     }
     if (expression.getNodeType() == ASTNode.METHOD_INVOCATION) {
       List<Expression> arguments = ((MethodInvocation) expression).arguments();

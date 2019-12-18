@@ -52,7 +52,7 @@ public class JDTParser {
    *
    * @return
    */
-  private ASTParser initASTParser() {
+  public ASTParser initASTParser() {
     // set up the parser and resolver options
     ASTParser parser = ASTParser.newParser(8);
     parser.setResolveBindings(true);
