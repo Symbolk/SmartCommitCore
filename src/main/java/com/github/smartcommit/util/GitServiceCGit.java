@@ -2,6 +2,7 @@ package com.github.smartcommit.util;
 
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
+import com.github.smartcommit.model.Location;
 import com.github.smartcommit.model.constant.ChangeType;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
@@ -214,18 +215,24 @@ public class GitServiceCGit implements GitService {
         List<String> currentCodeLines = getCodeSnippetInHunk(hunk.getLines(), Version.CURRENT);
         com.github.smartcommit.model.Hunk baseHunk =
             new com.github.smartcommit.model.Hunk(
-                baseFilePath,
                 Version.BASE,
-                hunk.getFromFileRange().getLineStart() + 1,
-                hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 2,
+                new Location(
+                    baseFilePath,
+                    hunk.getFromFileRange().getLineStart() + 1,
+                    hunk.getFromFileRange().getLineStart()
+                        + hunk.getFromFileRange().getLineCount()
+                        - 2),
                 Utils.checkContentType(baseCodeLines),
                 baseCodeLines);
         com.github.smartcommit.model.Hunk currentHunk =
             new com.github.smartcommit.model.Hunk(
-                currentFilePath,
                 Version.CURRENT,
-                hunk.getToFileRange().getLineStart() + 1,
-                hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 2,
+                new Location(
+                    currentFilePath,
+                    hunk.getToFileRange().getLineStart() + 1,
+                    hunk.getToFileRange().getLineStart()
+                        + hunk.getToFileRange().getLineCount()
+                        - 2),
                 Utils.checkContentType(currentCodeLines),
                 currentCodeLines);
         ChangeType changeType = ChangeType.MODIFIED;
