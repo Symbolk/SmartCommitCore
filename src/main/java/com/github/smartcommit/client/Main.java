@@ -59,12 +59,14 @@ public class Main {
         // use gumtree to compare change stem subtrees
         if (CUPair.getRight() != null) {
           CompilationUnit cu = CUPair.getRight();
+          System.out.println(diffFile.getBaseRelativePath());
           for (DiffHunk diffHunk : diffHunksContainCode) {
             List<ASTNode> coveredNodes = new ArrayList<>();
             // find nodes covered or covering by each diff hunk
             int startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
             int endPos = cu.getPosition(diffHunk.getCurrentEndLine() + 1, 0);
             int length = endPos - startPos;
+            System.out.println(startPos);
             if (length > 0) {
               MyNodeFinder nodeFinder = new MyNodeFinder(cu, startPos, length);
               List<ASTNode> nodes = nodeFinder.getCoveredNodes();
@@ -74,7 +76,7 @@ public class Main {
                   node = node.getParent();
                 }
                 coveredNodes.add(node);
-                System.out.println(node);
+//                System.out.println(node);
               }
             }
             //              if (node != null) {

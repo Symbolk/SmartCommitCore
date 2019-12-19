@@ -1,6 +1,6 @@
-package com.github.smartcommit.core;
+package com.github.smartcommit.client;
 
-import com.github.smartcommit.client.Config;
+import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
@@ -34,6 +34,7 @@ public class DataCollector {
     String currentDir = TEMP_DIR + File.separator + REPO_NAME + File.separator + COMMIT_ID + File.separator + "b" + File.separator;
 
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
+    gitService.getDiffHunksAtCommit(REPO_PATH, COMMIT_ID, diffFiles);
     // collect the diff files into the data dir
     int count = 0;
     for (DiffFile diffFile : diffFiles) {
@@ -46,8 +47,7 @@ public class DataCollector {
         boolean aOk = Utils.writeContentToPath(aPath, diffFile.getBaseContent());
         boolean bOk = Utils.writeContentToPath(bPath, diffFile.getCurrentContent());
         if (aOk && bOk) {
-          count ++;
-//          System.out.println(aPath);
+          count++;
         } else {
           logger.error("Error with: " + diffFile.getBaseRelativePath());
         }
@@ -58,8 +58,8 @@ public class DataCollector {
 
     // build the graph
     ExecutorService executorService = Executors.newFixedThreadPool(1);
-    Future<Graph<Node, Edge>> baseBuilder = executorService.submit(new GraphBuilder(baseDir));
-    Future<Graph<Node, Edge>> currentBuilder =executorService.submit(new GraphBuilder(currentDir));
+    Future<Graph<Node, Edge>> baseBuilder = executorService.submit(new GraphBuilder(baseDir, diffFiles));
+    Future<Graph<Node, Edge>> currentBuilder =executorService.submit(new GraphBuilder(currentDir, diffFiles));
     try{
       Graph<Node, Edge> baseGraph = baseBuilder.get();
 //      Graph<Node, Edge> currentGraph = currentBuilder.get();

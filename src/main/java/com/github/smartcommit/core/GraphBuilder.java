@@ -2,7 +2,10 @@ package com.github.smartcommit.core;
 
 import com.github.smartcommit.core.visitor.MemberVisitor;
 import com.github.smartcommit.io.GraphExporter;
+import com.github.smartcommit.model.DiffFile;
+import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.EntityPool;
+import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.model.entity.ClassInfo;
 import com.github.smartcommit.model.entity.FieldInfo;
 import com.github.smartcommit.model.entity.InterfaceInfo;
@@ -13,6 +16,7 @@ import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.JDTService;
 import com.github.smartcommit.util.NameResolver;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
 import org.jgrapht.Graph;
@@ -21,13 +25,21 @@ import org.jgrapht.graph.builder.GraphTypeBuilder;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
   private String srcDir;
+  private List<DiffFile> diffFiles;
 
   public GraphBuilder(String srcDir) {
     this.srcDir = srcDir;
+    this.diffFiles = new ArrayList<>();
+  }
+
+  public GraphBuilder(String srcDir, List<DiffFile> diffFiles) {
+    this.srcDir = srcDir;
+    this.diffFiles = diffFiles;
   }
 
   /**
@@ -91,10 +103,17 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         new FileASTRequestor() {
           @Override
           public void acceptAST(String sourceFilePath, CompilationUnit cu) {
-            // get all diff hunks in the current file
-            // get all covered statement nodes in each diff hunk
-            // create nodes for statements in the graph
-            // create edges for statements
+            Map<String, Pair<Integer, Integer>> diffHunkPositions =
+                computeHunksPosition(sourceFilePath, cu);
+            System.out.println(sourceFilePath);
+            for (String index : diffHunkPositions.keySet()) {
+              System.out.println(diffHunkPositions.get(index).getLeft());
+            }
+            // visit the covered statement nodes to find location
+
+            // create nodes for diff hunks in the graph
+            // create edges between diff hunks
+
             try {
               cu.accept(
                   new MemberVisitor(
@@ -163,7 +182,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         }
         InterfaceInfo interfaceInfo = interfaceDecMap.get(localVarType);
         if (interfaceInfo != null) {
-          graph.addEdge(methodDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+          graph.addEdge(
+              methodDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
         }
       }
     }
@@ -192,19 +212,82 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       }
 
       // type instance creation
-      for (String localVarType : fieldInfo.typeInitializes) {
-        ClassInfo targetClassInfo = classDecMap.get(localVarType);
+      for (String type : fieldInfo.typeInitializes) {
+        ClassInfo targetClassInfo = classDecMap.get(type);
         if (targetClassInfo != null) {
-          graph.addEdge(fieldDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+          graph.addEdge(
+              fieldDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
         }
-        InterfaceInfo interfaceInfo = interfaceDecMap.get(localVarType);
+        InterfaceInfo interfaceInfo = interfaceDecMap.get(type);
         if (interfaceInfo != null) {
-          graph.addEdge(fieldDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+          graph.addEdge(
+              fieldDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
         }
       }
     }
 
     String graphDotString = GraphExporter.exportAsDotWithType(graph);
     return graph;
+  }
+
+  /** Compute and construct a map to store the position of diff hunks inside current file */
+  private Map<String, Pair<Integer, Integer>> computeHunksPosition(
+      String sourceFilePath, CompilationUnit cu) {
+    Map<String, Pair<Integer, Integer>> indexToPositionMap = new HashMap<>();
+    // get the current diff file
+    Version version = Version.BASE;
+    if (sourceFilePath.contains(File.separator + "b" + File.separator)) {
+      version = Version.CURRENT;
+    }
+    Optional<DiffFile> diffFileOpt = getDiffFileByPath(sourceFilePath, version);
+    if (cu != null && diffFileOpt.isPresent()) {
+      DiffFile diffFile = diffFileOpt.get();
+
+      List<DiffHunk> diffHunksContainCode =
+          diffFile.getDiffHunks().stream()
+              .filter(diffHunk -> diffHunk.containsCode())
+              .collect(Collectors.toList());
+      for (DiffHunk diffHunk : diffHunksContainCode) {
+        // compute the pos of all diff hunks that contains code
+        int startPos = -1;
+        int endPos = -1;
+        switch (version) {
+          case BASE:
+            startPos = cu.getPosition(diffHunk.getBaseStartLine(), 0);
+            endPos = cu.getPosition(diffHunk.getBaseEndLine() + 1, 0);
+            break;
+          case CURRENT:
+            startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
+            endPos = cu.getPosition(diffHunk.getCurrentEndLine() + 1, 0);
+        }
+        int length = endPos - startPos;
+        // construct the location map
+        indexToPositionMap.put(
+            diffFile.getIndex().toString() + ":" + diffHunk.getIndex().toString(),
+            Pair.of(startPos, length));
+      }
+    }
+    return indexToPositionMap;
+  }
+
+  /**
+   * Given the absolute path, return the corresponding diff file
+   *
+   * @param absolutePath
+   * @return
+   */
+  private Optional<DiffFile> getDiffFileByPath(String absolutePath, Version version) {
+    switch (version) {
+      case BASE:
+        return this.diffFiles.stream()
+            .filter(diffFile -> absolutePath.endsWith(diffFile.getBaseRelativePath()))
+            .findAny();
+      case CURRENT:
+        return this.diffFiles.stream()
+            .filter(diffFile -> absolutePath.endsWith(diffFile.getCurrentRelativePath()))
+            .findAny();
+      default:
+        return Optional.empty();
+    }
   }
 }
