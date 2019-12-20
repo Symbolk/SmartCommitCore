@@ -15,6 +15,7 @@ import com.github.smartcommit.model.graph.EdgeType;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.JDTService;
 import com.github.smartcommit.util.NameResolver;
+import com.github.smartcommit.util.Utils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jdt.core.JavaCore;
@@ -105,20 +106,17 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           public void acceptAST(String sourceFilePath, CompilationUnit cu) {
             Map<String, Pair<Integer, Integer>> diffHunkPositions =
                 computeHunksPosition(sourceFilePath, cu);
-            System.out.println(sourceFilePath);
-            for (String index : diffHunkPositions.keySet()) {
-              System.out.println(diffHunkPositions.get(index).getLeft());
-            }
-            // visit the covered statement nodes to find location
-
-            // create nodes for diff hunks in the graph
-            // create edges between diff hunks
+//            System.out.println(sourceFilePath);
+//            for (String index : diffHunkPositions.keySet()) {
+//              System.out.println(diffHunkPositions.get(index).getLeft());
+//            }
 
             try {
               cu.accept(
                   new MemberVisitor(
                       entityPool,
                       graph,
+                      diffHunkPositions,
                       new JDTService(FileUtils.readFileToString(new File(sourceFilePath)))));
               //              System.out.println(cu.getAST().hasBindingsRecovery());
             } catch (Exception e) {
@@ -277,14 +275,15 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
    * @return
    */
   private Optional<DiffFile> getDiffFileByPath(String absolutePath, Version version) {
+    String formattedPath = Utils.formatPath(absolutePath);
     switch (version) {
       case BASE:
         return this.diffFiles.stream()
-            .filter(diffFile -> absolutePath.endsWith(diffFile.getBaseRelativePath()))
+            .filter(diffFile -> formattedPath.endsWith(diffFile.getBaseRelativePath()))
             .findAny();
       case CURRENT:
         return this.diffFiles.stream()
-            .filter(diffFile -> absolutePath.endsWith(diffFile.getCurrentRelativePath()))
+            .filter(diffFile -> formattedPath.endsWith(diffFile.getCurrentRelativePath()))
             .findAny();
       default:
         return Optional.empty();

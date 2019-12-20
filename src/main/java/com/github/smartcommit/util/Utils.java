@@ -240,4 +240,9 @@ public class Utils {
     }
     return isAllEmpty ? ContentType.EMPTY : contentType;
   }
+
+  /** Convert system-dependent path to the unified unix style */
+  public static String formatPath(String path) {
+    return path.replaceAll(Pattern.quote(File.separator), "/").replaceAll("/+", "/");
+  }
 }
