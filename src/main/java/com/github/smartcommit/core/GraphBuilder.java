@@ -25,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -110,14 +109,12 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           @Override
           public void acceptAST(String sourceFilePath, CompilationUnit cu) {
             try {
-              cu.accept(
-                  new MemberVisitor(
-                      entityPool,
-                      graph,
-                      new JDTService(FileUtils.readFileToString(new File(sourceFilePath)))));
+              JDTService jdtService =
+                  new JDTService(FileUtils.readFileToString(new File(sourceFilePath)));
+              cu.accept(new MemberVisitor(entityPool, graph, jdtService));
               //              System.out.println(cu.getAST().hasBindingsRecovery());
               // collect hunk infos and nodes
-              createHunkInfos(sourceFilePath, cu);
+              createHunkInfos(sourceFilePath, cu, jdtService);
             } catch (Exception e) {
               e.printStackTrace();
             }
@@ -131,12 +128,13 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     Map<String, InterfaceInfo> interfaceDecMap = entityPool.interfaceInfoMap;
     Map<String, MethodInfo> methodDecMap = entityPool.methodInfoMap;
     Map<String, FieldInfo> fieldDecMap = entityPool.fieldInfoMap;
+    Map<String, HunkInfo> hunkMap = entityPool.hunkInfoMap;
     Map<IMethodBinding, MethodInfo> methodBindingMap = new HashMap<>();
     for (MethodInfo methodInfo : entityPool.methodInfoMap.values()) {
       methodBindingMap.put(methodInfo.methodBinding, methodInfo);
     }
 
-    // edges from method declaration
+    // 1. edges from method declaration
     for (MethodInfo methodInfo : methodDecMap.values()) {
       Node methodDeclNode = methodInfo.node;
       // method invocation
@@ -171,7 +169,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       }
 
       // local var type
-      for (String localVarType : methodInfo.localVarTypes) {
+      for (String localVarType : methodInfo.typeUses) {
         ClassInfo targetClassInfo = classDecMap.get(localVarType);
         if (targetClassInfo != null) {
           graph.addEdge(
@@ -185,7 +183,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       }
     }
 
-    // edges from field declaration
+    // 2. edges from field declaration
     for (FieldInfo fieldInfo : fieldDecMap.values()) {
       Node fieldDeclNode = fieldInfo.node;
       // field type
@@ -208,8 +206,17 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         }
       }
 
+      // field access
+      for (String fieldUse : fieldInfo.fieldUses) {
+        FieldInfo targetFieldInfo = fieldDecMap.get(fieldUse);
+        if (targetFieldInfo != null) {
+          graph.addEdge(
+              fieldDeclNode, targetFieldInfo.node, new Edge(edgeCount++, EdgeType.ACCESS));
+        }
+      }
+
       // type instance creation
-      for (String type : fieldInfo.typeInitializes) {
+      for (String type : fieldInfo.typeUses) {
         ClassInfo targetClassInfo = classDecMap.get(type);
         if (targetClassInfo != null) {
           graph.addEdge(
@@ -223,8 +230,144 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       }
     }
 
+    // 3. edges from hunk nodes
+    for (HunkInfo hunkInfo : hunkMap.values()) {
+      Node hunkNode = hunkInfo.node;
+      // method invocation
+      for (IMethodBinding methodCall : hunkInfo.methodCalls) {
+        MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
+        if (targetMethodInfo != null) {
+          graph.addEdge(hunkNode, targetMethodInfo.node, new Edge(edgeCount++, EdgeType.CALL));
+        }
+      }
+
+      // field access
+      for (String fieldUse : hunkInfo.fieldUses) {
+        FieldInfo targetFieldInfo = fieldDecMap.get(fieldUse);
+        if (targetFieldInfo != null) {
+          graph.addEdge(hunkNode, targetFieldInfo.node, new Edge(edgeCount++, EdgeType.ACCESS));
+        }
+      }
+
+      // type uses
+      for (String type : hunkInfo.typeUses) {
+        ClassInfo targetClassInfo = classDecMap.get(type);
+        if (targetClassInfo != null) {
+          graph.addEdge(hunkNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+        }
+        InterfaceInfo interfaceInfo = interfaceDecMap.get(type);
+        if (interfaceInfo != null) {
+          graph.addEdge(hunkNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+        }
+      }
+    }
+
     String graphDotString = GraphExporter.exportAsDotWithType(graph);
     return graph;
+  }
+
+  /**
+   * Collect info of the hunks in the current file
+   *
+   * @param sourceFilePath
+   * @param cu
+   * @return
+   */
+  private void createHunkInfos(String sourceFilePath, CompilationUnit cu, JDTService jdtService) {
+    List<HunkInfo> hunkInfos = new ArrayList<>();
+    Map<String, Pair<Integer, Integer>> diffHunkPositions =
+        computeHunksPosition(sourceFilePath, cu);
+    for (String index : diffHunkPositions.keySet()) {
+      // for each diff hunk, find and analyze covered nodes, create hunk node and info
+      Set<ASTNode> coveredNodes = new LinkedHashSet<>();
+      int startPos = diffHunkPositions.get(index).getLeft();
+      int length = diffHunkPositions.get(index).getRight();
+      if (length > 0) {
+        MyNodeFinder nodeFinder = new MyNodeFinder(cu, startPos, length);
+        for (ASTNode node : nodeFinder.getCoveredNodes()) {
+          while (node != null && !(node instanceof Statement || node instanceof BodyDeclaration)) {
+            node = node.getParent();
+          }
+          coveredNodes.add(node);
+        }
+      }
+      HunkInfo hunkInfo = new HunkInfo(index);
+      hunkInfo.coveredNodes = coveredNodes;
+      boolean existInGraph = false;
+      for (ASTNode astNode : coveredNodes) {
+        if (astNode instanceof BodyDeclaration) {
+          Optional<Node> nodeOpt = Optional.empty();
+          // find the corresponding nodeOpt in the entity pool (expected to exist)
+          switch (astNode.getNodeType()) {
+            case ASTNode.TYPE_DECLARATION:
+              nodeOpt =
+                  findNodeByNameAndType(
+                      ((TypeDeclaration) astNode).getName().getIdentifier(), NodeType.CLASS);
+              if (nodeOpt.isPresent()) {
+                existInGraph = true;
+                Node node = nodeOpt.get();
+                node.isInDiffHunk = true;
+                hunkInfo.node = node;
+              } else {
+                logger.error("Not Found: " + astNode);
+              }
+              break;
+            case ASTNode.FIELD_DECLARATION:
+              List<VariableDeclarationFragment> fragments =
+                  ((FieldDeclaration) astNode).fragments();
+              for (VariableDeclarationFragment fragment : fragments) {
+                nodeOpt = findNodeByNameAndType(fragment.getName().getIdentifier(), NodeType.FIELD);
+                if (nodeOpt.isPresent()) {
+                  existInGraph = true;
+                  Node node = nodeOpt.get();
+                  node.isInDiffHunk = true;
+                  hunkInfo.node = node;
+                } else {
+                  logger.error("Not Found: " + astNode);
+                }
+              }
+              break;
+            case ASTNode.METHOD_DECLARATION:
+              nodeOpt =
+                  findNodeByNameAndType(
+                      ((MethodDeclaration) astNode).getName().getIdentifier(), NodeType.METHOD);
+              if (nodeOpt.isPresent()) {
+                existInGraph = true;
+                Node node = nodeOpt.get();
+                node.isInDiffHunk = true;
+                hunkInfo.node = node;
+              } else {
+                logger.error("Not Found: " + astNode);
+              }
+              break;
+            default:
+              logger.error("Other type: " + astNode.getNodeType());
+          }
+        } else if (astNode instanceof Statement) {
+          jdtService.parseStatement(hunkInfo, (Statement) astNode);
+        }
+      }
+      if (!existInGraph) {
+        // create the HunkInfo node
+        int nodeID = graph.vertexSet().size() + 1;
+        int edgeID = graph.edgeSet().size() + 1;
+        Node hunkNode =
+            new Node(nodeID, NodeType.HUNK, hunkInfo.uniqueName(), hunkInfo.uniqueName());
+        hunkNode.isInDiffHunk = true;
+        hunkInfo.node = hunkNode;
+        graph.addVertex(hunkNode);
+        // find parent entity node (expected to exist) and create the contain edge
+        Optional<Node> parentNodeOpt = findParentNode(coveredNodes);
+        if (parentNodeOpt.isPresent()) {
+          graph.addEdge(parentNodeOpt.get(), hunkNode, new Edge(edgeID, EdgeType.CONTAIN));
+        } else {
+          logger.error("Parent node null for: " + hunkNode);
+        }
+      }
+
+      // add HunkInfo into the pool
+      entityPool.hunkInfoMap.put(hunkInfo.uniqueName(), hunkInfo);
+    }
   }
 
   /**
@@ -274,85 +417,43 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
   }
 
   /**
-   * Collect info of the hunks in the current file
+   * Find the nearest common ancestor entity in the ast and the node in the graph
    *
-   * @param sourceFilePath
-   * @param cu
+   * @param astNodes
    * @return
    */
-  private void createHunkInfos(String sourceFilePath, CompilationUnit cu) throws IOException {
-    List<HunkInfo> hunkInfos = new ArrayList<>();
-    Map<String, Pair<Integer, Integer>> diffHunkPositions =
-        computeHunksPosition(sourceFilePath, cu);
-    for (String index : diffHunkPositions.keySet()) {
-      // for each diff hunk, find covered nodes
-      Set<ASTNode> coveredNodes = new LinkedHashSet<>();
-      int startPos = diffHunkPositions.get(index).getLeft();
-      int length = diffHunkPositions.get(index).getRight();
-      if (length > 0) {
-        MyNodeFinder nodeFinder = new MyNodeFinder(cu, startPos, length);
-        for (ASTNode node : nodeFinder.getCoveredNodes()) {
-          while (node != null && !(node instanceof Statement || node instanceof BodyDeclaration)) {
-            node = node.getParent();
-          }
-          coveredNodes.add(node);
-        }
+  private Optional<Node> findParentNode(Set<ASTNode> astNodes) {
+    // TODO: find the nearest common ancestor of the covered ast nodes
+    ASTNode parentEntity = null;
+    for (ASTNode astNode : astNodes) {
+      while (astNode != null && !(astNode instanceof BodyDeclaration)) {
+        astNode = astNode.getParent();
       }
-      HunkInfo hunkInfo = new HunkInfo();
-      hunkInfo.coveredNodes = coveredNodes;
-      for (ASTNode astNode : coveredNodes) {
-        if (astNode instanceof BodyDeclaration) {
-          Optional<Node> nodeOpt = Optional.empty();
-          // find the corresponding nodeOpt in the entity pool (expected to exist)
-          switch (astNode.getNodeType()) {
-            case ASTNode.TYPE_DECLARATION:
-              nodeOpt =
-                  findNodeByNameAndType(
-                      ((TypeDeclaration) astNode).getName().getIdentifier(), NodeType.CLASS);
-              if (nodeOpt.isPresent()) {
-                nodeOpt.get().isInDiffHunk = true;
-              } else {
-                logger.error("Not Found: " + astNode);
-              }
-              break;
-            case ASTNode.FIELD_DECLARATION:
-              List<VariableDeclarationFragment> fragments =
-                  ((FieldDeclaration) astNode).fragments();
-              for (VariableDeclarationFragment fragment : fragments) {
-                nodeOpt = findNodeByNameAndType(fragment.getName().getIdentifier(), NodeType.FIELD);
-                if (nodeOpt.isPresent()) {
-                  nodeOpt.get().isInDiffHunk = true;
-                } else {
-                  logger.error("Not Found: " + astNode);
-                }
-              }
-              break;
-            case ASTNode.METHOD_DECLARATION:
-              nodeOpt =
-                  findNodeByNameAndType(
-                      ((MethodDeclaration) astNode).getName().getIdentifier(), NodeType.METHOD);
-              if (nodeOpt.isPresent()) {
-                nodeOpt.get().isInDiffHunk = true;
-              } else {
-                logger.error("Not Found: " + astNode);
-              }
-              break;
-            default:
-              logger.error("Other type: " + astNode.getNodeType());
-          }
-        } else if (astNode instanceof Statement) {
-          JDTService jdtService = new JDTService(FileUtils.readFileToString(new File(sourceFilePath)));
-          // create the HunkInfo node by collecting info
-          if(jdtService!=null){
-            System.out.println(astNode);
-             // find parent entity node (expected to exist) and create the contain edge
-
-          }
-        }
-      }
-      // add HunkInfo into the pool
-      entityPool.hunkInfoMap.put(hunkInfo.uniqueName(), hunkInfo);
+      parentEntity = astNode;
     }
+    if (parentEntity != null) {
+      String identifier = "";
+      switch (parentEntity.getNodeType()) {
+        case ASTNode.TYPE_DECLARATION:
+          identifier = ((TypeDeclaration) parentEntity).getName().getFullyQualifiedName();
+          break;
+        case ASTNode.FIELD_DECLARATION:
+          List<VariableDeclarationFragment> fragments =
+              ((FieldDeclaration) parentEntity).fragments();
+          identifier = fragments.get(0).getName().getFullyQualifiedName();
+          break;
+        case ASTNode.METHOD_DECLARATION:
+          identifier = ((MethodDeclaration) parentEntity).getName().getFullyQualifiedName();
+          break;
+      }
+      String finalIdentifier = identifier;
+      return graph.vertexSet().stream()
+          .filter(node -> node.getIdentifier().equals(finalIdentifier))
+          .findAny();
+    } else {
+      logger.error("Parent entity null for " + astNodes);
+    }
+    return Optional.empty();
   }
 
   /**
