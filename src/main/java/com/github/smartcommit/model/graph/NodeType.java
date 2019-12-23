@@ -20,7 +20,8 @@ public enum NodeType {
   METHOD("method"),
   ENUM_CONSTANT("enum_constant"),
   INITIALIZER_BLOCK("initializer_block"),
-  ANNOTATION_MEMBER("annotation_member");
+  ANNOTATION_MEMBER("annotation_member"),
+  HUNK("hunk");
 
   String label;
 

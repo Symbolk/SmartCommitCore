@@ -1,18 +1,17 @@
 package com.github.smartcommit.core;
 
 import com.github.smartcommit.core.visitor.MemberVisitor;
+import com.github.smartcommit.core.visitor.MyNodeFinder;
 import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.EntityPool;
 import com.github.smartcommit.model.constant.Version;
-import com.github.smartcommit.model.entity.ClassInfo;
-import com.github.smartcommit.model.entity.FieldInfo;
-import com.github.smartcommit.model.entity.InterfaceInfo;
-import com.github.smartcommit.model.entity.MethodInfo;
+import com.github.smartcommit.model.entity.*;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;
 import com.github.smartcommit.model.graph.Node;
+import com.github.smartcommit.model.graph.NodeType;
 import com.github.smartcommit.util.JDTService;
 import com.github.smartcommit.util.NameResolver;
 import com.github.smartcommit.util.Utils;
@@ -22,16 +21,23 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.builder.GraphTypeBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
+  private static final Logger logger = LoggerFactory.getLogger(GraphBuilder.class);
+
   private String srcDir;
   private List<DiffFile> diffFiles;
+  private EntityPool entityPool;
+  private Graph<Node, Edge> graph;
 
   public GraphBuilder(String srcDir) {
     this.srcDir = srcDir;
@@ -41,6 +47,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
   public GraphBuilder(String srcDir, List<DiffFile> diffFiles) {
     this.srcDir = srcDir;
     this.diffFiles = diffFiles;
+    this.entityPool = new EntityPool(srcDir);
+    this.graph = initGraph();
   }
 
   /**
@@ -64,9 +72,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
    */
   @Override
   public Graph<Node, Edge> call() {
-    EntityPool entityPool = new EntityPool(srcDir);
-    Graph<Node, Edge> graph = initGraph();
-
     // get all java files by extension in the source directory
     Collection<File> javaFiles = FileUtils.listFiles(new File(srcDir), new String[] {"java"}, true);
     Set<String> srcPathSet = new HashSet<>();
@@ -84,7 +89,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     String[] srcFolderPaths = new String[srcFolderSet.size()];
     srcFolderSet.toArray(srcFolderPaths);
 
-    ASTParser parser = ASTParser.newParser(AST.JLS9);
+    ASTParser parser = ASTParser.newParser(9);
     //        parser.setProject(WorkspaceUtilities.javaProject);
     parser.setKind(ASTParser.K_COMPILATION_UNIT);
     parser.setEnvironment(null, srcFolderPaths, null, true);
@@ -104,21 +109,15 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         new FileASTRequestor() {
           @Override
           public void acceptAST(String sourceFilePath, CompilationUnit cu) {
-            Map<String, Pair<Integer, Integer>> diffHunkPositions =
-                computeHunksPosition(sourceFilePath, cu);
-//            System.out.println(sourceFilePath);
-//            for (String index : diffHunkPositions.keySet()) {
-//              System.out.println(diffHunkPositions.get(index).getLeft());
-//            }
-
             try {
               cu.accept(
                   new MemberVisitor(
                       entityPool,
                       graph,
-                      diffHunkPositions,
                       new JDTService(FileUtils.readFileToString(new File(sourceFilePath)))));
               //              System.out.println(cu.getAST().hasBindingsRecovery());
+              // collect hunk infos and nodes
+              createHunkInfos(sourceFilePath, cu);
             } catch (Exception e) {
               e.printStackTrace();
             }
@@ -228,7 +227,13 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     return graph;
   }
 
-  /** Compute and construct a map to store the position of diff hunks inside current file */
+  /**
+   * Compute and construct a map to store the position of diff hunks inside current file
+   *
+   * @param sourceFilePath
+   * @param cu
+   * @return
+   */
   private Map<String, Pair<Integer, Integer>> computeHunksPosition(
       String sourceFilePath, CompilationUnit cu) {
     Map<String, Pair<Integer, Integer>> indexToPositionMap = new HashMap<>();
@@ -266,6 +271,102 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       }
     }
     return indexToPositionMap;
+  }
+
+  /**
+   * Collect info of the hunks in the current file
+   *
+   * @param sourceFilePath
+   * @param cu
+   * @return
+   */
+  private void createHunkInfos(String sourceFilePath, CompilationUnit cu) throws IOException {
+    List<HunkInfo> hunkInfos = new ArrayList<>();
+    Map<String, Pair<Integer, Integer>> diffHunkPositions =
+        computeHunksPosition(sourceFilePath, cu);
+    for (String index : diffHunkPositions.keySet()) {
+      // for each diff hunk, find covered nodes
+      Set<ASTNode> coveredNodes = new LinkedHashSet<>();
+      int startPos = diffHunkPositions.get(index).getLeft();
+      int length = diffHunkPositions.get(index).getRight();
+      if (length > 0) {
+        MyNodeFinder nodeFinder = new MyNodeFinder(cu, startPos, length);
+        for (ASTNode node : nodeFinder.getCoveredNodes()) {
+          while (node != null && !(node instanceof Statement || node instanceof BodyDeclaration)) {
+            node = node.getParent();
+          }
+          coveredNodes.add(node);
+        }
+      }
+      HunkInfo hunkInfo = new HunkInfo();
+      hunkInfo.coveredNodes = coveredNodes;
+      for (ASTNode astNode : coveredNodes) {
+        if (astNode instanceof BodyDeclaration) {
+          Optional<Node> nodeOpt = Optional.empty();
+          // find the corresponding nodeOpt in the entity pool (expected to exist)
+          switch (astNode.getNodeType()) {
+            case ASTNode.TYPE_DECLARATION:
+              nodeOpt =
+                  findNodeByNameAndType(
+                      ((TypeDeclaration) astNode).getName().getIdentifier(), NodeType.CLASS);
+              if (nodeOpt.isPresent()) {
+                nodeOpt.get().isInDiffHunk = true;
+              } else {
+                logger.error("Not Found: " + astNode);
+              }
+              break;
+            case ASTNode.FIELD_DECLARATION:
+              List<VariableDeclarationFragment> fragments =
+                  ((FieldDeclaration) astNode).fragments();
+              for (VariableDeclarationFragment fragment : fragments) {
+                nodeOpt = findNodeByNameAndType(fragment.getName().getIdentifier(), NodeType.FIELD);
+                if (nodeOpt.isPresent()) {
+                  nodeOpt.get().isInDiffHunk = true;
+                } else {
+                  logger.error("Not Found: " + astNode);
+                }
+              }
+              break;
+            case ASTNode.METHOD_DECLARATION:
+              nodeOpt =
+                  findNodeByNameAndType(
+                      ((MethodDeclaration) astNode).getName().getIdentifier(), NodeType.METHOD);
+              if (nodeOpt.isPresent()) {
+                nodeOpt.get().isInDiffHunk = true;
+              } else {
+                logger.error("Not Found: " + astNode);
+              }
+              break;
+            default:
+              logger.error("Other type: " + astNode.getNodeType());
+          }
+        } else if (astNode instanceof Statement) {
+          JDTService jdtService = new JDTService(FileUtils.readFileToString(new File(sourceFilePath)));
+          // create the HunkInfo node by collecting info
+          if(jdtService!=null){
+            System.out.println(astNode);
+             // find parent entity node (expected to exist) and create the contain edge
+
+          }
+        }
+      }
+      // add HunkInfo into the pool
+      entityPool.hunkInfoMap.put(hunkInfo.uniqueName(), hunkInfo);
+    }
+  }
+
+  /**
+   * Find the corresponding node in graph by name and type
+   *
+   * @param name
+   * @param type
+   * @return
+   */
+  private Optional<Node> findNodeByNameAndType(String name, NodeType type) {
+    // TODO: use qualified name to eliminate false positive
+    return graph.vertexSet().stream()
+        .filter(node -> node.getType().equals(type) && node.getIdentifier().equals(name))
+        .findAny();
   }
 
   /**

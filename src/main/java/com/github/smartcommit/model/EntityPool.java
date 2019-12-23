@@ -1,9 +1,6 @@
 package com.github.smartcommit.model;
 
-import com.github.smartcommit.model.entity.ClassInfo;
-import com.github.smartcommit.model.entity.FieldInfo;
-import com.github.smartcommit.model.entity.InterfaceInfo;
-import com.github.smartcommit.model.entity.MethodInfo;
+import com.github.smartcommit.model.entity.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,6 +11,7 @@ public class EntityPool {
   public Map<String, InterfaceInfo> interfaceInfoMap;
   public Map<String, MethodInfo> methodInfoMap;
   public Map<String, FieldInfo> fieldInfoMap;
+  public Map<String, HunkInfo> hunkInfoMap;
 
   public EntityPool(String srcDir) {
     this.srcDir = srcDir;
@@ -21,5 +19,6 @@ public class EntityPool {
     interfaceInfoMap = new HashMap<>();
     methodInfoMap = new HashMap<>();
     fieldInfoMap = new HashMap<>();
+    hunkInfoMap = new HashMap<>();
   }
 }
