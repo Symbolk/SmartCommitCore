@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -37,9 +38,10 @@ public class Main {
     DataCollector dataCollector = new DataCollector(REPO_NAME, TEMP_DIR);
     Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(COMMIT_ID, diffFiles);
 //    Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
-    // (2) diff hunks
+    // (2) file id mapping
+    // (3) diff hunks
+    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
-    // (3) file id mapping
 
     // 3. build the diff hunk graph
     ExecutorService executorService = Executors.newFixedThreadPool(1);

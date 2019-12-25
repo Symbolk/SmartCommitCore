@@ -6,6 +6,8 @@ import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.util.JDTParser;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.PropertyConfigurator;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -17,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /** Main test and debug class */
@@ -35,6 +38,11 @@ public class Test {
 
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_NAME, REPO_PATH);
     repoAnalyzer.analyzeCommit(COMMIT_ID);
+
+    String uuid = UUID.randomUUID().toString().replaceAll("-", "");
+
+    Gson g = new GsonBuilder().create();
+    String str = g.toJson(repoAnalyzer.getDiffHunks().get(0));
 
     // find the AST nodes covered by each diff hunk
     JDTParser jdtParser = new JDTParser(REPO_PATH, JRE_PATH);

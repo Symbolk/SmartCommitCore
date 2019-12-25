@@ -4,13 +4,19 @@ import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.Version;
+import com.github.smartcommit.model.mergebot.Diff;
 import com.github.smartcommit.util.Utils;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class DataCollector {
   private static final Logger logger = LoggerFactory.getLogger(DataCollector.class);
@@ -93,5 +99,42 @@ public class DataCollector {
       }
     }
     return count;
+  }
+
+  /**
+   * Save diffs inside each DiffFile (for UI) Only needed for working tree
+   *
+   * @param diffFiles
+   * @return fileID : filePath (base if status!=ADDED else current)
+   */
+  public Map<String, String> collectDiffHunksWorking(List<DiffFile> diffFiles) {
+    String diffDir = tempDir + File.separator + "diffs";
+    Map<String, String> fileIDToPathMap = new HashMap<>();
+    for (DiffFile diffFile : diffFiles) {
+      String filePath =
+          diffFile.getStatus().equals(FileStatus.ADDED)
+              ? diffFile.getCurrentRelativePath()
+              : diffFile.getBaseRelativePath();
+      String fileID = UUID.randomUUID().toString().replaceAll("-", "");
+      fileIDToPathMap.put(fileID, filePath);
+
+      Diff diff =
+          new Diff(
+              String.valueOf(repoName.hashCode()),
+              repoName,
+              fileID,
+              diffFile.getBaseRelativePath(),
+              diffFile.getCurrentRelativePath(),
+              diffFile.getStatus().toString(),
+              diffFile.getDiffHunks());
+      Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+      Utils.writeStringToFile(gson.toJson(diff), diffDir + File.separator + fileID + ".json");
+    }
+
+    // save the fileID to path map
+    Gson gson = new Gson();
+    String str = gson.toJson(fileIDToPathMap);
+    Utils.writeStringToFile(str, tempDir + File.separator + "file_ids.json");
+    return fileIDToPathMap;
   }
 }
