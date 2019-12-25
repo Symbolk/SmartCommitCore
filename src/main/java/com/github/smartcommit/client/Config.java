@@ -6,10 +6,19 @@ import java.io.File;
 public final class Config {
   public static final String REPO_NAME = "nomulus";
   public static final String COMMIT_ID = "906b054f4b7a2e38681fd03282996955406afd65";
-  public static final String DATA_DIR = "/Users/symbolk/coding/data";
+  public static final String REPO_PATH = "/Users/symbolk/coding/data" + File.separator + REPO_NAME;
 
-  public static final String REPO_PATH = DATA_DIR + File.separator + REPO_NAME;
-  public static final String TEMP_DIR = DATA_DIR + File.separator + "temp";
+  public static final String TEMP_DIR =
+      System.getProperty("user.home")
+          + File.separator
+          + ".mergebot"
+          + File.separator
+          + "repos"
+          + File.separator
+          + REPO_NAME
+          + "_mergebot"
+          + File.separator
+          + "smart_commit";
   public static final String JRE_PATH =
       System.getProperty("java.home") + File.separator + "lib/rt.jar";
 }
