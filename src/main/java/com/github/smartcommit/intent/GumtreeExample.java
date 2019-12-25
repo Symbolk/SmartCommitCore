@@ -4,6 +4,8 @@ import com.github.gumtreediff.actions.ActionClusterFinder;
 import com.github.gumtreediff.actions.ChawatheScriptGenerator;
 import com.github.gumtreediff.actions.EditScript;
 import com.github.gumtreediff.actions.model.Action;
+import com.github.gumtreediff.actions.model.Delete;
+import com.github.gumtreediff.actions.model.Insert;
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
@@ -11,6 +13,10 @@ import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.matchers.SimilarityMetrics;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
+import com.github.smartcommit.intent.model.ActionType;
+import com.github.smartcommit.intent.model.CommitInfo;
+import com.github.smartcommit.intent.model.Intent;
+import com.github.smartcommit.intent.model.MyAction;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.dom.ASTParser;
 
@@ -38,10 +44,35 @@ public class GumtreeExample {
         generateEditScript(
             FileUtils.readFileToString(new File(fileRelativePath1)),
             FileUtils.readFileToString(new File(fileRelativePath2)));
+
+    // generate commit info from edit script
+    CommitInfo commitInfo = new CommitInfo();
     for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
       Action action = (Action) iter.next();
-      System.out.println(action);
+      ActionType actionType = null;
+      if (action instanceof Insert) {
+        actionType = ActionType.ADD;
+      } else if (action instanceof Delete) {
+        actionType = ActionType.DEL;
+      }
+      MyAction myAction = new MyAction(actionType, action.getNode().getType().toString());
+      commitInfo.addAction(myAction);
     }
+
+  }
+
+  /**
+   * Classify commit message into intent
+   * @param commitMsg
+   * @return
+   */
+  public Intent getIntentFromMsg(String commitMsg) {
+    for (Intent intent : Intent.values()) {
+      if (commitMsg.contains(intent.label)) {
+        return intent;
+      }
+    }
+    return Intent.UNKNOWN;
   }
 
   /**
