@@ -90,11 +90,11 @@ public class Utils {
   /**
    * Writes the given content into a file of the given file path, overwrite by default
    *
-   * @param filePath
    * @param content
+   * @param filePath
    * @return boolean indicating the success of the write operation.
    */
-  public static boolean writeStringToFile(String filePath, String content, boolean append) {
+  public static boolean writeStringToFile(String content, String filePath, boolean append) {
     try {
       File file = new File(filePath);
       if (file.exists() && !append) {
@@ -121,11 +121,11 @@ public class Utils {
   /**
    * Writes the given content in the file of the given file path.
    *
-   * @param filePath
    * @param content
+   * @param filePath
    * @return boolean indicating the success of the write operation.
    */
-  public static boolean writeContentToPath(String filePath, String content) {
+  public static boolean writeStringToFile(String content, String filePath) {
     if (!content.isEmpty()) {
       try {
         File file = new File(filePath);

@@ -83,8 +83,8 @@ public class DataCollector {
 
         String aPath = baseDir + diffFile.getBaseRelativePath();
         String bPath = currentDir + diffFile.getCurrentRelativePath();
-        boolean aOk = Utils.writeContentToPath(aPath, diffFile.getBaseContent());
-        boolean bOk = Utils.writeContentToPath(bPath, diffFile.getCurrentContent());
+        boolean aOk = Utils.writeStringToFile(diffFile.getBaseContent(), aPath);
+        boolean bOk = Utils.writeStringToFile(diffFile.getCurrentContent(), bPath);
         if (aOk && bOk) {
           count++;
         } else {

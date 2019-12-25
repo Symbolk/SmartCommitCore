@@ -75,7 +75,7 @@ public class GraphExporter {
    * @param graph
    */
   public static void saveAsDot(Graph<Node, Edge> graph, String filePath) {
-    Utils.writeStringToFile(filePath, exportAsDotWithType(graph), false);
+    Utils.writeStringToFile(exportAsDotWithType(graph), filePath, false);
   }
 
   public static void printVertexAndEdge(Graph<Node, Edge> graph) {
