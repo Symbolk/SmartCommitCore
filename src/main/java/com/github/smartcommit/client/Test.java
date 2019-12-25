@@ -5,8 +5,6 @@ import com.github.smartcommit.core.visitor.MyNodeFinder;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.FileType;
-import com.github.smartcommit.util.GitService;
-import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.JDTParser;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.PropertyConfigurator;
@@ -22,31 +20,25 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /** Main test and debug class */
-public class Main {
-  private static final Logger logger = LoggerFactory.getLogger(Main.class);
+public class Test {
+  private static final Logger logger = LoggerFactory.getLogger(Test.class);
 
   public static void main(String[] args) {
     PropertyConfigurator.configure("log4j.properties");
     //    BasicConfigurator.configure();
 
+    String REPO_NAME = Config.REPO_NAME;
     String REPO_PATH = Config.REPO_PATH;
     String COMMIT_ID = Config.COMMIT_ID;
     String JRE_PATH = Config.JRE_PATH;
-    GitService gitService = new GitServiceCGit();
-    JDTParser jdtParser = new JDTParser(REPO_PATH, JRE_PATH);
-    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_PATH, COMMIT_ID);
+    String TEMP_DIR = Config.TEMP_DIR; // temp folder to collect diff files
 
-    // given a git repo, get the file-level change set of the working directory
-    // collect the changed files and all diff hunks
-    ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(REPO_PATH, COMMIT_ID);
-    //        ArrayList<DiffFile> diffFiles = gitService.getChangedFilesInWorkingTree(REPO_PATH);
-    List<DiffHunk> allDiffHunks = gitService.getDiffHunksAtCommit(REPO_PATH, COMMIT_ID, diffFiles);
-    //        List<DiffHunk> allDiffHunks = gitService.getDiffHunksInWorkingTree(REPO_PATH);
-    repoAnalyzer.setDiffFiles(diffFiles);
-    repoAnalyzer.setDiffHunks(allDiffHunks);
+    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_NAME, REPO_PATH);
+    repoAnalyzer.analyzeCommit(COMMIT_ID);
 
     // find the AST nodes covered by each diff hunk
-    for (DiffFile diffFile : diffFiles) {
+    JDTParser jdtParser = new JDTParser(REPO_PATH, JRE_PATH);
+    for (DiffFile diffFile : repoAnalyzer.getDiffFiles()) {
       if (diffFile.getFileType().equals(FileType.JAVA)) {
         // get all diff hunks within this file
         List<DiffHunk> diffHunksContainCode =
@@ -59,14 +51,12 @@ public class Main {
         // use gumtree to compare change stem subtrees
         if (CUPair.getRight() != null) {
           CompilationUnit cu = CUPair.getRight();
-          System.out.println(diffFile.getBaseRelativePath());
           for (DiffHunk diffHunk : diffHunksContainCode) {
             List<ASTNode> coveredNodes = new ArrayList<>();
             // find nodes covered or covering by each diff hunk
             int startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
             int endPos = cu.getPosition(diffHunk.getCurrentEndLine() + 1, 0);
             int length = endPos - startPos;
-            System.out.println(startPos);
             if (length > 0) {
               MyNodeFinder nodeFinder = new MyNodeFinder(cu, startPos, length);
               List<ASTNode> nodes = nodeFinder.getCoveredNodes();
@@ -76,7 +66,7 @@ public class Main {
                   node = node.getParent();
                 }
                 coveredNodes.add(node);
-//                System.out.println(node);
+                //                System.out.println(node);
               }
             }
             //              if (node != null) {
@@ -96,7 +86,7 @@ public class Main {
     }
     // compute the distance matrix
     // build the graph
-    for (DiffHunk diffHunk : allDiffHunks) {}
+    for (DiffHunk diffHunk : repoAnalyzer.getDiffHunks()) {}
 
     // visualize the graph
   }

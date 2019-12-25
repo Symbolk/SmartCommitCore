@@ -1,20 +1,24 @@
 package com.github.smartcommit.client;
 
 import com.github.smartcommit.core.GraphBuilder;
+import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
+import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /** Collect and write the diff file content into temp folders */
-public class MergeBot {
-  private static final Logger logger = LoggerFactory.getLogger(MergeBot.class);
+public class Main {
+  private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
   public static void main(String[] args) {
 
@@ -23,16 +27,26 @@ public class MergeBot {
     String TEMP_DIR = Config.TEMP_DIR; // temp folder to collect diff files
     String COMMIT_ID = Config.COMMIT_ID;
 
-    DataCollector dataCollector = new DataCollector(REPO_NAME, REPO_PATH, TEMP_DIR);
-    int count = dataCollector.collectDiffFilesAtCommit(COMMIT_ID);
-    System.out.println("Java Files: " + count);
+    // 1. analyze the repo
+    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_NAME, REPO_PATH);
+    List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(COMMIT_ID);
+//    List<DiffFile> diffFiles = repoAnalyzer.analyzeWorkingTree();
 
-    // build the graph
+    // 2. collect the data into temp dir
+    // (1) diff files
+    DataCollector dataCollector = new DataCollector(REPO_NAME, TEMP_DIR);
+    Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(COMMIT_ID, diffFiles);
+//    Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
+    // (2) diff hunks
+
+    // (3) file id mapping
+
+    // 3. build the diff hunk graph
     ExecutorService executorService = Executors.newFixedThreadPool(1);
     Future<Graph<Node, Edge>> baseBuilder =
-        executorService.submit(new GraphBuilder(baseDir, diffFiles));
+        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
     Future<Graph<Node, Edge>> currentBuilder =
-        executorService.submit(new GraphBuilder(currentDir, diffFiles));
+        executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
     try {
       Graph<Node, Edge> baseGraph = baseBuilder.get();
       //      Graph<Node, Edge> currentGraph = currentBuilder.get();
@@ -41,6 +55,9 @@ public class MergeBot {
       e.printStackTrace();
     }
 
+    // 4. analyze the diff hunks
+
+    // 5. generate diff hunk groups
     executorService.shutdown();
   }
 }
