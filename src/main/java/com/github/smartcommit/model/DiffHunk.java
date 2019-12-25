@@ -51,6 +51,7 @@ public class DiffHunk {
     this.description = description;
   }
 
+
   public Integer getIndex() {
     return index;
   }

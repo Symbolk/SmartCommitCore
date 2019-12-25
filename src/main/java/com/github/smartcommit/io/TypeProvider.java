@@ -16,6 +16,7 @@ public class TypeProvider implements ComponentAttributeProvider {
       Node node = (Node) component;
       Map<String, Attribute> map = new HashMap<>();
       map.put("type", new NodeTypeAttribute(node));
+      map.put("color", new NodeColorAttribute(node));
       map.put("shape", new NodeShapeAttribute(node));
       return map;
     }
@@ -50,6 +51,8 @@ class NodeShapeAttribute implements Attribute {
         return "ellipse";
       case FIELD:
         return "box";
+      case HUNK:
+        return "Mcircle";
       default:
         return "";
     }
@@ -71,6 +74,24 @@ class NodeTypeAttribute implements Attribute {
   @Override
   public String getValue() {
     return node.getType().asString();
+  }
+
+  @Override
+  public AttributeType getType() {
+    return AttributeType.STRING;
+  }
+}
+
+class NodeColorAttribute implements Attribute {
+  private Node node;
+
+  public NodeColorAttribute(Node node) {
+    this.node = node;
+  }
+
+  @Override
+  public String getValue() {
+    return node.isInDiffHunk ? "blue" : "black";
   }
 
   @Override

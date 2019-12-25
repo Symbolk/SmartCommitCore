@@ -35,13 +35,6 @@ public class MemberVisitor extends ASTVisitor {
 
   @Override
   public boolean visit(TypeDeclaration type) {
-    if (type.isInterface()) {
-      InterfaceInfo interfaceInfo = jdtService.createInterfaceInfo(type);
-      entityPool.interfaceInfoMap.put(interfaceInfo.fullName, interfaceInfo);
-    } else {
-      ClassInfo classInfo = jdtService.createClassInfo(type);
-      entityPool.classInfoMap.put(classInfo.fullName, classInfo);
-    }
     // create the node for the current type declaration
     NodeType nodeType = type.isInterface() ? NodeType.INTERFACE : NodeType.CLASS;
     String qualifiedNameForType = jdtService.getQualifiedNameForType(type);
@@ -49,11 +42,30 @@ public class MemberVisitor extends ASTVisitor {
         new Node(generateNodeID(), nodeType, type.getName().getIdentifier(), qualifiedNameForType);
     graph.addVertex(typeNode);
 
-    // find and link with the package node
-    String packageName = jdtService.getPackageName(type);
-    if (!packageName.isEmpty()) {
-      Node pkgNode = getOrCreatePkgNode(packageName);
-      graph.addEdge(pkgNode, typeNode, new Edge(generateEdgeID(), EdgeType.CONTAIN));
+    if (type.isInterface()) {
+      InterfaceInfo interfaceInfo = jdtService.createInterfaceInfo(type);
+      interfaceInfo.node = typeNode;
+      entityPool.interfaceInfoMap.put(interfaceInfo.fullName, interfaceInfo);
+    } else {
+      ClassInfo classInfo = jdtService.createClassInfo(type);
+      classInfo.node = typeNode;
+      entityPool.classInfoMap.put(classInfo.fullName, classInfo);
+    }
+
+    // find and link with the package node or the parent type node
+    if (type.isPackageMemberTypeDeclaration()) {
+      String packageName = jdtService.getPackageName(type);
+      if (!packageName.isEmpty()) {
+        Node pkgNode = getOrCreatePkgNode(packageName);
+        graph.addEdge(pkgNode, typeNode, new Edge(generateEdgeID(), EdgeType.CONTAIN));
+      }
+    } else if (type.isMemberTypeDeclaration()) {
+      String parentTypeName =
+          qualifiedNameForType.replace("." + type.getName().getIdentifier(), "");
+      Optional<Node> nodeOpt = getParentTypeNode(parentTypeName);
+      if (nodeOpt.isPresent()) {
+        graph.addEdge(nodeOpt.get(), typeNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+      }
     }
 
     // process the members inside the current type
@@ -104,6 +116,21 @@ public class MemberVisitor extends ASTVisitor {
 
   private Integer generateEdgeID() {
     return this.graph.edgeSet().size() + 1;
+  }
+
+  /**
+   * Find the parent type node by qualified name in the graph
+   *
+   * @param qualifiedName
+   * @return
+   */
+  private Optional<Node> getParentTypeNode(String qualifiedName) {
+    return graph.vertexSet().stream()
+        .filter(
+            node ->
+                (node.getType().equals(NodeType.CLASS) || node.getType().equals(NodeType.INTERFACE))
+                    && node.getQualifiedName().equals(qualifiedName))
+        .findAny();
   }
 
   /**

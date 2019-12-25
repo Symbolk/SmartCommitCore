@@ -1,6 +1,5 @@
 package com.github.smartcommit.util;
 
-import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.model.DiffFile;
 import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.jdt.core.JavaCore;
@@ -12,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 public class JDTParser {
-  private static final Logger logger = LoggerFactory.getLogger(RepoAnalyzer.class);
+  private static final Logger logger = LoggerFactory.getLogger(JDTParser.class);
   private String repoPath;
   private String jrePath;
 
@@ -52,7 +51,7 @@ public class JDTParser {
    *
    * @return
    */
-  private ASTParser initASTParser() {
+  public ASTParser initASTParser() {
     // set up the parser and resolver options
     ASTParser parser = ASTParser.newParser(8);
     parser.setResolveBindings(true);

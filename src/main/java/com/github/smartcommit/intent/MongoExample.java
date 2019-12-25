@@ -1,5 +1,6 @@
 package com.github.smartcommit.intent;
 
+import com.github.smartcommit.intent.model.CommitInfo;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
@@ -17,10 +18,11 @@ public class MongoExample {
       MongoClient mongoClient = new MongoClient(connectionString);
       MongoDatabase sampleDB = mongoClient.getDatabase("samples");
       MongoCollection<Document> repoCol = sampleDB.getCollection(REPO_NAME);
-      Document sampleDoc = new Document("repo_name", REPO_NAME);
+      Document commitDoc = new Document("repo_name", REPO_NAME);
+      CommitInfo commitInfo = new CommitInfo();
       // key:value
-      sampleDoc
-          .append("intent", "bugfix")
+      commitDoc
+          .append("intent", commitInfo.getIntent())
           .append("commit_msg", "bugfix: fix a bug introduced in the last version")
           .append("author", "8889")
           .append("email", "990@gmail.com");
@@ -28,9 +30,11 @@ public class MongoExample {
       Document actionDoc =
           new Document("type", "add")
               .append("node_type", "MethodInvocation")
-              .append("target", "getID()");
+              .append("label", "getID()");
       actionDocs.add(actionDoc);
-      repoCol.insertOne(sampleDoc);
+      commitDoc.append("actions", actionDocs);
+
+      repoCol.insertOne(commitDoc);
 
       mongoClient.close();
     } catch (Exception e) {

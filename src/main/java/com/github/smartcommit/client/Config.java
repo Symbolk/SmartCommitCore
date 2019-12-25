@@ -1,12 +1,24 @@
 package com.github.smartcommit.client;
 
+import java.io.File;
+
 /** Store the constants as the config */
 public final class Config {
   public static final String REPO_NAME = "nomulus";
-  public static final String REPO_PATH = "/Users/symbolk/coding/data/" + REPO_NAME;
-  public static final String TEMP_DIR = "/Users/symbolk/coding/data/temp";
-
   public static final String COMMIT_ID = "906b054f4b7a2e38681fd03282996955406afd65";
+  public static final String REPO_PATH = "/Users/symbolk/coding/data" + File.separator + REPO_NAME;
+
+  public static final String TEMP_DIR =
+      System.getProperty("user.home")
+          + File.separator
+          + ".mergebot"
+          + File.separator
+          + "repos"
+          + File.separator
+          + REPO_NAME
+          + "_mergebot"
+          + File.separator
+          + "smart_commit";
   public static final String JRE_PATH =
-      "/Library/Java/JavaVirtualMachines/jdk1.8.0_231.jdk/Contents/Home/jre/lib/rt.jar";
+      System.getProperty("java.home") + File.separator + "lib/rt.jar";
 }

@@ -3,6 +3,7 @@ package com.github.smartcommit.model;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class DiffFile {
@@ -30,6 +31,7 @@ public class DiffFile {
     this.currentRelativePath = currentRelativePath;
     this.baseContent = baseContent;
     this.currentContent = currentContent;
+    this.diffHunks = new ArrayList<>();
   }
 
   public FileStatus getStatus() {

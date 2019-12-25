@@ -2,34 +2,30 @@ package com.github.smartcommit.model;
 
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.Version;
+import org.eclipse.jdt.core.dom.ASTNode;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Hunk {
-  private String relativeFilePath;
+  private Location location;
   private Version version;
-  private Integer startLine;
-  private Integer endLine;
   private ContentType contentType;
   private List<String> codeSnippet;
+  // at or above statement level
+  private List<ASTNode> coveredNodes;
 
   public Hunk(
-      String relativeFilePath,
-      Version version,
-      Integer startLine,
-      Integer endLine,
-      ContentType contentType,
-      List<String> codeSnippet) {
-    this.relativeFilePath = relativeFilePath;
+      Version version, Location location, ContentType contentType, List<String> codeSnippet) {
     this.version = version;
-    this.startLine = startLine;
-    this.endLine = endLine;
+    this.location = location;
     this.contentType = contentType;
     this.codeSnippet = codeSnippet;
+    this.coveredNodes = new ArrayList<>();
   }
 
   public String getRelativeFilePath() {
-    return relativeFilePath;
+    return location.getRelativeFilePath();
   }
 
   public Version getVersion() {
@@ -37,11 +33,11 @@ public class Hunk {
   }
 
   public Integer getStartLine() {
-    return startLine;
+    return location.getStartLine();
   }
 
   public Integer getEndLine() {
-    return endLine;
+    return location.getEndLine();
   }
 
   public List<String> getCodeSnippet() {
