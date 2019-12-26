@@ -31,14 +31,14 @@ public class Main {
 
     // 1. analyze the repo
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_NAME, REPO_PATH);
-    List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(COMMIT_ID);
-    //    List<DiffFile> diffFiles = repoAnalyzer.analyzeWorkingTree();
+//    List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(COMMIT_ID);
+        List<DiffFile> diffFiles = repoAnalyzer.analyzeWorkingTree();
 
     // 2. collect the data into temp dir
     // (1) diff files
     DataCollector dataCollector = new DataCollector(REPO_NAME, TEMP_DIR);
-    Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(COMMIT_ID, diffFiles);
-    //    Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
+//    Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(COMMIT_ID, diffFiles);
+          Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
     // (2) file id mapping
     // (3) diff hunks
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);

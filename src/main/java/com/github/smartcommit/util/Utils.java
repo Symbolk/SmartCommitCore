@@ -8,6 +8,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -208,11 +209,10 @@ public class Utils {
    * @return
    */
   public static FileType checkFileType(String filePath) {
-    FileType fileType = FileType.OTHER;
-    if (filePath.endsWith(".java")) {
-      fileType = FileType.JAVA;
-    }
-    return fileType;
+    return Arrays.asList(FileType.values()).stream()
+        .filter(fileType -> filePath.endsWith(fileType.extension))
+        .findFirst()
+        .orElse(FileType.OTHER);
   }
 
   /**

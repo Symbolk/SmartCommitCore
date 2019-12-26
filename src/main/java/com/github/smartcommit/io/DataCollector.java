@@ -1,7 +1,6 @@
 package com.github.smartcommit.io;
 
 import com.github.smartcommit.model.constant.FileStatus;
-import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
@@ -84,41 +83,38 @@ public class DataCollector {
       String baseDir, String currentDir, List<com.github.smartcommit.model.DiffFile> diffFiles) {
     int count = 0;
     for (com.github.smartcommit.model.DiffFile diffFile : diffFiles) {
-      // TODO: currently only collect Java files
-      if (diffFile.getFileType().equals(FileType.JAVA)) {
-        String basePath, currentPath;
-        switch (diffFile.getStatus()) {
-          case ADDED:
-          case UNTRACKED:
-            currentPath = currentDir + diffFile.getCurrentRelativePath();
-            if (Utils.writeStringToFile(diffFile.getCurrentContent(), currentPath)) {
-              count++;
-            } else {
-              logger.error("Error when collecting: " + diffFile.getStatus() + ":" + currentPath);
-            }
-            break;
-          case DELETED:
-            basePath = baseDir + diffFile.getBaseRelativePath();
-            if (Utils.writeStringToFile(diffFile.getBaseContent(), basePath)) {
-              count++;
-            } else {
-              logger.error("Error when collecting: " + diffFile.getStatus() + ":" + basePath);
-            }
-            break;
-          case MODIFIED:
-          case RENAMED:
-          case COPIED:
-            basePath = baseDir + diffFile.getBaseRelativePath();
-            currentPath = currentDir + diffFile.getCurrentRelativePath();
-            boolean baseOk = Utils.writeStringToFile(diffFile.getBaseContent(), basePath);
-            boolean currentOk = Utils.writeStringToFile(diffFile.getCurrentContent(), currentPath);
-            if (baseOk && currentOk) {
-              count++;
-            } else {
-              logger.error("Error when collecting: " + diffFile.getStatus() + ":" + basePath);
-            }
-            break;
-        }
+      String basePath, currentPath;
+      switch (diffFile.getStatus()) {
+        case ADDED:
+        case UNTRACKED:
+          currentPath = currentDir + diffFile.getCurrentRelativePath();
+          if (Utils.writeStringToFile(diffFile.getCurrentContent(), currentPath)) {
+            count++;
+          } else {
+            logger.error("Error when collecting: " + diffFile.getStatus() + ":" + currentPath);
+          }
+          break;
+        case DELETED:
+          basePath = baseDir + diffFile.getBaseRelativePath();
+          if (Utils.writeStringToFile(diffFile.getBaseContent(), basePath)) {
+            count++;
+          } else {
+            logger.error("Error when collecting: " + diffFile.getStatus() + ":" + basePath);
+          }
+          break;
+        case MODIFIED:
+        case RENAMED:
+        case COPIED:
+          basePath = baseDir + diffFile.getBaseRelativePath();
+          currentPath = currentDir + diffFile.getCurrentRelativePath();
+          boolean baseOk = Utils.writeStringToFile(diffFile.getBaseContent(), basePath);
+          boolean currentOk = Utils.writeStringToFile(diffFile.getCurrentContent(), currentPath);
+          if (baseOk && currentOk) {
+            count++;
+          } else {
+            logger.error("Error when collecting: " + diffFile.getStatus() + ":" + basePath);
+          }
+          break;
       }
     }
     return count;
