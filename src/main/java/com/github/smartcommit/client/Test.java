@@ -30,13 +30,14 @@ public class Test {
     PropertyConfigurator.configure("log4j.properties");
     //    BasicConfigurator.configure();
 
+    String REPO_ID = Config.REPO_ID;
     String REPO_NAME = Config.REPO_NAME;
     String REPO_PATH = Config.REPO_PATH;
     String COMMIT_ID = Config.COMMIT_ID;
     String JRE_PATH = Config.JRE_PATH;
     String TEMP_DIR = Config.TEMP_DIR; // temp folder to collect diff files
 
-    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_NAME, REPO_PATH);
+    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_ID, REPO_NAME, REPO_PATH);
     repoAnalyzer.analyzeCommit(COMMIT_ID);
 
     String uuid = UUID.randomUUID().toString().replaceAll("-", "");

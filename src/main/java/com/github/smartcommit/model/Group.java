@@ -9,6 +9,7 @@ public class Group {
   private String groupID;
   private String commitID;
 
+  // fileID:diffHunkID
   private List<String> diffHunks;
   private String commitMsg;
   private String templateCommitMsg;

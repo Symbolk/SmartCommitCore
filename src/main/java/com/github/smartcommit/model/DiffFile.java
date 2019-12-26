@@ -38,6 +38,18 @@ public class DiffFile {
     this.diffHunks = new ArrayList<>();
   }
 
+  public String getRepoID() {
+    return repoID;
+  }
+
+  public String getRepoName() {
+    return repoName;
+  }
+
+  public String getFileID() {
+    return fileID;
+  }
+
   public void setRepoID(String repoID) {
     this.repoID = repoID;
   }

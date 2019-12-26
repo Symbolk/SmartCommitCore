@@ -13,7 +13,6 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 public class DataCollector {
   private static final Logger logger = LoggerFactory.getLogger(DataCollector.class);
@@ -135,14 +134,10 @@ public class DataCollector {
           diffFile.getStatus().equals(FileStatus.ADDED)
               ? diffFile.getCurrentRelativePath()
               : diffFile.getBaseRelativePath();
-      String fileID = UUID.randomUUID().toString().replaceAll("-", "");
-      fileIDToPathMap.put(fileID, filePath);
-
-      diffFile.setRepoID(String.valueOf(repoName.hashCode()));
-      diffFile.setRepoName(repoName);
-      diffFile.setFileID(fileID);
+      fileIDToPathMap.put(diffFile.getFileID(), filePath);
       Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-      Utils.writeStringToFile(gson.toJson(diffFile), diffDir + File.separator + fileID + ".json");
+      Utils.writeStringToFile(
+          gson.toJson(diffFile), diffDir + File.separator + diffFile.getFileID() + ".json");
     }
 
     // save the fileID to path map

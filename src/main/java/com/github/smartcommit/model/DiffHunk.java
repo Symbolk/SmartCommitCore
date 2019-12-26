@@ -53,6 +53,38 @@ public class DiffHunk {
   //    this.changeActions = changeActions;
   //  }
 
+  public String getRepoID() {
+    return repoID;
+  }
+
+  public void setRepoID(String repoID) {
+    this.repoID = repoID;
+  }
+
+  public String getRepoName() {
+    return repoName;
+  }
+
+  public void setRepoName(String repoName) {
+    this.repoName = repoName;
+  }
+
+  public String getDiffHunkID() {
+    return diffHunkID;
+  }
+
+  public void setDiffHunkID(String diffHunkID) {
+    this.diffHunkID = diffHunkID;
+  }
+
+  public String getCommitID() {
+    return commitID;
+  }
+
+  public void setCommitID(String commitID) {
+    this.commitID = commitID;
+  }
+
   public Integer getBaseStartLine() {
     return baseHunk.getStartLine();
   }
