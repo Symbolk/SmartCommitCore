@@ -307,6 +307,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 existInGraph = true;
                 Node node = nodeOpt.get();
                 node.isInDiffHunk = true;
+                hunkInfo.typeDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
               } else {
                 logger.error("Not Found: " + astNode);
@@ -321,6 +322,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                   existInGraph = true;
                   Node node = nodeOpt.get();
                   node.isInDiffHunk = true;
+                  hunkInfo.fieldDefs.add(node.getQualifiedName());
                   hunkInfo.node = node;
                 } else {
                   logger.error("Not Found: " + astNode);
@@ -335,6 +337,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 existInGraph = true;
                 Node node = nodeOpt.get();
                 node.isInDiffHunk = true;
+                hunkInfo.methodDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
               } else {
                 logger.error("Not Found: " + astNode);

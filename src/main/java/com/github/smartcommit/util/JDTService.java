@@ -757,6 +757,30 @@ public class JDTService {
       }
       parseExpression(entityInfo, ((QualifiedName) expression).getQualifier());
     }
+    if (expression.getNodeType() == ASTNode.SIMPLE_NAME) {
+      IBinding binding = ((SimpleName) expression).resolveBinding();
+      if (binding != null && binding instanceof IVariableBinding) {
+        IVariableBinding varBinding = ((IVariableBinding) binding);
+        if (varBinding.isField()) {
+          entityInfo.fieldUses.add(
+              varBinding.getDeclaringClass().getQualifiedName() + "." + binding.getName());
+        } else if (varBinding.isParameter()) {
+          entityInfo.paraUses.add(
+              varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
+                  + "."
+                  + varBinding.getDeclaringMethod().getName()
+                  + ":"
+                  + varBinding.getName());
+        } else {
+          entityInfo.localVarUses.add(
+              varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
+                  + "."
+                  + varBinding.getDeclaringMethod().getName()
+                  + "."
+                  + varBinding.getName());
+        }
+      }
+    }
   }
 
   private Set<String> getTypes(Type oType) {
