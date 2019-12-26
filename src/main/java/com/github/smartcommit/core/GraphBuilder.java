@@ -2,7 +2,6 @@ package com.github.smartcommit.core;
 
 import com.github.smartcommit.core.visitor.MemberVisitor;
 import com.github.smartcommit.core.visitor.MyNodeFinder;
-import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.EntityPool;
@@ -262,7 +261,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       }
     }
 
-    String graphDotString = GraphExporter.exportAsDotWithType(graph);
+    //    String graphDotString = GraphExporter.exportAsDotWithType(graph);
     return graph;
   }
 
@@ -274,7 +273,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
    * @return
    */
   private void createHunkInfos(String sourceFilePath, CompilationUnit cu, JDTService jdtService) {
-    List<HunkInfo> hunkInfos = new ArrayList<>();
     Map<String, Pair<Integer, Integer>> diffHunkPositions =
         computeHunksPosition(sourceFilePath, cu);
     for (String index : diffHunkPositions.keySet()) {
@@ -294,19 +292,32 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       HunkInfo hunkInfo = new HunkInfo(index);
       hunkInfo.coveredNodes = coveredNodes;
       boolean existInGraph = false;
+
+      // coveredNodes.isEmpty() --> added for BASE and deleted for CURRENT
       for (ASTNode astNode : coveredNodes) {
         if (astNode instanceof BodyDeclaration) {
           Optional<Node> nodeOpt = Optional.empty();
           // find the corresponding nodeOpt in the entity pool (expected to exist)
           switch (astNode.getNodeType()) {
             case ASTNode.TYPE_DECLARATION:
-              nodeOpt =
-                  findNodeByNameAndType(
-                      ((TypeDeclaration) astNode).getName().getIdentifier(), NodeType.CLASS);
+              ITypeBinding typeBinding = ((TypeDeclaration) astNode).resolveBinding();
+              if (typeBinding != null) {
+                nodeOpt =
+                    findNodeByNameAndType(typeBinding.getQualifiedName(), NodeType.CLASS, true);
+              } else {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        ((TypeDeclaration) astNode).getName().getIdentifier(),
+                        NodeType.CLASS,
+                        false);
+              }
+
               if (nodeOpt.isPresent()) {
                 existInGraph = true;
                 Node node = nodeOpt.get();
                 node.isInDiffHunk = true;
+                node.diffHunkID = index;
+
                 hunkInfo.typeDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
               } else {
@@ -317,11 +328,22 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               List<VariableDeclarationFragment> fragments =
                   ((FieldDeclaration) astNode).fragments();
               for (VariableDeclarationFragment fragment : fragments) {
-                nodeOpt = findNodeByNameAndType(fragment.getName().getIdentifier(), NodeType.FIELD);
+                IVariableBinding binding = fragment.resolveBinding();
+                if (binding != null && binding.getDeclaringClass() != null) {
+                  nodeOpt =
+                      findNodeByNameAndType(
+                          binding.getDeclaringClass().getQualifiedName() + ":" + binding.getName(),
+                          NodeType.FIELD,
+                          true);
+                } else {
+                  nodeOpt = findNodeByNameAndType(binding.getName(), NodeType.FIELD, false);
+                }
                 if (nodeOpt.isPresent()) {
                   existInGraph = true;
                   Node node = nodeOpt.get();
                   node.isInDiffHunk = true;
+                  node.diffHunkID = index;
+
                   hunkInfo.fieldDefs.add(node.getQualifiedName());
                   hunkInfo.node = node;
                 } else {
@@ -330,13 +352,29 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               }
               break;
             case ASTNode.METHOD_DECLARATION:
-              nodeOpt =
-                  findNodeByNameAndType(
-                      ((MethodDeclaration) astNode).getName().getIdentifier(), NodeType.METHOD);
+              IMethodBinding methodBinding = ((MethodDeclaration) astNode).resolveBinding();
+              if (methodBinding != null && methodBinding.getDeclaringClass() != null) {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        methodBinding.getDeclaringClass().getQualifiedName()
+                            + ":"
+                            + methodBinding.getName(),
+                        NodeType.METHOD,
+                        true);
+              } else {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        ((MethodDeclaration) astNode).getName().getIdentifier(),
+                        NodeType.METHOD,
+                        false);
+              }
+
               if (nodeOpt.isPresent()) {
                 existInGraph = true;
                 Node node = nodeOpt.get();
                 node.isInDiffHunk = true;
+                node.diffHunkID = index;
+
                 hunkInfo.methodDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
               } else {
@@ -357,6 +395,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         Node hunkNode =
             new Node(nodeID, NodeType.HUNK, hunkInfo.uniqueName(), hunkInfo.uniqueName());
         hunkNode.isInDiffHunk = true;
+        hunkNode.diffHunkID = index;
+
         hunkInfo.node = hunkNode;
         graph.addVertex(hunkNode);
         // find parent entity node (expected to exist) and create the contain edge
@@ -385,7 +425,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     Map<String, Pair<Integer, Integer>> indexToPositionMap = new HashMap<>();
     // get the current diff file
     Version version = Version.BASE;
-    if (sourceFilePath.contains(File.separator + "b" + File.separator)) {
+    if (sourceFilePath.contains(File.separator + Version.CURRENT.asString() + File.separator)) {
       version = Version.CURRENT;
     }
     Optional<DiffFile> diffFileOpt = getDiffFileByPath(sourceFilePath, version);
@@ -460,17 +500,24 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
   }
 
   /**
-   * Find the corresponding node in graph by name and type
+   * Find the corresponding node in graph by name (qualified name first, simple name if no qualified
+   * name) and type
    *
    * @param name
    * @param type
    * @return
    */
-  private Optional<Node> findNodeByNameAndType(String name, NodeType type) {
-    // TODO: use qualified name to eliminate false positive
-    return graph.vertexSet().stream()
-        .filter(node -> node.getType().equals(type) && node.getIdentifier().equals(name))
-        .findAny();
+  private Optional<Node> findNodeByNameAndType(
+      String name, NodeType type, Boolean isQualifiedName) {
+    if (isQualifiedName) {
+      return graph.vertexSet().stream()
+          .filter(node -> node.getType().equals(type) && node.getQualifiedName().equals(name))
+          .findAny();
+    } else {
+      return graph.vertexSet().stream()
+          .filter(node -> node.getType().equals(type) && node.getIdentifier().equals(name))
+          .findAny();
+    }
   }
 
   /**

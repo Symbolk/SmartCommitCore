@@ -3,6 +3,7 @@ package com.github.smartcommit.client;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
+import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
@@ -45,14 +46,15 @@ public class Main {
 
     // 3. build the diff hunk graph
     ExecutorService executorService = Executors.newFixedThreadPool(1);
-    Future<Graph<Node, Edge>> baseBuilder =
-        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
+//    Future<Graph<Node, Edge>> baseBuilder =
+//        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
     Future<Graph<Node, Edge>> currentBuilder =
         executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
     try {
-      Graph<Node, Edge> baseGraph = baseBuilder.get();
-      //      Graph<Node, Edge> currentGraph = currentBuilder.get();
+//      Graph<Node, Edge> baseGraph = baseBuilder.get();
+            Graph<Node, Edge> currentGraph = currentBuilder.get();
       //      String graphDotString = GraphExporter.exportAsDotWithType(baseGraph);
+            String graphDotString = GraphExporter.exportAsDotWithType(currentGraph);
     } catch (Exception e) {
       e.printStackTrace();
     }

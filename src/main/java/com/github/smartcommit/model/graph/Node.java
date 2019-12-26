@@ -6,6 +6,7 @@ public class Node {
     private String identifier;
     private String qualifiedName;
     public Boolean isInDiffHunk;
+    public String diffHunkID;
 
     public Node(Integer id, NodeType type, String identifier, String qualifiedName) {
         this.id = id;
@@ -13,6 +14,7 @@ public class Node {
         this.identifier = identifier;
         this.qualifiedName = qualifiedName;
         this.isInDiffHunk = false;
+        this.diffHunkID = "";
     }
 
     public Integer getId() {

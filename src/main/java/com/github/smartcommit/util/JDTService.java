@@ -306,7 +306,7 @@ public class JDTService {
       if (((QualifiedName) expression).getQualifier().resolveTypeBinding() != null) {
         String name =
             ((QualifiedName) expression).getQualifier().resolveTypeBinding().getQualifiedName()
-                + "."
+                + ":"
                 + ((QualifiedName) expression).getName().getIdentifier();
         fieldInfo.fieldUses.add(name);
       }
@@ -532,7 +532,7 @@ public class JDTService {
       if (typeBinding != null) {
         String name =
             typeBinding.getQualifiedName()
-                + "."
+                + ":"
                 + ((QualifiedName) expression).getName().getIdentifier();
         methodInfo.fieldUses.add(name);
       }
@@ -756,7 +756,7 @@ public class JDTService {
       if (typeBinding != null) {
         String name =
             typeBinding.getQualifiedName()
-                + "."
+                + ":"
                 + ((QualifiedName) expression).getName().getIdentifier();
         entityInfo.fieldUses.add(name);
       }
@@ -768,20 +768,20 @@ public class JDTService {
         IVariableBinding varBinding = ((IVariableBinding) binding);
         if (varBinding.isField()) {
           entityInfo.fieldUses.add(
-              varBinding.getDeclaringClass().getQualifiedName() + "." + binding.getName());
+              varBinding.getDeclaringClass().getQualifiedName() + ":" + binding.getName());
         } else if (varBinding.isParameter()) {
           entityInfo.paraUses.add(
               varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
-                  + "."
+                  + ":"
                   + varBinding.getDeclaringMethod().getName()
                   + ":"
                   + varBinding.getName());
         } else {
           entityInfo.localVarUses.add(
               varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
-                  + "."
+                  + ":"
                   + varBinding.getDeclaringMethod().getName()
-                  + "."
+                  + ":"
                   + varBinding.getName());
         }
       }

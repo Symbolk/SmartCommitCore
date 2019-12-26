@@ -4,8 +4,6 @@ import com.github.smartcommit.model.constant.ChangeType;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
 
-import java.util.List;
-
 public class DiffHunk {
 
   private Integer fileIndex; // the index of the diff file
@@ -16,25 +14,6 @@ public class DiffHunk {
   private ChangeType changeType;
   //  private List<ActionCluster> changeActions;
   private String description;
-
-  private List<String> simpleTypes;
-  private List<String> simpleNames;
-
-  public List<String> getSimpleTypes() {
-    return simpleTypes;
-  }
-
-  public void setSimpleTypes(List<String> simpleTypes) {
-    this.simpleTypes = simpleTypes;
-  }
-
-  public List<String> getSimpleNames() {
-    return simpleNames;
-  }
-
-  public void setSimpleNames(List<String> simpleNames) {
-    this.simpleNames = simpleNames;
-  }
 
   public DiffHunk(
       Integer index,
@@ -50,7 +29,6 @@ public class DiffHunk {
     this.changeType = changeType;
     this.description = description;
   }
-
 
   public Integer getIndex() {
     return index;

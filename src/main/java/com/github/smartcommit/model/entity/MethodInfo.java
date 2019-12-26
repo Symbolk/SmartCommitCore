@@ -31,6 +31,6 @@ public class MethodInfo extends EntityInfo {
   public IMethodBinding methodBinding;
 
   public String uniqueName() {
-    return belongTo + "." + name + "(" + paramString + ")";
+    return belongTo + ":" + name + "(" + paramString + ")";
   }
 }
