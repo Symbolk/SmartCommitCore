@@ -7,6 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DiffFile {
+  private String repoID;
+  private String repoName;
+  private String fileID;
+
   private Integer index; // the index of the diff file in the current repo, start from 0
   private FileStatus status;
   private FileType fileType;
@@ -32,6 +36,18 @@ public class DiffFile {
     this.baseContent = baseContent;
     this.currentContent = currentContent;
     this.diffHunks = new ArrayList<>();
+  }
+
+  public void setRepoID(String repoID) {
+    this.repoID = repoID;
+  }
+
+  public void setRepoName(String repoName) {
+    this.repoName = repoName;
+  }
+
+  public void setFileID(String fileID) {
+    this.fileID = fileID;
   }
 
   public FileStatus getStatus() {

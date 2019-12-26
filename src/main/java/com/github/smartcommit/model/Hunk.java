@@ -6,33 +6,42 @@ import com.github.smartcommit.model.constant.Version;
 import java.util.List;
 
 public class Hunk {
-  private Location location;
+  private String relativeFilePath;
+  private Integer startLine;
+  private Integer endLine;
   private Version version;
   private ContentType contentType;
   private List<String> codeSnippet;
 
   public Hunk(
-      Version version, Location location, ContentType contentType, List<String> codeSnippet) {
+      Version version,
+      String relativeFilePath,
+      Integer startLine,
+      Integer endLine,
+      ContentType contentType,
+      List<String> codeSnippet) {
     this.version = version;
-    this.location = location;
+    this.relativeFilePath = relativeFilePath;
+    this.startLine = startLine;
+    this.endLine = endLine;
     this.contentType = contentType;
     this.codeSnippet = codeSnippet;
-  }
-
-  public String getRelativeFilePath() {
-    return location.getRelativeFilePath();
   }
 
   public Version getVersion() {
     return version;
   }
 
+  public String getRelativeFilePath() {
+    return relativeFilePath;
+  }
+
   public Integer getStartLine() {
-    return location.getStartLine();
+    return startLine;
   }
 
   public Integer getEndLine() {
-    return location.getEndLine();
+    return endLine;
   }
 
   public List<String> getCodeSnippet() {

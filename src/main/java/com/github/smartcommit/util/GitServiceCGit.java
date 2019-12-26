@@ -2,7 +2,6 @@ package com.github.smartcommit.util;
 
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
-import com.github.smartcommit.model.Location;
 import com.github.smartcommit.model.constant.ChangeType;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
@@ -216,23 +215,17 @@ public class GitServiceCGit implements GitService {
         com.github.smartcommit.model.Hunk baseHunk =
             new com.github.smartcommit.model.Hunk(
                 Version.BASE,
-                new Location(
-                    baseFilePath,
-                    hunk.getFromFileRange().getLineStart() + 1,
-                    hunk.getFromFileRange().getLineStart()
-                        + hunk.getFromFileRange().getLineCount()
-                        - 2),
+                removeVersionLabel(baseFilePath),
+                hunk.getFromFileRange().getLineStart() + 1,
+                hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 2,
                 Utils.checkContentType(baseCodeLines),
                 baseCodeLines);
         com.github.smartcommit.model.Hunk currentHunk =
             new com.github.smartcommit.model.Hunk(
                 Version.CURRENT,
-                new Location(
-                    currentFilePath,
-                    hunk.getToFileRange().getLineStart() + 1,
-                    hunk.getToFileRange().getLineStart()
-                        + hunk.getToFileRange().getLineCount()
-                        - 2),
+                removeVersionLabel(currentFilePath),
+                hunk.getToFileRange().getLineStart() + 1,
+                hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 2,
                 Utils.checkContentType(currentCodeLines),
                 currentCodeLines);
         ChangeType changeType = ChangeType.MODIFIED;
@@ -332,5 +325,14 @@ public class GitServiceCGit implements GitService {
     } else {
       return "";
     }
+  }
+
+  /**
+   * Remove the "a/" or "b/" at the beginning of the path printed in Git
+   *
+   * @return
+   */
+  private String removeVersionLabel(String gitFilePath) {
+    return gitFilePath.replaceFirst("a/", "").replaceFirst("b/", "");
   }
 }

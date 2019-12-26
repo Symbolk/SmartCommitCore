@@ -43,7 +43,7 @@ public class Main {
     // (3) diff hunks
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
-    // 3. build the diff hunk graph
+    // 3. build the d    //    Future<Graph<Node, Edge>> baseBuilder =iff hunk graph
     ExecutorService executorService = Executors.newFixedThreadPool(1);
     //    Future<Graph<Node, Edge>> baseBuilder =
     //        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
@@ -56,7 +56,7 @@ public class Main {
       String graphDotString = GraphExporter.exportAsDotWithType(currentGraph);
 
       // 4. analyze the diff hunks
-      
+
       // 5. generate diff hunk groups
 
     } catch (Exception e) {

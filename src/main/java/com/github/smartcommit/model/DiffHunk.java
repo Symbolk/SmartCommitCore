@@ -5,6 +5,10 @@ import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
 
 public class DiffHunk {
+  private String repoID;
+  private String repoName;
+  private String diffHunkID;
+  private String commitID;
 
   private Integer fileIndex; // the index of the diff file
   private Integer index; // the index of the diff hunk in the current file diff, start from 0
