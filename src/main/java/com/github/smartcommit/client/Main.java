@@ -32,36 +32,37 @@ public class Main {
     // 1. analyze the repo
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_NAME, REPO_PATH);
     List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(COMMIT_ID);
-//    List<DiffFile> diffFiles = repoAnalyzer.analyzeWorkingTree();
+    //    List<DiffFile> diffFiles = repoAnalyzer.analyzeWorkingTree();
 
     // 2. collect the data into temp dir
     // (1) diff files
     DataCollector dataCollector = new DataCollector(REPO_NAME, TEMP_DIR);
     Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(COMMIT_ID, diffFiles);
-//    Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
+    //    Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
     // (2) file id mapping
     // (3) diff hunks
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
-
     // 3. build the diff hunk graph
     ExecutorService executorService = Executors.newFixedThreadPool(1);
-//    Future<Graph<Node, Edge>> baseBuilder =
-//        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
+    //    Future<Graph<Node, Edge>> baseBuilder =
+    //        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
     Future<Graph<Node, Edge>> currentBuilder =
         executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
     try {
-//      Graph<Node, Edge> baseGraph = baseBuilder.get();
-            Graph<Node, Edge> currentGraph = currentBuilder.get();
+      //      Graph<Node, Edge> baseGraph = baseBuilder.get();
+      Graph<Node, Edge> currentGraph = currentBuilder.get();
       //      String graphDotString = GraphExporter.exportAsDotWithType(baseGraph);
-            String graphDotString = GraphExporter.exportAsDotWithType(currentGraph);
+      String graphDotString = GraphExporter.exportAsDotWithType(currentGraph);
+
+      // 4. analyze the diff hunks
+      
+      // 5. generate diff hunk groups
+
     } catch (Exception e) {
       e.printStackTrace();
     }
 
-    // 4. analyze the diff hunks
-
-    // 5. generate diff hunk groups
     executorService.shutdown();
   }
 }

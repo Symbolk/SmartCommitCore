@@ -83,18 +83,40 @@ public class DataCollector {
   private int collect(String baseDir, String currentDir, List<DiffFile> diffFiles) {
     int count = 0;
     for (DiffFile diffFile : diffFiles) {
-      // TODO: currently only collect MODIFIED Java files
-      if (diffFile.getFileType().equals(FileType.JAVA)
-          && diffFile.getStatus().equals(FileStatus.MODIFIED)) {
-
-        String aPath = baseDir + diffFile.getBaseRelativePath();
-        String bPath = currentDir + diffFile.getCurrentRelativePath();
-        boolean aOk = Utils.writeStringToFile(diffFile.getBaseContent(), aPath);
-        boolean bOk = Utils.writeStringToFile(diffFile.getCurrentContent(), bPath);
-        if (aOk && bOk) {
-          count++;
-        } else {
-          logger.error("Error with: " + diffFile.getBaseRelativePath());
+      // TODO: currently only collect Java files
+      if (diffFile.getFileType().equals(FileType.JAVA)) {
+        String basePath, currentPath;
+        switch (diffFile.getStatus()) {
+          case ADDED:
+          case UNTRACKED:
+            currentPath = currentDir + diffFile.getCurrentRelativePath();
+            if (Utils.writeStringToFile(diffFile.getCurrentContent(), currentPath)) {
+              count++;
+            } else {
+              logger.error("Error when collecting: " + diffFile.getStatus() + ":" + currentPath);
+            }
+            break;
+          case DELETED:
+            basePath = baseDir + diffFile.getBaseRelativePath();
+            if (Utils.writeStringToFile(diffFile.getBaseContent(), basePath)) {
+              count++;
+            } else {
+              logger.error("Error when collecting: " + diffFile.getStatus() + ":" + basePath);
+            }
+            break;
+          case MODIFIED:
+          case RENAMED:
+          case COPIED:
+            basePath = baseDir + diffFile.getBaseRelativePath();
+            currentPath = currentDir + diffFile.getCurrentRelativePath();
+            boolean baseOk = Utils.writeStringToFile(diffFile.getBaseContent(), basePath);
+            boolean currentOk = Utils.writeStringToFile(diffFile.getCurrentContent(), currentPath);
+            if (baseOk && currentOk) {
+              count++;
+            } else {
+              logger.error("Error when collecting: " + diffFile.getStatus() + ":" + basePath);
+            }
+            break;
         }
       }
     }
