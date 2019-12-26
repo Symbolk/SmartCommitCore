@@ -528,9 +528,10 @@ public class JDTService {
       parseExpressionInMethod(methodInfo, ((Assignment) expression).getRightHandSide());
     }
     if (expression.getNodeType() == ASTNode.QUALIFIED_NAME) {
-      if (((QualifiedName) expression).getQualifier().resolveTypeBinding() != null) {
+      ITypeBinding typeBinding = ((QualifiedName) expression).getQualifier().resolveTypeBinding();
+      if (typeBinding != null) {
         String name =
-            ((QualifiedName) expression).getQualifier().resolveTypeBinding().getQualifiedName()
+            typeBinding.getQualifiedName()
                 + "."
                 + ((QualifiedName) expression).getName().getIdentifier();
         methodInfo.fieldUses.add(name);
@@ -748,9 +749,10 @@ public class JDTService {
       parseExpression(entityInfo, ((Assignment) expression).getRightHandSide());
     }
     if (expression.getNodeType() == ASTNode.QUALIFIED_NAME) {
-      if (((QualifiedName) expression).getQualifier().resolveTypeBinding() != null) {
+      ITypeBinding typeBinding = ((QualifiedName) expression).getQualifier().resolveTypeBinding();
+      if (typeBinding != null) {
         String name =
-            ((QualifiedName) expression).getQualifier().resolveTypeBinding().getQualifiedName()
+            typeBinding.getQualifiedName()
                 + "."
                 + ((QualifiedName) expression).getName().getIdentifier();
         entityInfo.fieldUses.add(name);
