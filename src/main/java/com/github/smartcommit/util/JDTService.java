@@ -738,10 +738,13 @@ public class JDTService {
       }
     }
     if (expression.getNodeType() == ASTNode.METHOD_INVOCATION) {
-      List<Expression> arguments = ((MethodInvocation) expression).arguments();
       IMethodBinding methodBinding = ((MethodInvocation) expression).resolveMethodBinding();
       if (methodBinding != null) entityInfo.methodCalls.add(methodBinding);
-      for (Expression exp : arguments) parseExpression(entityInfo, exp);
+
+      List<Expression> arguments = ((MethodInvocation) expression).arguments();
+      for (Expression exp : arguments) {
+        parseExpression(entityInfo, exp);
+      }
       parseExpression(entityInfo, ((MethodInvocation) expression).getExpression());
     }
     if (expression.getNodeType() == ASTNode.ASSIGNMENT) {
@@ -781,6 +784,14 @@ public class JDTService {
                   + "."
                   + varBinding.getName());
         }
+      }
+    }
+
+    if (expression.getNodeType() == ASTNode.EXPRESSION_METHOD_REFERENCE) {
+      IMethodBinding methodBinding =
+          ((ExpressionMethodReference) expression).resolveMethodBinding();
+      if (methodBinding != null) {
+        entityInfo.methodCalls.add(methodBinding);
       }
     }
   }
