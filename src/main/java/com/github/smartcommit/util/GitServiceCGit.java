@@ -17,8 +17,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.github.smartcommit.util.Utils.readFileToString;
-
 /** Implementation of helper functions based on the output of git commands. */
 public class GitServiceCGit implements GitService {
   /**
@@ -28,9 +26,14 @@ public class GitServiceCGit implements GitService {
    */
   @Override
   public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoDir) {
+    ArrayList<DiffFile> diffFileList = new ArrayList<>();
     // run git status --porcelain to get changeset
     String output = Utils.runSystemCommand(repoDir, "git", "status", "--porcelain");
-    ArrayList<DiffFile> DiffFileList = new ArrayList<>();
+    if (output.isEmpty()) {
+      // working tree clean
+      return diffFileList;
+    }
+
     String lines[] = output.split("\\r?\\n");
     for (int i = 0; i < lines.length; i++) {
       String temp[] = lines[i].trim().split("\\s+");
@@ -50,13 +53,13 @@ public class GitServiceCGit implements GitService {
                   relativePath,
                   relativePath,
                   getContentAtHEAD(repoDir, relativePath),
-                  readFileToString(absolutePath));
+                  Utils.readFileToString(absolutePath));
           break;
         case ADDED:
         case UNTRACKED:
           DiffFile =
               new DiffFile(
-                  i, status, fileType, "", relativePath, "", readFileToString(absolutePath));
+                  i, status, fileType, "", relativePath, "", Utils.readFileToString(absolutePath));
           break;
         case DELETED:
           DiffFile =
@@ -83,17 +86,17 @@ public class GitServiceCGit implements GitService {
                     oldPath,
                     newPath,
                     getContentAtHEAD(repoDir, oldPath),
-                    readFileToString(newAbsPath));
+                    Utils.readFileToString(newAbsPath));
           }
           break;
         default:
           break;
       }
       if (DiffFile != null) {
-        DiffFileList.add(DiffFile);
+        diffFileList.add(DiffFile);
       }
     }
-    return DiffFileList;
+    return diffFileList;
   }
 
   /**

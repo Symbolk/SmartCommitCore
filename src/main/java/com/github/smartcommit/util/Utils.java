@@ -3,15 +3,15 @@ package com.github.smartcommit.util;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
+import org.apache.commons.io.FileUtils;
 
-import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /** Helper functions to operate the file and the system. */
 public class Utils {
@@ -66,85 +66,33 @@ public class Utils {
   }
 
   /**
-   * Read the content of a given file (Use FileUtils.readFileToString from commons-io instead)
+   * Read the content of a file into string
    *
-   * @param path to be read
-   * @return string content of the file, or null in case of errors.
+   * @return
    */
-  public static String readFileToString(String path) {
+  public static String readFileToString(String filePath) {
     String content = "";
-    File file = new File(path);
-    if (file.exists()) {
-      String fileEncoding = "UTF-8";
-      try (BufferedReader reader =
-          Files.newBufferedReader(Paths.get(path), Charset.forName(fileEncoding))) {
-        content = reader.lines().collect(Collectors.joining("\n"));
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    } else {
-      System.err.println(path + " does not exist!");
+    try {
+      content = FileUtils.readFileToString(new File(filePath), "UTF-8");
+    } catch (IOException e) {
+      e.printStackTrace();
     }
     return content;
   }
 
   /**
-   * Writes the given content into a file of the given file path, overwrite by default
-   *
-   * @param content
-   * @param filePath
-   * @return boolean indicating the success of the write operation.
-   */
-  public static boolean writeStringToFile(String content, String filePath, boolean append) {
-    try {
-      File file = new File(filePath);
-      if (file.exists() && !append) {
-        file.delete();
-      }
-      if (!file.exists()) {
-        file.getParentFile().mkdirs();
-        file.createNewFile();
-      }
-      FileWriter fileWriter = new FileWriter(filePath, append);
-      BufferedWriter writer = new BufferedWriter(fileWriter);
-      writer.write(content);
-      writer.flush();
-      writer.close();
-    } catch (NullPointerException ne) {
-      ne.printStackTrace();
-    } catch (Exception e) {
-      e.printStackTrace();
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Writes the given content in the file of the given file path.
+   * Write the given content in the file of the given file path.
    *
    * @param content
    * @param filePath
    * @return boolean indicating the success of the write operation.
    */
   public static boolean writeStringToFile(String content, String filePath) {
-    if (!content.isEmpty()) {
-      try {
-        File file = new File(filePath);
-        if (!file.exists()) {
-          file.getParentFile().mkdirs();
-          file.createNewFile();
-        }
-        BufferedWriter writer = Files.newBufferedWriter(Paths.get(filePath));
-        writer.write(content);
-        writer.flush();
-        writer.close();
-      } catch (NullPointerException ne) {
-        ne.printStackTrace();
-        // empty, necessary for integration with git version control system
-      } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-      }
+    try {
+      FileUtils.writeStringToFile(new File(filePath), content, "UTF-8");
+    } catch (IOException e) {
+      e.printStackTrace();
+      return false;
     }
     return true;
   }
