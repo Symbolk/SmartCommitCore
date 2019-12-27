@@ -20,38 +20,37 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /** Collect and write the diff file content into temp folders */
-public class Main {
-  private static final Logger logger = LoggerFactory.getLogger(Main.class);
+public class SpecificCommit {
+  private static final Logger logger = LoggerFactory.getLogger(SpecificCommit.class);
 
   public static void main(String[] args) {
 
     String REPO_ID = Config.REPO_ID;
     String REPO_NAME = Config.REPO_NAME;
     String REPO_PATH = Config.REPO_PATH;
-    String TEMP_DIR = Config.TEMP_DIR; // temp folder to collect diff files
+    String TEMP_DIR = Config.TEMP_DIR;
     String COMMIT_ID = Config.COMMIT_ID;
 
-    // 1. analyze the repo
-    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_ID, REPO_NAME, REPO_PATH);
-    List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(COMMIT_ID);
-    //        List<DiffFile> diffFiles = repoAnalyzer.analyzeWorkingTree();
-
-    // 2. collect the data into temp dir
-    // (1) diff files
-    DataCollector dataCollector = new DataCollector(REPO_NAME, TEMP_DIR);
-    Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(COMMIT_ID, diffFiles);
-    //          Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
-    // (2) file id mapping
-    // (3) diff hunks
-    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
-
-    // 3. build the d    //    Future<Graph<Node, Edge>> baseBuilder =iff hunk graph
-    ExecutorService executorService = Executors.newFixedThreadPool(1);
-    //    Future<Graph<Node, Edge>> baseBuilder =
-    //        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
-    Future<Graph<Node, Edge>> currentBuilder =
-        executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
     try {
+      // 1. analyze the repo
+      RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_ID, REPO_NAME, REPO_PATH);
+      List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(COMMIT_ID);
+
+      // 2. collect the data into temp dir
+      // (1) diff files
+      DataCollector dataCollector = new DataCollector(REPO_NAME, TEMP_DIR);
+      Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(COMMIT_ID, diffFiles);
+      //          Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
+      // (2) file id mapping
+      // (3) diff hunks
+      Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
+
+      // 3. build the diff hunk graph
+      ExecutorService executorService = Executors.newFixedThreadPool(1);
+      //    Future<Graph<Node, Edge>> baseBuilder =
+      //        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
+      Future<Graph<Node, Edge>> currentBuilder =
+          executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
       //      Graph<Node, Edge> baseGraph = baseBuilder.get();
       Graph<Node, Edge> currentGraph = currentBuilder.get();
       //      String graphDotString = GraphExporter.exportAsDotWithType(baseGraph);
@@ -65,10 +64,10 @@ public class Main {
       Map<String, DiffFile> idToDiffFileMap = repoAnalyzer.getIdToDiffFileMap();
       Map<String, DiffHunk> idToDiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();
 
+      executorService.shutdown();
+
     } catch (Exception e) {
       e.printStackTrace();
     }
-
-    executorService.shutdown();
   }
 }
