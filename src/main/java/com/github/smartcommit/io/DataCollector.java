@@ -101,6 +101,7 @@ public class DataCollector {
           break;
         case MODIFIED:
         case RENAMED:
+        case RENAMED2:
         case COPIED:
           basePath = baseDir + diffFile.getBaseRelativePath();
           currentPath = currentDir + diffFile.getCurrentRelativePath();

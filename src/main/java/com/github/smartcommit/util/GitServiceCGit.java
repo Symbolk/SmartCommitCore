@@ -73,6 +73,7 @@ public class GitServiceCGit implements GitService {
                   "");
           break;
         case RENAMED:
+        case RENAMED2:
         case COPIED:
           if (temp.length == 4) {
             String oldPath = temp[1];
@@ -156,6 +157,7 @@ public class GitServiceCGit implements GitService {
                   "");
           break;
         case RENAMED:
+        case RENAMED2:
         case COPIED:
           if (temp.length == 4) {
             String oldPath = temp[1];
