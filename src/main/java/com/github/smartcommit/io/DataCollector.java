@@ -1,5 +1,6 @@
 package com.github.smartcommit.io;
 
+import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.util.Utils;
@@ -31,8 +32,7 @@ public class DataCollector {
    * @param commitID
    * @return
    */
-  public Pair<String, String> collectDiffFilesAtCommit(
-      String commitID, List<com.github.smartcommit.model.DiffFile> diffFiles) {
+  public Pair<String, String> collectDiffFilesAtCommit(String commitID, List<DiffFile> diffFiles) {
     String baseDir =
         tempDir
             + File.separator
@@ -61,8 +61,7 @@ public class DataCollector {
    *
    * @return
    */
-  public Pair<String, String> collectDiffFilesWorking(
-      List<com.github.smartcommit.model.DiffFile> diffFiles) {
+  public Pair<String, String> collectDiffFilesWorking(List<DiffFile> diffFiles) {
     String baseDir = tempDir + File.separator + Version.BASE.asString() + File.separator;
     String currentDir = tempDir + File.separator + Version.CURRENT.asString() + File.separator;
 
@@ -78,10 +77,9 @@ public class DataCollector {
    * @param diffFiles
    * @return
    */
-  private int collect(
-      String baseDir, String currentDir, List<com.github.smartcommit.model.DiffFile> diffFiles) {
+  private int collect(String baseDir, String currentDir, List<DiffFile> diffFiles) {
     int count = 0;
-    for (com.github.smartcommit.model.DiffFile diffFile : diffFiles) {
+    for (DiffFile diffFile : diffFiles) {
       String basePath, currentPath;
       switch (diffFile.getStatus()) {
         case ADDED:
@@ -125,11 +123,10 @@ public class DataCollector {
    * @param diffFiles
    * @return fileID : filePath (base if status!=ADDED else current)
    */
-  public Map<String, String> collectDiffHunksWorking(
-      List<com.github.smartcommit.model.DiffFile> diffFiles) {
+  public Map<String, String> collectDiffHunksWorking(List<DiffFile> diffFiles) {
     String diffDir = tempDir + File.separator + "diffs";
     Map<String, String> fileIDToPathMap = new HashMap<>();
-    for (com.github.smartcommit.model.DiffFile diffFile : diffFiles) {
+    for (DiffFile diffFile : diffFiles) {
       String filePath =
           diffFile.getStatus().equals(FileStatus.ADDED)
               ? diffFile.getCurrentRelativePath()
@@ -137,7 +134,8 @@ public class DataCollector {
       fileIDToPathMap.put(diffFile.getFileID(), filePath);
       Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
       Utils.writeStringToFile(
-          gson.toJson(diffFile), diffDir + File.separator + diffFile.getFileID() + ".json");
+          gson.toJson(diffFile.shallowClone()),
+          diffDir + File.separator + diffFile.getFileID() + ".json");
     }
 
     // save the fileID to path map

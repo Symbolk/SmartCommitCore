@@ -38,6 +38,31 @@ public class DiffFile {
     this.diffHunks = new ArrayList<>();
   }
 
+  public DiffFile(
+      String repoID,
+      String repoName,
+      String fileID,
+      Integer index,
+      FileStatus status,
+      FileType fileType,
+      String baseRelativePath,
+      String currentRelativePath,
+      String baseContent,
+      String currentContent,
+      List<DiffHunk> diffHunks) {
+    this.repoID = repoID;
+    this.repoName = repoName;
+    this.fileID = fileID;
+    this.index = index;
+    this.status = status;
+    this.fileType = fileType;
+    this.baseRelativePath = baseRelativePath;
+    this.currentRelativePath = currentRelativePath;
+    this.baseContent = baseContent;
+    this.currentContent = currentContent;
+    this.diffHunks = diffHunks;
+  }
+
   public String getRepoID() {
     return repoID;
   }
@@ -96,5 +121,24 @@ public class DiffFile {
 
   public void setDiffHunks(List<DiffHunk> diffHunks) {
     this.diffHunks = diffHunks;
+  }
+
+  /**
+   * Clone the object with non-needed field left empty
+   * @return
+   */
+  public DiffFile shallowClone() {
+    return new DiffFile(
+        repoID,
+        repoName,
+        fileID,
+        index,
+        status,
+        fileType,
+        baseRelativePath,
+        currentRelativePath,
+        "",
+        "",
+        diffHunks);
   }
 }

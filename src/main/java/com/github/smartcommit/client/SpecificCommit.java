@@ -37,13 +37,8 @@ public class SpecificCommit {
       List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(COMMIT_ID);
 
       // 2. collect the data into temp dir
-      // (1) diff files
       DataCollector dataCollector = new DataCollector(REPO_NAME, TEMP_DIR);
       Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(COMMIT_ID, diffFiles);
-      //          Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
-      // (2) file id mapping
-      // (3) diff hunks
-      Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
       // 3. build the diff hunk graph
       ExecutorService executorService = Executors.newFixedThreadPool(1);
