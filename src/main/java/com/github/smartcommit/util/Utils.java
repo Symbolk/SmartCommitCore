@@ -187,7 +187,7 @@ public class Utils {
 
       }
     }
-    return isAllEmpty ? ContentType.EMPTY : contentType;
+    return isAllEmpty ? ContentType.BLANKLINE : contentType;
   }
 
   /** Convert system-dependent path to the unified unix style */
