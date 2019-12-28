@@ -58,7 +58,7 @@ public class Utils {
    */
   public static FileStatus convertSymbolToStatus(String symbol) {
     for (FileStatus status : FileStatus.values()) {
-      if (symbol.equals(status.symbol)) {
+      if (symbol.equals(status.symbol) || symbol.startsWith(status.symbol)) {
         return status;
       }
     }
