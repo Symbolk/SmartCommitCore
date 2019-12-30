@@ -1,7 +1,6 @@
 package com.github.smartcommit.io;
 
 import com.github.smartcommit.model.DiffFile;
-import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
@@ -128,7 +127,7 @@ public class DataCollector {
     Map<String, String> fileIDToPathMap = new HashMap<>();
     for (DiffFile diffFile : diffFiles) {
       String filePath =
-          diffFile.getStatus().equals(FileStatus.ADDED)
+          diffFile.getBaseRelativePath().isEmpty()
               ? diffFile.getCurrentRelativePath()
               : diffFile.getBaseRelativePath();
       fileIDToPathMap.put(diffFile.getFileID(), filePath);
