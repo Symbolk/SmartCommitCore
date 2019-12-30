@@ -10,8 +10,20 @@ public class Group {
   private String commitID;
 
   // fileID:diffHunkID
+  // if fileID==diffHunkID, status is UNTRACKED, the whole file is a diff hunk
   private List<String> diffHunks;
   private String commitMsg;
   private String templateCommitMsg;
   private String intentLabel;
+
+  public Group(String repoID, String repoName, String groupID, List<String> diffHunks) {
+    this.repoID = repoID;
+    this.repoName = repoName;
+    this.groupID = groupID;
+    this.commitID = "";
+    this.diffHunks = diffHunks;
+    this.commitMsg = "";
+    this.templateCommitMsg = "";
+    this.intentLabel = "";
+  }
 }

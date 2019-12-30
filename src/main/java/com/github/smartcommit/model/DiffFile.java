@@ -41,7 +41,7 @@ public class DiffFile {
     this.currentRelativePath = currentRelativePath;
     this.baseContent = baseContent;
     this.currentContent = currentContent;
-    this.description = "";
+    this.description = status.label;
     this.diffHunks = new ArrayList<>();
     this.diffHunksMap = new HashMap<>();
   }

@@ -6,11 +6,19 @@ import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
+import com.github.smartcommit.model.Group;
+import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
+import com.github.smartcommit.util.Utils;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -53,7 +61,32 @@ public class WorkingTree {
 
       // 4. analyze the diff hunks
 
-      // 5. generate diff hunk groups
+      // 5. generate diff hunk groups according to user-input threshold
+      Map<String, Group> generatedGroups = new HashMap<>();
+
+      // put the non-java files in the first group
+      List<String> nonJavaDiffHunks = new ArrayList<>();
+      for (DiffFile diffFile : repoAnalyzer.getDiffFiles()) {
+        if (!diffFile.getFileType().equals(FileType.JAVA)) {
+          String diffHunkID = diffFile.getFileID() + ":" + diffFile.getFileID();
+          nonJavaDiffHunks.add(diffHunkID);
+        }
+      }
+      Group nonJavaGroup = new Group(REPO_ID, REPO_NAME, Utils.generateUUID(), nonJavaDiffHunks);
+      generatedGroups.put("group0", nonJavaGroup);
+
+      // save to disk
+      Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+      for (Map.Entry<String, Group> entry : generatedGroups.entrySet()) {
+        Utils.writeStringToFile(
+            gson.toJson(entry.getValue()),
+            TEMP_DIR
+                + File.separator
+                + "generated_groups"
+                + File.separator
+                + entry.getKey()
+                + ".json");
+      }
 
       // 6. commit
       Map<String, DiffFile> idToDiffFileMap = repoAnalyzer.getIdToDiffFileMap();
