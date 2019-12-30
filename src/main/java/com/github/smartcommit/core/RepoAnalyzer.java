@@ -4,10 +4,14 @@ import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
+import com.github.smartcommit.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 // import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 
@@ -83,7 +87,7 @@ public class RepoAnalyzer {
     Map<String, DiffFile> idToDiffFileMap = new HashMap<>();
 
     for (DiffFile diffFile : diffFiles) {
-      String fileID = UUID.randomUUID().toString().replaceAll("-", "");
+      String fileID = Utils.generateUUID();
       idToDiffFileMap.put(fileID, diffFile);
       diffFile.setRepoID(repoID);
       diffFile.setRepoName(repoName);
@@ -101,7 +105,7 @@ public class RepoAnalyzer {
     Map<String, DiffHunk> idToDiffHunkMap = new HashMap<>();
 
     for (DiffHunk diffHunk : diffHunks) {
-      String diffHunkID = UUID.randomUUID().toString().replaceAll("-", "");
+      String diffHunkID = Utils.generateUUID();
       idToDiffHunkMap.put(diffHunkID, diffHunk);
       diffHunk.setRepoID(repoID);
       diffHunk.setRepoName(repoName);

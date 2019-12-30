@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /** Helper functions to operate the file and the system. */
@@ -193,5 +194,14 @@ public class Utils {
   /** Convert system-dependent path to the unified unix style */
   public static String formatPath(String path) {
     return path.replaceAll(Pattern.quote(File.separator), "/").replaceAll("/+", "/");
+  }
+
+  /**
+   * Generate the unique id
+   *
+   * @return
+   */
+  public static String generateUUID() {
+    return UUID.randomUUID().toString().replaceAll("-", "");
   }
 }
