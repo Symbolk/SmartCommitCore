@@ -9,9 +9,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /** Helper functions to operate the file and the system. */
@@ -174,21 +172,53 @@ public class Utils {
     if (codeLines.isEmpty()) {
       return ContentType.EMPTY;
     }
-    ContentType contentType = ContentType.CODE;
     boolean isAllEmpty = true;
-    for (String line : codeLines) {
-      String trimmedLine = line.trim();
+    Set<String> lineTypes = new HashSet<>();
+
+    for (int i = 0; i < codeLines.size(); ++i) {
+      String trimmedLine = codeLines.get(i).trim();
       if (trimmedLine.length() > 0) {
         isAllEmpty = false;
-      }
-      if (trimmedLine.startsWith("import")) {
-        contentType = ContentType.IMPORT;
-      } else {
-        // TODO check for pure comments here
-
+        if (trimmedLine.startsWith("import")) {
+          lineTypes.add("IMPORT");
+        } else if (trimmedLine.startsWith("//")
+            || trimmedLine.startsWith("/*")
+            || trimmedLine.startsWith("/**")
+            || trimmedLine.startsWith("*")) {
+          lineTypes.add("COMMENT");
+        } else {
+          lineTypes.add("CODE");
+        }
       }
     }
-    return isAllEmpty ? ContentType.BLANKLINE : contentType;
+
+    if (isAllEmpty) {
+      return ContentType.BLANKLINE;
+    } else if (lineTypes.contains("CODE")) {
+      return ContentType.CODE;
+    } else if (lineTypes.contains("IMPORT")) {
+      // import + comment ~= import
+      return ContentType.IMPORT;
+    } else if (lineTypes.contains("COMMENT")) {
+      // pure comment
+      return ContentType.COMMENT;
+    }
+    return ContentType.CODE;
+  }
+
+  /**
+   * Remove comment from a string WARNING: Java's builtin regex support has problems with regexes
+   * containing repetitive alternative paths (that is, (A|B)*), so this may lead to
+   * StackOverflowError
+   *
+   * @param source
+   * @return
+   */
+  private static String removeComment(String source) {
+    return source.replaceAll(
+        "((['\"])(?:(?!\\2|\\\\).|\\\\.)*\\2)|\\/\\/[^\\n]*|\\/\\*(?:[^*]|\\*(?!\\/))*\\*\\/", "");
+    //    return source.replaceAll("[^:]//.*|/\\\\*((?!=*/)(?s:.))+\\\\*", "");
+    //    return source.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)", "");
   }
 
   /** Convert system-dependent path to the unified unix style */
