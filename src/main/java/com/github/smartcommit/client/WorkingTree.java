@@ -34,6 +34,8 @@ public class WorkingTree {
     String REPO_PATH = Config.REPO_PATH;
     String TEMP_DIR = Config.TEMP_DIR;
 
+    Utils.clearDir(TEMP_DIR);
+
     try {
       // 1. analyze the repo
       RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_ID, REPO_NAME, REPO_PATH);
@@ -47,7 +49,6 @@ public class WorkingTree {
       // (3) diff hunks
       Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
-      // 测试乱码
       // 3. build the diff hunk graph
       ExecutorService executorService = Executors.newFixedThreadPool(1);
       //    Future<Graph<Node, Edge>> baseBuilder =
