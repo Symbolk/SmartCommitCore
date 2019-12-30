@@ -7,6 +7,7 @@ import com.github.smartcommit.model.constant.FileType;
 public class DiffHunk {
   private String repoID;
   private String repoName;
+  private String fileID;
   private String diffHunkID;
   private String commitID;
 
@@ -55,6 +56,14 @@ public class DiffHunk {
 
   public String getRepoID() {
     return repoID;
+  }
+
+  public String getFileID() {
+    return fileID;
+  }
+
+  public void setFileID(String fileID) {
+    this.fileID = fileID;
   }
 
   public void setRepoID(String repoID) {

@@ -33,6 +33,8 @@ public class RepoAnalyzer {
     this.repoPath = repoPath;
     this.diffFiles = new ArrayList<>();
     this.diffHunks = new ArrayList<>();
+    this.idToDiffFileMap = new HashMap<>();
+    this.idToDiffHunkMap = new HashMap<>();
   }
 
   public String getRepoPath() {
@@ -56,7 +58,6 @@ public class RepoAnalyzer {
     this.diffFiles = diffFiles;
     this.diffHunks = allDiffHunks;
     this.idToDiffFileMap = generateIDToDiffFileMap();
-    this.idToDiffHunkMap = generateIDToDiffHunkMap();
     return diffFiles;
   }
 
@@ -74,7 +75,6 @@ public class RepoAnalyzer {
     this.diffFiles = diffFiles;
     this.diffHunks = allDiffHunks;
     this.idToDiffFileMap = generateIDToDiffFileMap();
-    this.idToDiffHunkMap = generateIDToDiffHunkMap();
     return diffFiles;
   }
 
@@ -85,33 +85,28 @@ public class RepoAnalyzer {
    */
   private Map<String, DiffFile> generateIDToDiffFileMap() {
     Map<String, DiffFile> idToDiffFileMap = new HashMap<>();
-
+    // map for all diff hunks inside the repo
     for (DiffFile diffFile : diffFiles) {
       String fileID = Utils.generateUUID();
       idToDiffFileMap.put(fileID, diffFile);
       diffFile.setRepoID(repoID);
       diffFile.setRepoName(repoName);
       diffFile.setFileID(fileID);
+      // map for diff hunks inside a file
+      Map<String, DiffHunk> diffHunksMap = new HashMap<>();
+      for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
+        String diffHunkID = Utils.generateUUID();
+        diffHunksMap.put(diffHunkID, diffHunk);
+        this.idToDiffHunkMap.put(diffHunkID, diffHunk);
+
+        diffHunk.setRepoID(repoID);
+        diffHunk.setRepoName(repoName);
+        diffHunk.setFileID(fileID);
+        diffHunk.setDiffHunkID(diffHunkID);
+      }
+      diffFile.setDiffHunksMap(diffHunksMap);
     }
     return idToDiffFileMap;
-  }
-
-  /**
-   * Generate diffHunkID:diffHunk map (for commit stage)
-   *
-   * @return
-   */
-  private Map<String, DiffHunk> generateIDToDiffHunkMap() {
-    Map<String, DiffHunk> idToDiffHunkMap = new HashMap<>();
-
-    for (DiffHunk diffHunk : diffHunks) {
-      String diffHunkID = Utils.generateUUID();
-      idToDiffHunkMap.put(diffHunkID, diffHunk);
-      diffHunk.setRepoID(repoID);
-      diffHunk.setRepoName(repoName);
-      diffHunk.setDiffHunkID(diffHunkID);
-    }
-    return idToDiffHunkMap;
   }
 
   public String getRepoName() {

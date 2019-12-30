@@ -2,9 +2,12 @@ package com.github.smartcommit.model;
 
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
+import com.google.gson.annotations.Expose;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DiffFile {
   private String repoID;
@@ -18,7 +21,10 @@ public class DiffFile {
   private String currentRelativePath;
   private String baseContent;
   private String currentContent;
+  private String description;
+  @Expose
   private List<DiffHunk> diffHunks;
+  private Map<String, DiffHunk> diffHunksMap;
 
   public DiffFile(
       Integer index,
@@ -35,9 +41,12 @@ public class DiffFile {
     this.currentRelativePath = currentRelativePath;
     this.baseContent = baseContent;
     this.currentContent = currentContent;
+    this.description = "";
     this.diffHunks = new ArrayList<>();
+    this.diffHunksMap = new HashMap<>();
   }
 
+  /** Constructor to clone object for json serialization */
   public DiffFile(
       String repoID,
       String repoName,
@@ -49,18 +58,19 @@ public class DiffFile {
       String currentRelativePath,
       String baseContent,
       String currentContent,
-      List<DiffHunk> diffHunks) {
+      Map<String, DiffHunk> diffHunksMap) {
     this.repoID = repoID;
     this.repoName = repoName;
     this.fileID = fileID;
     this.index = index;
     this.status = status;
+    this.description = status.label;
     this.fileType = fileType;
     this.baseRelativePath = baseRelativePath;
     this.currentRelativePath = currentRelativePath;
     this.baseContent = baseContent;
     this.currentContent = currentContent;
-    this.diffHunks = diffHunks;
+    this.diffHunksMap = diffHunksMap;
   }
 
   public String getRepoID() {
@@ -119,12 +129,21 @@ public class DiffFile {
     return diffHunks;
   }
 
+  public Map<String, DiffHunk> getDiffHunksMap() {
+    return diffHunksMap;
+  }
+
+  public void setDiffHunksMap(Map<String, DiffHunk> diffHunksMap) {
+    this.diffHunksMap = diffHunksMap;
+  }
+
   public void setDiffHunks(List<DiffHunk> diffHunks) {
     this.diffHunks = diffHunks;
   }
 
   /**
-   * Clone the object with non-needed field left empty
+   * Clone the object for json serialization
+   *
    * @return
    */
   public DiffFile shallowClone() {
@@ -139,6 +158,6 @@ public class DiffFile {
         currentRelativePath,
         "",
         "",
-        diffHunks);
+        diffHunksMap);
   }
 }
