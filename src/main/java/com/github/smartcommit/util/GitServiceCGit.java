@@ -2,10 +2,7 @@ package com.github.smartcommit.util;
 
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
-import com.github.smartcommit.model.constant.ChangeType;
-import com.github.smartcommit.model.constant.FileStatus;
-import com.github.smartcommit.model.constant.FileType;
-import com.github.smartcommit.model.constant.Version;
+import com.github.smartcommit.model.constant.*;
 import io.reflectoring.diffparser.api.DiffParser;
 import io.reflectoring.diffparser.api.UnifiedDiffParser;
 import io.reflectoring.diffparser.api.model.Diff;
@@ -198,6 +195,35 @@ public class GitServiceCGit implements GitService {
   private List<DiffHunk> generateDiffHunks(List<Diff> diffs, List<DiffFile> diffFiles) {
     List<DiffHunk> allDiffHunks = new ArrayList<>();
     // one file, one diff
+    // UNTRACKED/ADDED files won't be shown in the diff
+    for (DiffFile diffFile : diffFiles) {
+      if (diffFile.getStatus().equals(FileStatus.ADDED)
+          || diffFile.getStatus().equals(FileStatus.UNTRACKED)) {
+        List<String> lines = Utils.convertStringToLines(diffFile.getCurrentContent());
+        DiffHunk diffHunk =
+            new DiffHunk(
+                0,
+                Utils.checkFileType(diffFile.getCurrentRelativePath()),
+                ChangeType.ADDED,
+                new com.github.smartcommit.model.Hunk(
+                    Version.BASE, "", 0, 0, ContentType.EMPTY, new ArrayList<>()),
+                new com.github.smartcommit.model.Hunk(
+                    Version.CURRENT,
+                    diffFile.getCurrentRelativePath(),
+                    0,
+                    lines.size(),
+                    Utils.checkContentType(lines),
+                    lines),
+                "Add a new file.");
+
+        // bidirectional binding
+        diffHunk.setFileIndex(diffFile.getIndex());
+        List<DiffHunk> diffHunksInFile = new ArrayList<>();
+        diffHunksInFile.add(diffHunk);
+        diffFile.setDiffHunks(diffHunksInFile);
+      }
+    }
+
     for (Diff diff : diffs) {
       // the hunkIndex of the diff hunk in the current file diff, start from 0
       Integer hunkIndex = 0;
@@ -245,6 +271,7 @@ public class GitServiceCGit implements GitService {
         hunkIndex++;
       }
 
+      // bidirectional binding
       for (DiffFile diffFile : diffFiles) {
         if (baseFilePath.contains(diffFile.getBaseRelativePath())
             && currentFilePath.contains(diffFile.getCurrentRelativePath())) {

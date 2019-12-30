@@ -9,8 +9,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /** Helper functions to operate the file and the system. */
 public class Utils {
@@ -77,6 +81,28 @@ public class Utils {
       e.printStackTrace();
     }
     return content;
+  }
+
+  /**
+   * Read the content of a given file.
+   *
+   * @param path to be read
+   * @return string content of the file, or null in case of errors.
+   */
+  public static List<String> readFileToLines(String path) {
+    List<String> lines = new ArrayList<>();
+    File file = new File(path);
+    if (file.exists()) {
+      try (BufferedReader reader =
+          Files.newBufferedReader(Paths.get(path), Charset.forName("UTF-8"))) {
+        lines = reader.lines().collect(Collectors.toList());
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    } else {
+      return lines;
+    }
+    return lines;
   }
 
   /**
@@ -233,5 +259,15 @@ public class Utils {
    */
   public static String generateUUID() {
     return UUID.randomUUID().toString().replaceAll("-", "");
+  }
+
+  /**
+   * Convert string to a list of lines
+   *
+   * @param s
+   * @return
+   */
+  public static List<String> convertStringToLines(String s) {
+    return Arrays.asList(s.split("\\r?\\n"));
   }
 }
