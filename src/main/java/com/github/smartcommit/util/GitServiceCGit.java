@@ -28,7 +28,7 @@ public class GitServiceCGit implements GitService {
   public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoDir) {
     ArrayList<DiffFile> diffFileList = new ArrayList<>();
     // run git status --porcelain to get changeset
-    String output = Utils.runSystemCommand(repoDir, "git", "status", "--porcelain");
+    String output = Utils.runSystemCommand(repoDir, "git", "status", "--porcelain", "-uall");
     if (output.isEmpty()) {
       // working tree clean
       return diffFileList;
