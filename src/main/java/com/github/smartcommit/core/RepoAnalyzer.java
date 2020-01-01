@@ -2,6 +2,7 @@ package com.github.smartcommit.core;
 
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
+import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;

@@ -41,7 +41,7 @@ public class GraphExporter {
       ComponentNameProvider<Node> vertexLabelProvider =
           node ->
               node.isInDiffHunk
-                  ? node.getIdentifier() + "(" + node.diffHunkID + ")"
+                  ? node.getIdentifier() + "(" + node.diffHunkIndex + ")"
                   : node.getIdentifier();
       ComponentAttributeProvider<Node> vertexAttributeProvider = new TypeProvider();
 

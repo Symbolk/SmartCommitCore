@@ -316,7 +316,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 existInGraph = true;
                 Node node = nodeOpt.get();
                 node.isInDiffHunk = true;
-                node.diffHunkID = index;
+                node.diffHunkIndex = index;
 
                 hunkInfo.typeDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
@@ -342,7 +342,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                   existInGraph = true;
                   Node node = nodeOpt.get();
                   node.isInDiffHunk = true;
-                  node.diffHunkID = index;
+                  node.diffHunkIndex = index;
 
                   hunkInfo.fieldDefs.add(node.getQualifiedName());
                   hunkInfo.node = node;
@@ -373,7 +373,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 existInGraph = true;
                 Node node = nodeOpt.get();
                 node.isInDiffHunk = true;
-                node.diffHunkID = index;
+                node.diffHunkIndex = index;
 
                 hunkInfo.methodDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
@@ -395,7 +395,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         Node hunkNode =
             new Node(nodeID, NodeType.HUNK, hunkInfo.uniqueName(), hunkInfo.uniqueName());
         hunkNode.isInDiffHunk = true;
-        hunkNode.diffHunkID = index;
+        hunkNode.diffHunkIndex = index;
 
         hunkInfo.node = hunkNode;
         graph.addVertex(hunkNode);
