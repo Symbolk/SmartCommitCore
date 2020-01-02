@@ -8,6 +8,7 @@ public enum FileType {
   MD(".md", "Markdown"),
   TXT(".txt", "Text"),
   JAR(".jar", "Jar"),
+  XML(".xml", "XML"),
   OTHER(".*", "Other");
 
   public String extension;

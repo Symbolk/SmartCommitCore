@@ -2,11 +2,7 @@ package com.github.smartcommit.util;
 
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
-import com.github.smartcommit.model.Location;
-import com.github.smartcommit.model.constant.ChangeType;
-import com.github.smartcommit.model.constant.FileStatus;
-import com.github.smartcommit.model.constant.FileType;
-import com.github.smartcommit.model.constant.Version;
+import com.github.smartcommit.model.constant.*;
 import io.reflectoring.diffparser.api.DiffParser;
 import io.reflectoring.diffparser.api.UnifiedDiffParser;
 import io.reflectoring.diffparser.api.model.Diff;
@@ -18,8 +14,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.github.smartcommit.util.Utils.readFileToString;
-
 /** Implementation of helper functions based on the output of git commands. */
 public class GitServiceCGit implements GitService {
   /**
@@ -29,9 +23,14 @@ public class GitServiceCGit implements GitService {
    */
   @Override
   public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoDir) {
+    ArrayList<DiffFile> diffFileList = new ArrayList<>();
     // run git status --porcelain to get changeset
-    String output = Utils.runSystemCommand(repoDir, "git", "status", "--porcelain");
-    ArrayList<DiffFile> DiffFileList = new ArrayList<>();
+    String output = Utils.runSystemCommand(repoDir, "git", "status", "--porcelain", "-uall");
+    if (output.isEmpty()) {
+      // working tree clean
+      return diffFileList;
+    }
+
     String lines[] = output.split("\\r?\\n");
     for (int i = 0; i < lines.length; i++) {
       String temp[] = lines[i].trim().split("\\s+");
@@ -51,13 +50,13 @@ public class GitServiceCGit implements GitService {
                   relativePath,
                   relativePath,
                   getContentAtHEAD(repoDir, relativePath),
-                  readFileToString(absolutePath));
+                  Utils.readFileToString(absolutePath));
           break;
         case ADDED:
         case UNTRACKED:
           DiffFile =
               new DiffFile(
-                  i, status, fileType, "", relativePath, "", readFileToString(absolutePath));
+                  i, status, fileType, "", relativePath, "", Utils.readFileToString(absolutePath));
           break;
         case DELETED:
           DiffFile =
@@ -84,17 +83,17 @@ public class GitServiceCGit implements GitService {
                     oldPath,
                     newPath,
                     getContentAtHEAD(repoDir, oldPath),
-                    readFileToString(newAbsPath));
+                    Utils.readFileToString(newAbsPath));
           }
           break;
         default:
           break;
       }
       if (DiffFile != null) {
-        DiffFileList.add(DiffFile);
+        diffFileList.add(DiffFile);
       }
     }
-    return DiffFileList;
+    return diffFileList;
   }
 
   /**
@@ -196,6 +195,35 @@ public class GitServiceCGit implements GitService {
   private List<DiffHunk> generateDiffHunks(List<Diff> diffs, List<DiffFile> diffFiles) {
     List<DiffHunk> allDiffHunks = new ArrayList<>();
     // one file, one diff
+    // UNTRACKED/ADDED files won't be shown in the diff
+    for (DiffFile diffFile : diffFiles) {
+      if (diffFile.getStatus().equals(FileStatus.ADDED)
+          || diffFile.getStatus().equals(FileStatus.UNTRACKED)) {
+        List<String> lines = Utils.convertStringToLines(diffFile.getCurrentContent());
+        DiffHunk diffHunk =
+            new DiffHunk(
+                0,
+                Utils.checkFileType(diffFile.getCurrentRelativePath()),
+                ChangeType.ADDED,
+                new com.github.smartcommit.model.Hunk(
+                    Version.BASE, "", 0, 0, ContentType.EMPTY, new ArrayList<>()),
+                new com.github.smartcommit.model.Hunk(
+                    Version.CURRENT,
+                    diffFile.getCurrentRelativePath(),
+                    0,
+                    lines.size(),
+                    Utils.checkContentType(lines),
+                    lines),
+                "Add a new file.");
+
+        // bidirectional binding
+        diffHunk.setFileIndex(diffFile.getIndex());
+        List<DiffHunk> diffHunksInFile = new ArrayList<>();
+        diffHunksInFile.add(diffHunk);
+        diffFile.setDiffHunks(diffHunksInFile);
+      }
+    }
+
     for (Diff diff : diffs) {
       // the hunkIndex of the diff hunk in the current file diff, start from 0
       Integer hunkIndex = 0;
@@ -216,23 +244,17 @@ public class GitServiceCGit implements GitService {
         com.github.smartcommit.model.Hunk baseHunk =
             new com.github.smartcommit.model.Hunk(
                 Version.BASE,
-                new Location(
-                    baseFilePath,
-                    hunk.getFromFileRange().getLineStart() + 1,
-                    hunk.getFromFileRange().getLineStart()
-                        + hunk.getFromFileRange().getLineCount()
-                        - 2),
+                removeVersionLabel(baseFilePath),
+                hunk.getFromFileRange().getLineStart() + 1,
+                hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 2,
                 Utils.checkContentType(baseCodeLines),
                 baseCodeLines);
         com.github.smartcommit.model.Hunk currentHunk =
             new com.github.smartcommit.model.Hunk(
                 Version.CURRENT,
-                new Location(
-                    currentFilePath,
-                    hunk.getToFileRange().getLineStart() + 1,
-                    hunk.getToFileRange().getLineStart()
-                        + hunk.getToFileRange().getLineCount()
-                        - 2),
+                removeVersionLabel(currentFilePath),
+                hunk.getToFileRange().getLineStart() + 1,
+                hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 2,
                 Utils.checkContentType(currentCodeLines),
                 currentCodeLines);
         ChangeType changeType = ChangeType.MODIFIED;
@@ -249,6 +271,7 @@ public class GitServiceCGit implements GitService {
         hunkIndex++;
       }
 
+      // bidirectional binding
       for (DiffFile diffFile : diffFiles) {
         if (baseFilePath.contains(diffFile.getBaseRelativePath())
             && currentFilePath.contains(diffFile.getCurrentRelativePath())) {
@@ -332,5 +355,14 @@ public class GitServiceCGit implements GitService {
     } else {
       return "";
     }
+  }
+
+  /**
+   * Remove the "a/" or "b/" at the beginning of the path printed in Git
+   *
+   * @return
+   */
+  private String removeVersionLabel(String gitFilePath) {
+    return gitFilePath.replaceFirst("a/", "").replaceFirst("b/", "");
   }
 }

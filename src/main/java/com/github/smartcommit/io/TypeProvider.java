@@ -52,7 +52,7 @@ class NodeShapeAttribute implements Attribute {
       case FIELD:
         return "box";
       case HUNK:
-        return "Mcircle";
+        return "diamond";
       default:
         return "";
     }

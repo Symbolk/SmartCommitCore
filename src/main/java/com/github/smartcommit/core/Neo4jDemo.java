@@ -7,7 +7,7 @@ import java.util.Map;
 
 import static org.neo4j.driver.v1.Values.parameters;
 
-public class DiffAnalyzer {
+public class Neo4jDemo {
   public static void main(String[] args) {
     // 2. process collected old/new content from agent
     Driver driver =

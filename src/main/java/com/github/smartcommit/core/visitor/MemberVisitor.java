@@ -88,6 +88,7 @@ public class MemberVisitor extends ASTVisitor {
 
     MethodDeclaration[] methodDeclarations = type.getMethods();
     for (MethodDeclaration methodDeclaration : methodDeclarations) {
+      MethodInfo methodInfo = jdtService.createMethodInfo(methodDeclaration, qualifiedNameForType);
       Node methodNode =
           new Node(
               generateNodeID(),
@@ -97,7 +98,6 @@ public class MemberVisitor extends ASTVisitor {
       graph.addVertex(methodNode);
       graph.addEdge(typeNode, methodNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
 
-      MethodInfo methodInfo = jdtService.createMethodInfo(methodDeclaration, qualifiedNameForType);
       methodInfo.node = methodNode;
       entityPool.methodInfoMap.put(methodInfo.uniqueName(), methodInfo);
     }

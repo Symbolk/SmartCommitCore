@@ -3,12 +3,16 @@ package com.github.smartcommit.util;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
+import org.apache.commons.io.FileUtils;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -57,7 +61,7 @@ public class Utils {
    */
   public static FileStatus convertSymbolToStatus(String symbol) {
     for (FileStatus status : FileStatus.values()) {
-      if (symbol.equals(status.symbol)) {
+      if (symbol.equals(status.symbol) || symbol.startsWith(status.symbol)) {
         return status;
       }
     }
@@ -65,85 +69,55 @@ public class Utils {
   }
 
   /**
-   * Read the content of a given file (Use FileUtils.readFileToString from commons-io instead)
+   * Read the content of a file into string
    *
-   * @param path to be read
-   * @return string content of the file, or null in case of errors.
+   * @return
    */
-  public static String readFileToString(String path) {
+  public static String readFileToString(String filePath) {
     String content = "";
-    File file = new File(path);
-    if (file.exists()) {
-      String fileEncoding = "UTF-8";
-      try (BufferedReader reader =
-          Files.newBufferedReader(Paths.get(path), Charset.forName(fileEncoding))) {
-        content = reader.lines().collect(Collectors.joining("\n"));
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    } else {
-      System.err.println(path + " does not exist!");
+    try {
+      content = FileUtils.readFileToString(new File(filePath), "UTF-8");
+    } catch (IOException e) {
+      e.printStackTrace();
     }
     return content;
   }
 
   /**
-   * Writes the given content into a file of the given file path, overwrite by default
+   * Read the content of a given file.
    *
-   * @param filePath
-   * @param content
-   * @return boolean indicating the success of the write operation.
+   * @param path to be read
+   * @return string content of the file, or null in case of errors.
    */
-  public static boolean writeStringToFile(String filePath, String content, boolean append) {
-    try {
-      File file = new File(filePath);
-      if (file.exists() && !append) {
-        file.delete();
+  public static List<String> readFileToLines(String path) {
+    List<String> lines = new ArrayList<>();
+    File file = new File(path);
+    if (file.exists()) {
+      try (BufferedReader reader =
+          Files.newBufferedReader(Paths.get(path), Charset.forName("UTF-8"))) {
+        lines = reader.lines().collect(Collectors.toList());
+      } catch (Exception e) {
+        e.printStackTrace();
       }
-      if (!file.exists()) {
-        file.getParentFile().mkdirs();
-        file.createNewFile();
-      }
-      FileWriter fileWriter = new FileWriter(filePath, append);
-      BufferedWriter writer = new BufferedWriter(fileWriter);
-      writer.write(content);
-      writer.flush();
-      writer.close();
-    } catch (NullPointerException ne) {
-      ne.printStackTrace();
-    } catch (Exception e) {
-      e.printStackTrace();
-      return false;
+    } else {
+      return lines;
     }
-    return true;
+    return lines;
   }
 
   /**
-   * Writes the given content in the file of the given file path.
+   * Write the given content in the file of the given file path.
    *
-   * @param filePath
    * @param content
+   * @param filePath
    * @return boolean indicating the success of the write operation.
    */
-  public static boolean writeContentToPath(String filePath, String content) {
-    if (!content.isEmpty()) {
-      try {
-        File file = new File(filePath);
-        if (!file.exists()) {
-          file.getParentFile().mkdirs();
-          file.createNewFile();
-        }
-        BufferedWriter writer = Files.newBufferedWriter(Paths.get(filePath));
-        writer.write(content);
-        writer.flush();
-        writer.close();
-      } catch (NullPointerException ne) {
-        ne.printStackTrace();
-        // empty, necessary for integration with git version control system
-      } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-      }
+  public static boolean writeStringToFile(String content, String filePath) {
+    try {
+      FileUtils.writeStringToFile(new File(filePath), content, "UTF-8");
+    } catch (IOException e) {
+      e.printStackTrace();
+      return false;
     }
     return true;
   }
@@ -208,11 +182,10 @@ public class Utils {
    * @return
    */
   public static FileType checkFileType(String filePath) {
-    FileType fileType = FileType.OTHER;
-    if (filePath.endsWith(".java")) {
-      fileType = FileType.JAVA;
-    }
-    return fileType;
+    return Arrays.asList(FileType.values()).stream()
+        .filter(fileType -> filePath.endsWith(fileType.extension))
+        .findFirst()
+        .orElse(FileType.OTHER);
   }
 
   /**
@@ -225,25 +198,76 @@ public class Utils {
     if (codeLines.isEmpty()) {
       return ContentType.EMPTY;
     }
-    ContentType contentType = ContentType.CODE;
     boolean isAllEmpty = true;
-    for (String line : codeLines) {
-      String trimmedLine = line.trim();
+    Set<String> lineTypes = new HashSet<>();
+
+    for (int i = 0; i < codeLines.size(); ++i) {
+      String trimmedLine = codeLines.get(i).trim();
       if (trimmedLine.length() > 0) {
         isAllEmpty = false;
-      }
-      if (trimmedLine.startsWith("import")) {
-        contentType = ContentType.IMPORT;
-      } else {
-        // TODO check for pure comments here
-
+        if (trimmedLine.startsWith("import")) {
+          lineTypes.add("IMPORT");
+        } else if (trimmedLine.startsWith("//")
+            || trimmedLine.startsWith("/*")
+            || trimmedLine.startsWith("/**")
+            || trimmedLine.startsWith("*")) {
+          lineTypes.add("COMMENT");
+        } else {
+          lineTypes.add("CODE");
+        }
       }
     }
-    return isAllEmpty ? ContentType.EMPTY : contentType;
+
+    if (isAllEmpty) {
+      return ContentType.BLANKLINE;
+    } else if (lineTypes.contains("CODE")) {
+      return ContentType.CODE;
+    } else if (lineTypes.contains("IMPORT")) {
+      // import + comment ~= import
+      return ContentType.IMPORT;
+    } else if (lineTypes.contains("COMMENT")) {
+      // pure comment
+      return ContentType.COMMENT;
+    }
+    return ContentType.CODE;
+  }
+
+  /**
+   * Remove comment from a string WARNING: Java's builtin regex support has problems with regexes
+   * containing repetitive alternative paths (that is, (A|B)*), so this may lead to
+   * StackOverflowError
+   *
+   * @param source
+   * @return
+   */
+  private static String removeComment(String source) {
+    return source.replaceAll(
+        "((['\"])(?:(?!\\2|\\\\).|\\\\.)*\\2)|\\/\\/[^\\n]*|\\/\\*(?:[^*]|\\*(?!\\/))*\\*\\/", "");
+    //    return source.replaceAll("[^:]//.*|/\\\\*((?!=*/)(?s:.))+\\\\*", "");
+    //    return source.replaceAll("(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?://.*)", "");
   }
 
   /** Convert system-dependent path to the unified unix style */
   public static String formatPath(String path) {
     return path.replaceAll(Pattern.quote(File.separator), "/").replaceAll("/+", "/");
+  }
+
+  /**
+   * Generate the unique id
+   *
+   * @return
+   */
+  public static String generateUUID() {
+    return UUID.randomUUID().toString().replaceAll("-", "");
+  }
+
+  /**
+   * Convert string to a list of lines
+   *
+   * @param s
+   * @return
+   */
+  public static List<String> convertStringToLines(String s) {
+    return Arrays.asList(s.split("\\r?\\n"));
   }
 }

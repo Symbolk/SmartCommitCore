@@ -19,6 +19,6 @@ public class FieldInfo extends EntityInfo{
   public Node node;
 
   public String uniqueName() {
-    return belongTo + "." + name;
+    return belongTo + ":" + name;
   }
 }

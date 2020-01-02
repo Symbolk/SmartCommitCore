@@ -4,9 +4,12 @@ import com.github.smartcommit.model.constant.ChangeType;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
 
-import java.util.List;
-
 public class DiffHunk {
+  private String repoID;
+  private String repoName;
+  private String fileID;
+  private String diffHunkID;
+  private String commitID;
 
   private Integer fileIndex; // the index of the diff file
   private Integer index; // the index of the diff hunk in the current file diff, start from 0
@@ -16,25 +19,6 @@ public class DiffHunk {
   private ChangeType changeType;
   //  private List<ActionCluster> changeActions;
   private String description;
-
-  private List<String> simpleTypes;
-  private List<String> simpleNames;
-
-  public List<String> getSimpleTypes() {
-    return simpleTypes;
-  }
-
-  public void setSimpleTypes(List<String> simpleTypes) {
-    this.simpleTypes = simpleTypes;
-  }
-
-  public List<String> getSimpleNames() {
-    return simpleNames;
-  }
-
-  public void setSimpleNames(List<String> simpleNames) {
-    this.simpleNames = simpleNames;
-  }
 
   public DiffHunk(
       Integer index,
@@ -50,7 +34,6 @@ public class DiffHunk {
     this.changeType = changeType;
     this.description = description;
   }
-
 
   public Integer getIndex() {
     return index;
@@ -70,6 +53,46 @@ public class DiffHunk {
   //  public void setChangeActions(List<ActionCluster> changeActions) {
   //    this.changeActions = changeActions;
   //  }
+
+  public String getRepoID() {
+    return repoID;
+  }
+
+  public String getFileID() {
+    return fileID;
+  }
+
+  public void setFileID(String fileID) {
+    this.fileID = fileID;
+  }
+
+  public void setRepoID(String repoID) {
+    this.repoID = repoID;
+  }
+
+  public String getRepoName() {
+    return repoName;
+  }
+
+  public void setRepoName(String repoName) {
+    this.repoName = repoName;
+  }
+
+  public String getDiffHunkID() {
+    return diffHunkID;
+  }
+
+  public void setDiffHunkID(String diffHunkID) {
+    this.diffHunkID = diffHunkID;
+  }
+
+  public String getCommitID() {
+    return commitID;
+  }
+
+  public void setCommitID(String commitID) {
+    this.commitID = commitID;
+  }
 
   public Integer getBaseStartLine() {
     return baseHunk.getStartLine();
@@ -104,6 +127,7 @@ public class DiffHunk {
 
   public boolean containsCode() {
     return baseHunk.getContentType().equals(ContentType.CODE)
-        || currentHunk.getContentType().equals(ContentType.CODE);
+        || currentHunk.getContentType().equals(ContentType.CODE)
+        || currentHunk.getContentType().equals(ContentType.IMPORT);
   }
 }

@@ -38,7 +38,11 @@ public class GraphExporter {
       // use helper classes to define how vertices should be rendered,
       // adhering to the DOT language restrictions
       ComponentNameProvider<Node> vertexIdProvider = node -> node.getId().toString();
-      ComponentNameProvider<Node> vertexLabelProvider = node -> node.getIdentifier();
+      ComponentNameProvider<Node> vertexLabelProvider =
+          node ->
+              node.isInDiffHunk
+                  ? node.getIdentifier() + "(" + node.diffHunkIndex + ")"
+                  : node.getIdentifier();
       ComponentAttributeProvider<Node> vertexAttributeProvider = new TypeProvider();
 
       ComponentNameProvider<Edge> edgeLabelProvider = edge -> edge.getType().asString();
@@ -75,7 +79,7 @@ public class GraphExporter {
    * @param graph
    */
   public static void saveAsDot(Graph<Node, Edge> graph, String filePath) {
-    Utils.writeStringToFile(filePath, exportAsDotWithType(graph), false);
+    Utils.writeStringToFile(exportAsDotWithType(graph), filePath);
   }
 
   public static void printVertexAndEdge(Graph<Node, Edge> graph) {
