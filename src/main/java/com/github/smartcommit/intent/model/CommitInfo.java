@@ -8,6 +8,7 @@ public class CommitInfo {
   private Intent intent;
   private String committer;
   private String committerEmail;
+  private String commitTime;
   private List<MyAction> actionList;
 
   public String getCommitID() {
@@ -42,6 +43,14 @@ public class CommitInfo {
     this.committerEmail = committerEmail;
   }
 
+  public String getCommitTime() {
+    return commitTime;
+  }
+
+  public void setCommitTime(String commitTime) {
+    this.commitTime = commitTime;
+  }
+
   public List<MyAction> getActionList() {
     return actionList;
   }
@@ -57,4 +66,9 @@ public class CommitInfo {
   public Intent getIntent() {
     return this.intent;
   }
+
+  public void setIntent(Intent intent) {
+    this.intent = intent;
+  }
+
 }

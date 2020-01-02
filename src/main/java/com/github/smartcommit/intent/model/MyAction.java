@@ -8,4 +8,9 @@ public class MyAction {
     this.type = type;
     this.targetNodeType = targetNodeType;
   }
+
+  public String getActions() {
+    return targetNodeType;
+  }
+
 }

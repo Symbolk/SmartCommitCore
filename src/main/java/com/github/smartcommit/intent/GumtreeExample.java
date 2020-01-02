@@ -6,6 +6,8 @@ import com.github.gumtreediff.actions.EditScript;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
+import com.github.gumtreediff.actions.model.Move;
+import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
@@ -54,6 +56,10 @@ public class GumtreeExample {
         actionType = ActionType.ADD;
       } else if (action instanceof Delete) {
         actionType = ActionType.DEL;
+      } else if (action instanceof Move) {
+          actionType = ActionType.MOV;
+      } else if (action instanceof Update) {
+          actionType = ActionType.UPD;
       }
       MyAction myAction = new MyAction(actionType, action.getNode().getType().toString());
       commitInfo.addAction(myAction);
