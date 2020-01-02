@@ -292,6 +292,12 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           coveredNodes.add(node);
         }
       }
+
+      // if the hunk is empty, process the next hunk
+      if (coveredNodes.isEmpty()) {
+        continue;
+      }
+
       HunkInfo hunkInfo = new HunkInfo(index);
       hunkInfo.coveredNodes = coveredNodes;
       boolean existInGraph = false;
