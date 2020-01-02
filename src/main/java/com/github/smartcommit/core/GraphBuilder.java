@@ -28,6 +28,9 @@ import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
+/**
+ * Build the semantic context graph of DiffHunks in Java files.
+ */
 public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
   private static final Logger logger = LoggerFactory.getLogger(GraphBuilder.class);

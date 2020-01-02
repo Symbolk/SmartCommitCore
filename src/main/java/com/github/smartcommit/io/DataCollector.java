@@ -35,16 +35,12 @@ public class DataCollector {
     String baseDir =
         tempDir
             + File.separator
-            + repoName
-            + File.separator
             + commitID
             + File.separator
             + Version.BASE.asString()
             + File.separator;
     String currentDir =
         tempDir
-            + File.separator
-            + repoName
             + File.separator
             + commitID
             + File.separator
