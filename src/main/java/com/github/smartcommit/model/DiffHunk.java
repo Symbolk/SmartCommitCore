@@ -127,6 +127,7 @@ public class DiffHunk {
 
   public boolean containsCode() {
     return baseHunk.getContentType().equals(ContentType.CODE)
-        || currentHunk.getContentType().equals(ContentType.CODE);
+        || currentHunk.getContentType().equals(ContentType.CODE)
+        || currentHunk.getContentType().equals(ContentType.IMPORT);
   }
 }

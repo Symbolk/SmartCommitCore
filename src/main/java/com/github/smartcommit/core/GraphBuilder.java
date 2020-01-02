@@ -28,9 +28,7 @@ import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-/**
- * Build the semantic context graph of DiffHunks in Java files.
- */
+/** Build the semantic context graph of DiffHunks in Java files. */
 public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
   private static final Logger logger = LoggerFactory.getLogger(GraphBuilder.class);
@@ -276,17 +274,19 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
    * @return
    */
   private void createHunkInfos(String sourceFilePath, CompilationUnit cu, JDTService jdtService) {
-    Map<String, Pair<Integer, Integer>> diffHunkPositions =
-        computeHunksPosition(sourceFilePath, cu);
-    for (String index : diffHunkPositions.keySet()) {
+    Map<String, Pair<Integer, Integer>> hunksPosition = computeHunksPosition(sourceFilePath, cu);
+    for (String index : hunksPosition.keySet()) {
       // for each diff hunk, find and analyze covered nodes, create hunk node and info
       Set<ASTNode> coveredNodes = new LinkedHashSet<>();
-      int startPos = diffHunkPositions.get(index).getLeft();
-      int length = diffHunkPositions.get(index).getRight();
+      int startPos = hunksPosition.get(index).getLeft();
+      int length = hunksPosition.get(index).getRight();
       if (length > 0) {
         MyNodeFinder nodeFinder = new MyNodeFinder(cu, startPos, length);
         for (ASTNode node : nodeFinder.getCoveredNodes()) {
-          while (node != null && !(node instanceof Statement || node instanceof BodyDeclaration)) {
+          while (node != null
+              && !(node instanceof ImportDeclaration
+                  || node instanceof Statement
+                  || node instanceof BodyDeclaration)) {
             node = node.getParent();
           }
           coveredNodes.add(node);
@@ -304,7 +304,9 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
       // coveredNodes.isEmpty() --> added for BASE and deleted for CURRENT
       for (ASTNode astNode : coveredNodes) {
-        if (astNode instanceof BodyDeclaration) {
+        if (astNode instanceof ImportDeclaration) {
+          hunkInfo.typeDefs.add(((ImportDeclaration) astNode).getName().toString());
+        } else if (astNode instanceof BodyDeclaration) {
           Optional<Node> nodeOpt = Optional.empty();
           // find the corresponding nodeOpt in the entity pool (expected to exist)
           switch (astNode.getNodeType()) {
@@ -397,8 +399,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           jdtService.parseStatement(hunkInfo, (Statement) astNode);
         }
       }
+      // create the HunkInfo node for hunks inside entities
       if (!existInGraph) {
-        // create the HunkInfo node
         int nodeID = graph.vertexSet().size() + 1;
         int edgeID = graph.edgeSet().size() + 1;
         Node hunkNode =
