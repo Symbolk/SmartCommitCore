@@ -26,4 +26,16 @@ public class Group {
     this.templateCommitMsg = "";
     this.intentLabel = "";
   }
+
+  public List<String> getDiffHunks() {
+    return diffHunks;
+  }
+
+  public void addDiffHunk(String diffID){
+    if(diffHunks.contains(diffID)){
+      return;
+    }else{
+      diffHunks.add(diffID);
+    }
+  }
 }
