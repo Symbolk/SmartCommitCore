@@ -47,101 +47,19 @@ import javax.lang.model.type.IntersectionType;
 
 
 // Main Class: Commit message:  Get, Label, Store
-public class CommitLog_GetLabelStore {
+public class CommitInfoHandler {
     public static void main(String[] args) {
         String REPO_NAME = "guava";
         String REPO_DIR = "/Users/Chuncen/IdeaProjects/" + REPO_NAME;
-        String commitID = "f4b3f611c4e49ecaded58dcb49262f55e56a3322";
-        //DataCollector dataCollector = new DataCollector(REPO_NAME, REPO_DIR);
 
-        // List<List<>>
-        List<List<String>> commits = new ArrayList<List<String>>();
         // CommitInfo
         List<CommitInfo> commitsInfo = new ArrayList<>();
-        /*
-        System.out.println("getIt? " + getIt(REPO_DIR, commits));
-        System.out.println("labelIt? " + labelIt(REPO_DIR, commits));
-        System.out.println("storeIt? " + storeIt(REPO_NAME, commits));
-        */
 
         System.out.println("CommitsCollector? " + CommitsCollector(REPO_DIR, commitsInfo));
         System.out.println("LabelExtractor? " + LabelExtractor(REPO_DIR, REPO_NAME, commitsInfo));
         System.out.println("DBLoader? " + DBLoader(REPO_NAME, commitsInfo));
 
     }
-
-    // Get All commit Messages
-    public static boolean getIt(String REPO_DIR, List<List<String>> commits) {
-        GitService gitService = new GitServiceCGit();
-        // get all the commit details
-        String log = Utils.runSystemCommand(REPO_DIR, "git", "log");
-        String parts[] = log.split("\\ncommit"), body[];
-        for (String part : parts) {
-            List<String> tempList = new ArrayList<String>();
-            //tempList.add(part);
-            body = part.split("\\nAuthor:|\\nDate:|\\n\\n");
-            // commit_ID
-            tempList.add(body[0]);
-            // commit_Author
-            tempList.add(body[1]);
-            // commit_Date
-            tempList.add(body[2]);
-            // commit_msg
-            tempList.add(body[3]);
-            // commit_intent
-            tempList.add("unsure");
-            // add list1 into list2
-            commits.add(tempList);
-        }
-        return true;
-    }
-    // Cluster to get label simply matching
-    public static boolean labelIt(String REPO_DIR, List<List<String>> commits) {
-        try {
-            List<String> intents;
-            intents = FileUtils.readLines(new File(REPO_DIR +File.separator+"intents-selected.txt"));
-            for (List<String> commit : commits) {
-                for (String intent : intents) {
-                    String msg = commit.get(0);
-                    if(msg.toLowerCase().contains(intent)) {
-                         commit.add(intent);
-                         break;
-                    }
-                    else commit.add("unknown");
-                }
-
-            }
-       }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-        return true;
-    }
-    // Store the label and message into mongodb
-    public static boolean storeIt(String REPO_NAME, List<List<String>> commits) {
-        MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
-        MongoClient mongoClient = new MongoClient(connectionString);
-
-        MongoDatabase commitsDB = mongoClient.getDatabase("commits");
-        MongoCollection<Document> repoCol = commitsDB.getCollection(REPO_NAME);
-        Integer size = commits.size();
-        for(int i = 0 ; i < size ; i++) {
-            // key:value
-            Document tempDoc = new Document("repo_name", REPO_NAME);
-            tempDoc
-                    .append("commit_log", commits.get(i).get(0))
-                    .append("commit_ID", commits.get(i).get(1))
-                    .append("commit_Author", commits.get(i).get(2))
-                    .append("commit_Date", commits.get(i).get(3))
-                    .append("commit_msg", commits.get(i).get(4))
-                    .append("commit_intent", commits.get(i).get(5))
-            ;
-            repoCol.insertOne(tempDoc);
-        }
-        mongoClient.close();
-        return true;
-    }
-
 
     // Let's Gumtree
     public static boolean CommitsCollector(String REPO_DIR, List<CommitInfo> commitInfo) {
@@ -168,9 +86,11 @@ public class CommitLog_GetLabelStore {
         }
         return true;
     }
+
+
     public static boolean LabelExtractor(String REPO_DIR, String REPO_NAME, List<CommitInfo> commitInfo) {
         Integer size = commitInfo.size();
-        for(int i = 10 ; i < 12 ; i++) {
+        for(int i = 1 ; i < size ; i++) {
             CommitInfo tempCommitInfo = commitInfo.get(i);
             String commitMsg = tempCommitInfo.getCommitMsg();
 
@@ -250,6 +170,7 @@ public class CommitLog_GetLabelStore {
         return Intent.UNKNOWN;
     }
 
+
     public static boolean DBLoader(String REPO_NAME, List<CommitInfo> commitInfo) {
         MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
         MongoClient mongoClient = new MongoClient(connectionString);
@@ -258,7 +179,7 @@ public class CommitLog_GetLabelStore {
         repoCol.drop();
         repoCol = commitsDB.getCollection(REPO_NAME);
         Integer size = commitInfo.size();
-        for(int i = 10 ; i < 12 ; i++) {
+        for(int i = 1 ; i < size ; i++) {
             // key:value
             Document tempDoc = new Document("repo_name", REPO_NAME);
             CommitInfo tempCommitInfo = commitInfo.get(i);
