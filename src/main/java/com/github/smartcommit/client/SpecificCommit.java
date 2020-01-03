@@ -52,8 +52,8 @@ public class SpecificCommit {
           executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
       Graph<Node, Edge> baseGraph = baseBuilder.get();
       Graph<Node, Edge> currentGraph = currentBuilder.get();
-      //      String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
-      //      String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
+//      String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
+//      String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
       executorService.shutdown();
 
       // 4. analyze the diff hunks to generate groups
@@ -63,6 +63,7 @@ public class SpecificCommit {
       groupGenerator.analyzeNonJavaFiles();
       groupGenerator.analyzeHardLinks();
       groupGenerator.analyzeSoftLinks();
+      groupGenerator.analyzeRemainingDiffHunks();
       groupGenerator.exportGroupingResults(TEMP_DIR);
 
       // 5. commit

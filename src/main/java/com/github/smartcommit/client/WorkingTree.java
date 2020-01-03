@@ -4,7 +4,6 @@ import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
-import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.graph.Edge;
@@ -52,8 +51,8 @@ public class WorkingTree {
       Graph<Node, Edge> baseGraph = baseBuilder.get();
       Graph<Node, Edge> currentGraph = currentBuilder.get();
 
-      String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
-      String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
+//      String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
+//      String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
 
       // 4. analyze the diff hunks
       GroupGenerator groupGenerator =
@@ -62,6 +61,7 @@ public class WorkingTree {
       groupGenerator.analyzeNonJavaFiles();
       groupGenerator.analyzeHardLinks();
       groupGenerator.analyzeSoftLinks();
+      groupGenerator.analyzeRemainingDiffHunks();
       groupGenerator.exportGroupingResults(TEMP_DIR);
 
       // 6. commit
