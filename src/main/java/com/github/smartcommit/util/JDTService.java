@@ -157,7 +157,8 @@ public class JDTService {
    * @param belongTo
    * @return
    */
-  public List<FieldInfo> createFieldInfos(FieldDeclaration node, String belongTo) {
+  public List<FieldInfo> createFieldInfos(
+      Integer fileIndex, FieldDeclaration node, String belongTo) {
     List<FieldInfo> fieldInfos = new ArrayList<>();
     Type type = node.getType();
     Set<String> types = getTypes(type);
@@ -174,6 +175,7 @@ public class JDTService {
     List<VariableDeclarationFragment> fragments = node.fragments();
     for (VariableDeclarationFragment fragment : fragments) {
       FieldInfo fieldInfo = new FieldInfo();
+      fieldInfo.fileIndex = fileIndex;
       fieldInfo.belongTo = belongTo;
       fieldInfo.name = fragment.getName().getFullyQualifiedName();
       fieldInfo.typeString = typeString;
@@ -197,8 +199,9 @@ public class JDTService {
    * @param belongTo
    * @return
    */
-  public MethodInfo createMethodInfo(MethodDeclaration node, String belongTo) {
+  public MethodInfo createMethodInfo(Integer fileIndex, MethodDeclaration node, String belongTo) {
     MethodInfo methodInfo = new MethodInfo();
+    methodInfo.fileIndex = fileIndex;
     methodInfo.methodBinding = node.resolveBinding();
     methodInfo.name = node.getName().getFullyQualifiedName();
     Type returnType = node.getReturnType2();
@@ -256,6 +259,9 @@ public class JDTService {
       for (Expression expression2 : expressions) {
         parseFieldInitializer(fieldInfo, expression2);
       }
+    }
+    if (expression.getNodeType() == ASTNode.TYPE_LITERAL) {
+      fieldInfo.typeUses.addAll(getTypes(((TypeLiteral) expression).getType()));
     }
     if (expression.getNodeType() == ASTNode.CAST_EXPRESSION) {
       parseFieldInitializer(fieldInfo, ((CastExpression) expression).getExpression());
@@ -436,8 +442,7 @@ public class JDTService {
       }
       if (statement.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT) {
         Type type = ((VariableDeclarationStatement) statement).getType();
-        List<VariableDeclaration> list =
-            ((VariableDeclarationStatement) statement).fragments();
+        List<VariableDeclaration> list = ((VariableDeclarationStatement) statement).fragments();
         methodInfo.typeUses.addAll(getTypes(type));
         for (VariableDeclaration decStat : list) {
           parseExpressionInMethod(methodInfo, decStat.getInitializer());
@@ -483,6 +488,11 @@ public class JDTService {
         parseExpressionInMethod(methodInfo, expression2);
       }
     }
+
+    if (expression.getNodeType() == ASTNode.TYPE_LITERAL) {
+      methodInfo.typeUses.addAll(getTypes(((TypeLiteral) expression).getType()));
+    }
+
     if (expression.getNodeType() == ASTNode.CAST_EXPRESSION) {
       parseExpressionInMethod(methodInfo, ((CastExpression) expression).getExpression());
     }
@@ -658,8 +668,7 @@ public class JDTService {
       }
       if (current.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT) {
         Type type = ((VariableDeclarationStatement) current).getType();
-        List<VariableDeclaration> list =
-            ((VariableDeclarationStatement) current).fragments();
+        List<VariableDeclaration> list = ((VariableDeclarationStatement) current).fragments();
         entityInfo.typeUses.addAll(getTypes(type));
         for (VariableDeclaration decStat : list) {
           parseExpression(entityInfo, decStat.getInitializer());
@@ -704,6 +713,10 @@ public class JDTService {
       for (Expression expression2 : expressions) {
         parseExpression(entityInfo, expression2);
       }
+    }
+
+    if (expression.getNodeType() == ASTNode.TYPE_LITERAL) {
+      entityInfo.typeUses.addAll(getTypes(((TypeLiteral) expression).getType()));
     }
     if (expression.getNodeType() == ASTNode.CAST_EXPRESSION) {
       parseExpression(entityInfo, ((CastExpression) expression).getExpression());
@@ -802,7 +815,11 @@ public class JDTService {
     Set<String> types = new HashSet<>();
     if (oType == null) return types;
     ITypeBinding typeBinding = oType.resolveBinding();
-    if (typeBinding == null) return types;
+    // also record unresolved types
+    if (typeBinding == null) {
+      types.add(oType.toString());
+      return types;
+    }
     String str = typeBinding.getQualifiedName();
     String[] eles = str.split("[^A-Za-z0-9_\\.]+");
     for (String e : eles) {

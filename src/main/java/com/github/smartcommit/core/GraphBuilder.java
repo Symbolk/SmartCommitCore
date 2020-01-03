@@ -6,7 +6,9 @@ import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.EntityPool;
 import com.github.smartcommit.model.constant.Version;
-import com.github.smartcommit.model.entity.*;
+import com.github.smartcommit.model.entity.FieldInfo;
+import com.github.smartcommit.model.entity.HunkInfo;
+import com.github.smartcommit.model.entity.MethodInfo;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;
 import com.github.smartcommit.model.graph.Node;
@@ -109,12 +111,26 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           @Override
           public void acceptAST(String sourceFilePath, CompilationUnit cu) {
             try {
-              JDTService jdtService =
-                  new JDTService(FileUtils.readFileToString(new File(sourceFilePath)));
-              cu.accept(new MemberVisitor(entityPool, graph, jdtService));
-              //              System.out.println(cu.getAST().hasBindingsRecovery());
-              // collect hunk infos and nodes
-              createHunkInfos(sourceFilePath, cu, jdtService);
+              // get the corresponding diff file
+              Version version = Version.BASE;
+              if (sourceFilePath.contains(
+                  File.separator + Version.CURRENT.asString() + File.separator)) {
+                version = Version.CURRENT;
+              }
+              Optional<DiffFile> diffFileOpt = getDiffFileByPath(sourceFilePath, version);
+              if (diffFileOpt.isPresent()) {
+                DiffFile diffFile = diffFileOpt.get();
+                Map<String, Pair<Integer, Integer>> hunksPosition =
+                    computeHunksPosition(diffFile, cu, version);
+
+                // collect type/field/method infos and create nodes
+                JDTService jdtService =
+                    new JDTService(FileUtils.readFileToString(new File(sourceFilePath)));
+                cu.accept(new MemberVisitor(diffFile.getIndex(), entityPool, graph, jdtService));
+
+                // collect hunk infos and create nodes
+                createHunkInfos(diffFile.getIndex(), hunksPosition, cu, jdtService);
+              }
             } catch (Exception e) {
               e.printStackTrace();
             }
@@ -124,8 +140,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
     // Edge: create inter-entity edges with the EntityPool and EntityInfo
     int edgeCount = graph.edgeSet().size();
-    Map<String, ClassInfo> classDecMap = entityPool.classInfoMap;
-    Map<String, InterfaceInfo> interfaceDecMap = entityPool.interfaceInfoMap;
     Map<String, MethodInfo> methodDecMap = entityPool.methodInfoMap;
     Map<String, FieldInfo> fieldDecMap = entityPool.fieldInfoMap;
     Map<String, HunkInfo> hunkMap = entityPool.hunkInfoMap;
@@ -156,29 +170,19 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       }
 
       // param type
-      for (String param : methodInfo.paramTypes) {
-        ClassInfo targetClassInfo = classDecMap.get(param);
-        if (targetClassInfo != null) {
-          graph.addEdge(
-              methodDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.PARAM));
-        }
-        InterfaceInfo interfaceInfo = interfaceDecMap.get(param);
-        if (interfaceInfo != null) {
-          graph.addEdge(methodDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.PARAM));
+      for (String type : methodInfo.paramTypes) {
+        Optional<Node> typeDecNode = findTypeNode(type, methodInfo.fileIndex);
+        if (typeDecNode.isPresent()) {
+          graph.addEdge(methodDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.PARAM));
         }
       }
 
       // local var type
-      for (String localVarType : methodInfo.typeUses) {
-        ClassInfo targetClassInfo = classDecMap.get(localVarType);
-        if (targetClassInfo != null) {
+      for (String type : methodInfo.typeUses) {
+        Optional<Node> typeDecNode = findTypeNode(type, methodInfo.fileIndex);
+        if (typeDecNode.isPresent()) {
           graph.addEdge(
-              methodDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
-        }
-        InterfaceInfo interfaceInfo = interfaceDecMap.get(localVarType);
-        if (interfaceInfo != null) {
-          graph.addEdge(
-              methodDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+              methodDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.INITIALIZE));
         }
       }
     }
@@ -188,13 +192,9 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       Node fieldDeclNode = fieldInfo.node;
       // field type
       for (String type : fieldInfo.types) {
-        ClassInfo targetClassInfo = classDecMap.get(type);
-        if (targetClassInfo != null) {
-          graph.addEdge(fieldDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.TYPE));
-        }
-        InterfaceInfo interfaceInfo = interfaceDecMap.get(type);
-        if (interfaceInfo != null) {
-          graph.addEdge(fieldDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.TYPE));
+        Optional<Node> typeDecNode = findTypeNode(type, fieldInfo.fileIndex);
+        if (typeDecNode.isPresent()) {
+          graph.addEdge(fieldDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.TYPE));
         }
       }
 
@@ -217,15 +217,10 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
       // type instance creation
       for (String type : fieldInfo.typeUses) {
-        ClassInfo targetClassInfo = classDecMap.get(type);
-        if (targetClassInfo != null) {
+        Optional<Node> typeDecNode = findTypeNode(type, fieldInfo.fileIndex);
+        if (typeDecNode.isPresent()) {
           graph.addEdge(
-              fieldDeclNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
-        }
-        InterfaceInfo interfaceInfo = interfaceDecMap.get(type);
-        if (interfaceInfo != null) {
-          graph.addEdge(
-              fieldDeclNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+              fieldDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.INITIALIZE));
         }
       }
     }
@@ -251,30 +246,51 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
       // type uses
       for (String type : hunkInfo.typeUses) {
-        ClassInfo targetClassInfo = classDecMap.get(type);
-        if (targetClassInfo != null) {
-          graph.addEdge(hunkNode, targetClassInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
-        }
-        InterfaceInfo interfaceInfo = interfaceDecMap.get(type);
-        if (interfaceInfo != null) {
-          graph.addEdge(hunkNode, interfaceInfo.node, new Edge(edgeCount++, EdgeType.INITIALIZE));
+        Optional<Node> typeDecNode = findTypeNode(type, hunkInfo.fileIndex);
+        if (typeDecNode.isPresent()) {
+          graph.addEdge(hunkNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.INITIALIZE));
         }
       }
     }
 
-    //    String graphDotString = GraphExporter.exportAsDotWithType(graph);
     return graph;
   }
 
   /**
+   * Find the type declaration node
+   *
+   * @param type
+   * @return
+   */
+  private Optional<Node> findTypeNode(String type, Integer fileIndex) {
+    // for qualified name
+    if (entityPool.classInfoMap.containsKey(type)) {
+      return Optional.of(entityPool.classInfoMap.get(type).node);
+    } else if (entityPool.interfaceInfoMap.containsKey(type)) {
+      return Optional.of(entityPool.interfaceInfoMap.get(type).node);
+    } else if (entityPool.importInfoMap.containsKey(type)) {
+      return Optional.of(entityPool.importInfoMap.get(type).node);
+    }
+    // for unqualified name: fuzzy matching in the imports of the current file
+    for (Map.Entry<String, HunkInfo> entry : entityPool.importInfoMap.entrySet()) {
+      if (entry.getValue().fileIndex == fileIndex && entry.getKey().endsWith(type)) {
+        return Optional.of(entry.getValue().node);
+      }
+    }
+    return Optional.empty();
+  }
+  /**
    * Collect info of the hunks in the current file
    *
-   * @param sourceFilePath
+   * @param hunksPosition
    * @param cu
    * @return
    */
-  private void createHunkInfos(String sourceFilePath, CompilationUnit cu, JDTService jdtService) {
-    Map<String, Pair<Integer, Integer>> hunksPosition = computeHunksPosition(sourceFilePath, cu);
+  private void createHunkInfos(
+      Integer fileIndex,
+      Map<String, Pair<Integer, Integer>> hunksPosition,
+      CompilationUnit cu,
+      JDTService jdtService) {
     for (String index : hunksPosition.keySet()) {
       // for each diff hunk, find and analyze covered nodes, create hunk node and info
       Set<ASTNode> coveredNodes = new LinkedHashSet<>();
@@ -299,6 +315,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       }
 
       HunkInfo hunkInfo = new HunkInfo(index);
+      hunkInfo.fileIndex = fileIndex;
       hunkInfo.coveredNodes = coveredNodes;
       boolean existInGraph = false;
 
@@ -419,6 +436,12 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         }
       }
 
+      // for import declarations, map imported type to HunkInfo
+      if (hunkInfo.typeDefs.size() > 0) {
+        for (String s : hunkInfo.typeDefs) {
+          entityPool.importInfoMap.put(s, hunkInfo);
+        }
+      }
       // add HunkInfo into the pool
       entityPool.hunkInfoMap.put(hunkInfo.uniqueName(), hunkInfo);
     }
@@ -427,21 +450,14 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
   /**
    * Compute and construct a map to store the position of diff hunks inside current file
    *
-   * @param sourceFilePath
+   * @param diffFile
    * @param cu
    * @return
    */
   private Map<String, Pair<Integer, Integer>> computeHunksPosition(
-      String sourceFilePath, CompilationUnit cu) {
+      DiffFile diffFile, CompilationUnit cu, Version version) {
     Map<String, Pair<Integer, Integer>> indexToPositionMap = new HashMap<>();
-    // get the current diff file
-    Version version = Version.BASE;
-    if (sourceFilePath.contains(File.separator + Version.CURRENT.asString() + File.separator)) {
-      version = Version.CURRENT;
-    }
-    Optional<DiffFile> diffFileOpt = getDiffFileByPath(sourceFilePath, version);
-    if (cu != null && diffFileOpt.isPresent()) {
-      DiffFile diffFile = diffFileOpt.get();
+    if (cu != null) {
 
       List<DiffHunk> diffHunksContainCode =
           diffFile.getDiffHunks().stream()
