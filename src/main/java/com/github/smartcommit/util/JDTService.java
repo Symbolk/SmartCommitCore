@@ -302,6 +302,8 @@ public class JDTService {
           ((ClassInstanceCreation) expression).resolveConstructorBinding();
       if (constructorBinding != null) {
         fieldInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
+      } else {
+        fieldInfo.typeDefs.addAll(getTypes(((ClassInstanceCreation) expression).getType()));
       }
     }
     if (expression.getNodeType() == ASTNode.ASSIGNMENT) {
@@ -531,6 +533,8 @@ public class JDTService {
           ((ClassInstanceCreation) expression).resolveConstructorBinding();
       if (constructorBinding != null) {
         methodInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
+      } else {
+        methodInfo.typeDefs.addAll(getTypes(((ClassInstanceCreation) expression).getType()));
       }
     }
     if (expression.getNodeType() == ASTNode.METHOD_INVOCATION) {
@@ -765,6 +769,8 @@ public class JDTService {
           ((ClassInstanceCreation) expression).resolveConstructorBinding();
       if (constructorBinding != null) {
         entityInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
+      } else {
+        entityInfo.typeDefs.addAll(getTypes(((ClassInstanceCreation) expression).getType()));
       }
     }
     if (expression.getNodeType() == ASTNode.METHOD_INVOCATION) {

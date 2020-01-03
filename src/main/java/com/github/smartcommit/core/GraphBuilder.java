@@ -169,6 +169,14 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         }
       }
 
+      // return type(s)
+      for (String type : methodInfo.returnTypes) {
+        Optional<Node> typeDecNode = findTypeNode(type, methodInfo.fileIndex);
+        if (typeDecNode.isPresent()) {
+          graph.addEdge(methodDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.RETURN));
+        }
+      }
+
       // param type
       for (String type : methodInfo.paramTypes) {
         Optional<Node> typeDecNode = findTypeNode(type, methodInfo.fileIndex);
