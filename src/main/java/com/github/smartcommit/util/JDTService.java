@@ -479,9 +479,7 @@ public class JDTService {
     if (expression == null) {
       return;
     }
-    //    System.out.println(
-    //        expression.toString() + " : " +
-    // Annotation.nodeClassForType(expression.getNodeType()));
+
     if (expression.getNodeType() == ASTNode.ARRAY_INITIALIZER) {
       List<Expression> expressions = ((ArrayInitializer) expression).expressions();
       for (Expression expression2 : expressions) {
@@ -517,9 +515,17 @@ public class JDTService {
     if (expression.getNodeType() == ASTNode.PREFIX_EXPRESSION) {
       parseExpressionInMethod(methodInfo, ((PrefixExpression) expression).getOperand());
     }
-    if (expression.getNodeType() == ASTNode.THIS_EXPRESSION) {
-      parseExpressionInMethod(methodInfo, ((ThisExpression) expression).getQualifier());
+
+    if (expression.getNodeType() == ASTNode.FIELD_ACCESS) {
+      FieldAccess fieldAccess = (FieldAccess) expression;
+      // support this. field access
+      if (fieldAccess.getExpression().getNodeType() == ASTNode.THIS_EXPRESSION) {
+        methodInfo.fieldUses.add(methodInfo.belongTo + ":" + fieldAccess.getName());
+      } else {
+        parseExpressionInMethod(methodInfo, ((FieldAccess) expression).getExpression());
+      }
     }
+
     if (expression.getNodeType() == ASTNode.CLASS_INSTANCE_CREATION) {
       IMethodBinding constructorBinding =
           ((ClassInstanceCreation) expression).resolveConstructorBinding();
@@ -705,9 +711,7 @@ public class JDTService {
     if (expression == null) {
       return;
     }
-    //    System.out.println(
-    //        expression.toString() + " : " +
-    // Annotation.nodeClassForType(expression.getNodeType()));
+
     if (expression.getNodeType() == ASTNode.ARRAY_INITIALIZER) {
       List<Expression> expressions = ((ArrayInitializer) expression).expressions();
       for (Expression expression2 : expressions) {
@@ -742,9 +746,20 @@ public class JDTService {
     if (expression.getNodeType() == ASTNode.PREFIX_EXPRESSION) {
       parseExpression(entityInfo, ((PrefixExpression) expression).getOperand());
     }
-    if (expression.getNodeType() == ASTNode.THIS_EXPRESSION) {
-      parseExpression(entityInfo, ((ThisExpression) expression).getQualifier());
+
+    if (expression.getNodeType() == ASTNode.FIELD_ACCESS) {
+      FieldAccess fieldAccess = (FieldAccess) expression;
+      // support this. field access
+      if (fieldAccess.getExpression().getNodeType() == ASTNode.THIS_EXPRESSION) {
+        entityInfo.fieldUses.add(
+            fieldAccess.resolveFieldBinding().getDeclaringClass().getQualifiedName()
+                + ":"
+                + fieldAccess.getName());
+      } else {
+        parseExpression(entityInfo, ((FieldAccess) expression).getExpression());
+      }
     }
+
     if (expression.getNodeType() == ASTNode.CLASS_INSTANCE_CREATION) {
       IMethodBinding constructorBinding =
           ((ClassInstanceCreation) expression).resolveConstructorBinding();
