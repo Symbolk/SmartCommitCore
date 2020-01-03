@@ -303,7 +303,11 @@ public class JDTService {
       if (constructorBinding != null) {
         fieldInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
       } else {
-        fieldInfo.typeDefs.addAll(getTypes(((ClassInstanceCreation) expression).getType()));
+        fieldInfo.typeUses.addAll(getTypes(((ClassInstanceCreation) expression).getType()));
+      }
+      List<Expression> arguments = ((ClassInstanceCreation) expression).arguments();
+      for (Expression exp : arguments) {
+        parseExpression(fieldInfo, exp);
       }
     }
     if (expression.getNodeType() == ASTNode.ASSIGNMENT) {
@@ -467,6 +471,10 @@ public class JDTService {
         if (constructorBinding != null) {
           methodInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
         }
+        List<Expression> arguments = ((ConstructorInvocation) statement).arguments();
+        for (Expression exp : arguments) {
+          parseExpression(methodInfo, exp);
+        }
       }
     }
   }
@@ -534,7 +542,11 @@ public class JDTService {
       if (constructorBinding != null) {
         methodInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
       } else {
-        methodInfo.typeDefs.addAll(getTypes(((ClassInstanceCreation) expression).getType()));
+        methodInfo.typeUses.addAll(getTypes(((ClassInstanceCreation) expression).getType()));
+      }
+      List<Expression> arguments = ((ClassInstanceCreation) expression).arguments();
+      for (Expression exp : arguments) {
+        parseExpression(methodInfo, exp);
       }
     }
     if (expression.getNodeType() == ASTNode.METHOD_INVOCATION) {
@@ -701,6 +713,10 @@ public class JDTService {
         if (constructorBinding != null) {
           entityInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
         }
+        List<Expression> arguments = ((ConstructorInvocation) statement).arguments();
+        for (Expression exp : arguments) {
+          parseExpression(entityInfo, exp);
+        }
       }
     }
   }
@@ -770,7 +786,11 @@ public class JDTService {
       if (constructorBinding != null) {
         entityInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
       } else {
-        entityInfo.typeDefs.addAll(getTypes(((ClassInstanceCreation) expression).getType()));
+        entityInfo.typeUses.addAll(getTypes(((ClassInstanceCreation) expression).getType()));
+      }
+      List<Expression> arguments = ((ClassInstanceCreation) expression).arguments();
+      for (Expression exp : arguments) {
+        parseExpression(entityInfo, exp);
       }
     }
     if (expression.getNodeType() == ASTNode.METHOD_INVOCATION) {
@@ -787,6 +807,7 @@ public class JDTService {
       parseExpression(entityInfo, ((Assignment) expression).getLeftHandSide());
       parseExpression(entityInfo, ((Assignment) expression).getRightHandSide());
     }
+    // PersistenceModule.PERSISTENCE_UNIT_NAME
     if (expression.getNodeType() == ASTNode.QUALIFIED_NAME) {
       ITypeBinding typeBinding = ((QualifiedName) expression).getQualifier().resolveTypeBinding();
       if (typeBinding != null) {
@@ -794,35 +815,55 @@ public class JDTService {
             typeBinding.getQualifiedName()
                 + ":"
                 + ((QualifiedName) expression).getName().getIdentifier();
+        entityInfo.typeUses.add(typeBinding.getQualifiedName());
         entityInfo.fieldUses.add(name);
       }
       parseExpression(entityInfo, ((QualifiedName) expression).getQualifier());
     }
     if (expression.getNodeType() == ASTNode.SIMPLE_NAME) {
       IBinding binding = ((SimpleName) expression).resolveBinding();
-      if (binding != null && binding instanceof IVariableBinding) {
-        IVariableBinding varBinding = ((IVariableBinding) binding);
-        if (varBinding.isField()) {
-          entityInfo.fieldUses.add(
-              varBinding.getDeclaringClass().getQualifiedName() + ":" + binding.getName());
-        } else if (varBinding.isParameter()) {
-          entityInfo.paraUses.add(
-              varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
-                  + ":"
-                  + varBinding.getDeclaringMethod().getName()
-                  + ":"
-                  + varBinding.getName());
-        } else {
-          entityInfo.localVarUses.add(
-              varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
-                  + ":"
-                  + varBinding.getDeclaringMethod().getName()
-                  + ":"
-                  + varBinding.getName());
+      if (binding != null) {
+        if (binding instanceof IVariableBinding) {
+          IVariableBinding varBinding = ((IVariableBinding) binding);
+          if (varBinding.isField()) {
+            entityInfo.fieldUses.add(
+                varBinding.getDeclaringClass().getQualifiedName() + ":" + binding.getName());
+          } else if (varBinding.isParameter()) {
+            entityInfo.paraUses.add(
+                varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
+                    + ":"
+                    + varBinding.getDeclaringMethod().getName()
+                    + ":"
+                    + varBinding.getName());
+          } else {
+            entityInfo.localVarUses.add(
+                varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
+                    + ":"
+                    + varBinding.getDeclaringMethod().getName()
+                    + ":"
+                    + varBinding.getName());
+          }
         }
       }
     }
 
+    // lambda expression (annoymous method declaration): ()->{}
+    if (expression.getNodeType() == ASTNode.LAMBDA_EXPRESSION) {
+      ASTNode body = ((LambdaExpression) expression).getBody();
+      if (body instanceof Block) {
+        // use a temp MethodInfo to collect information
+        MethodInfo methodInfo = new MethodInfo();
+        parseMethodBody(methodInfo, (Block) body);
+        entityInfo.typeUses.addAll(methodInfo.typeUses);
+        entityInfo.fieldUses.addAll(methodInfo.fieldUses);
+        entityInfo.methodCalls.addAll(methodInfo.methodCalls);
+
+      } else if (body instanceof Expression) {
+        parseExpression(entityInfo, (Expression) body);
+      }
+    }
+
+    // .forEach(System.out::println)
     if (expression.getNodeType() == ASTNode.EXPRESSION_METHOD_REFERENCE) {
       IMethodBinding methodBinding =
           ((ExpressionMethodReference) expression).resolveMethodBinding();

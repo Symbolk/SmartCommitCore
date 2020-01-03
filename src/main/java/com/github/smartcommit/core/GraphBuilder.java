@@ -439,8 +439,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         Optional<Node> parentNodeOpt = findParentNode(coveredNodes);
         if (parentNodeOpt.isPresent()) {
           graph.addEdge(parentNodeOpt.get(), hunkNode, new Edge(edgeID, EdgeType.CONTAIN));
-        } else {
-          logger.error("Parent node null for: " + hunkNode);
         }
       }
 
@@ -528,8 +526,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       return graph.vertexSet().stream()
           .filter(node -> node.getIdentifier().equals(finalIdentifier))
           .findAny();
-    } else {
-      logger.error("Parent entity null for " + astNodes);
     }
     return Optional.empty();
   }
