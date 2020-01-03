@@ -3,11 +3,11 @@ package com.github.smartcommit.util;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.*;
-import io.reflectoring.diffparser.api.DiffParser;
-import io.reflectoring.diffparser.api.UnifiedDiffParser;
-import io.reflectoring.diffparser.api.model.Diff;
-import io.reflectoring.diffparser.api.model.Hunk;
-import io.reflectoring.diffparser.api.model.Line;
+import com.github.smartcommit.util.diffparser.api.DiffParser;
+import com.github.smartcommit.util.diffparser.api.UnifiedDiffParser;
+import com.github.smartcommit.util.diffparser.api.model.Diff;
+import com.github.smartcommit.util.diffparser.api.model.Hunk;
+import com.github.smartcommit.util.diffparser.api.model.Line;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
