@@ -57,13 +57,16 @@ public class GroupGenerator {
       }
     }
     if (nonJavaDiffHunks.size() > 0) {
-      Group nonJavaGroup = new Group(repoID, repoName, Utils.generateUUID(), nonJavaDiffHunks);
-      generatedGroups.put("group" + generatedGroups.size(), nonJavaGroup);
+      String groupID = "group" + generatedGroups.size();
+      Group nonJavaGroup = new Group(repoID, repoName, groupID, nonJavaDiffHunks);
+      generatedGroups.put(groupID, nonJavaGroup);
     }
   }
 
+  // TODO: group the import in fine-grained way
   public void analyzeImports() {}
 
+  /** Group the remaining diff hunks in the last group */
   public void analyzeRemainingDiffHunks() {}
 
   public void analyzeHardLinks() {
@@ -75,9 +78,9 @@ public class GroupGenerator {
       for (String target : entry.getValue()) {
         diffHunksInGroup.add(getDiffHunkIDFromIndex(diffFiles, target));
       }
-      Group group =
-          new Group(repoID, repoName, Utils.generateUUID(), new ArrayList<>(diffHunksInGroup));
-      generatedGroups.put("group" + generatedGroups.size(), group);
+      String groupID = "group" + generatedGroups.size();
+      Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunksInGroup));
+      generatedGroups.put(groupID, group);
     }
   }
 
@@ -97,8 +100,8 @@ public class GroupGenerator {
   }
 
   private static void addDiffHunkIntoGroup(
-      String REPO_ID,
-      String REPO_NAME,
+      String repoID,
+      String repoName,
       Map<String, Group> groups,
       DiffHunk diffHunk,
       DiffHunk diffHunk1) {
@@ -118,9 +121,9 @@ public class GroupGenerator {
       Set<String> diffHunksInGroup = new HashSet<>();
       diffHunksInGroup.add(id);
       diffHunksInGroup.add(id1);
-      Group group =
-          new Group(REPO_ID, REPO_NAME, Utils.generateUUID(), new ArrayList<>(diffHunksInGroup));
-      groups.put("group" + groups.values().size(), group);
+      String groupID = "group" + groups.values().size();
+      Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunksInGroup));
+      groups.put(groupID, group);
     }
   }
 
