@@ -6,6 +6,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class EntityInfo {
+  // which file the entity belongs to
+  public Integer fileIndex;
+
   // def internal
   public Set<String> typeDefs = new HashSet<>();
   public Set<String> fieldDefs = new HashSet<>();

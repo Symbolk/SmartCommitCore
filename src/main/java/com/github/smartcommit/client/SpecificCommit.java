@@ -4,12 +4,14 @@ import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
+import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.Utils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.PropertyConfigurator;
 import org.jgrapht.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,8 @@ public class SpecificCommit {
     String COMMIT_ID = Config.COMMIT_ID;
 
     Utils.clearDir(TEMP_DIR);
+    // config the logger with properties files when developing
+    PropertyConfigurator.configure("log4j.properties");
 
     try {
       // 1. analyze the repo
@@ -52,8 +56,8 @@ public class SpecificCommit {
           executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
       Graph<Node, Edge> baseGraph = baseBuilder.get();
       Graph<Node, Edge> currentGraph = currentBuilder.get();
-      //      String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
-      //      String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
+//      String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
+//      String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
       executorService.shutdown();
 
       // 4. analyze the diff hunks to generate groups
@@ -63,6 +67,7 @@ public class SpecificCommit {
       groupGenerator.analyzeNonJavaFiles();
       groupGenerator.analyzeHardLinks();
       groupGenerator.analyzeSoftLinks();
+      groupGenerator.analyzeRemainingDiffHunks();
       groupGenerator.exportGroupingResults(TEMP_DIR);
 
       // 5. commit

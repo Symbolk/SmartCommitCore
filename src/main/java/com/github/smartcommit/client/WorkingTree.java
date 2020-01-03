@@ -4,13 +4,14 @@ import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
-import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.Utils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
 import org.jgrapht.Graph;
 
 import java.util.List;
@@ -29,6 +30,9 @@ public class WorkingTree {
     String TEMP_DIR = Config.TEMP_DIR;
 
     Utils.clearDir(TEMP_DIR);
+    // use basic configuration when packaging
+    BasicConfigurator.configure();
+    org.apache.log4j.Logger.getRootLogger().setLevel(Level.INFO);
 
     try {
       // 1. analyze the repo
@@ -52,8 +56,8 @@ public class WorkingTree {
       Graph<Node, Edge> baseGraph = baseBuilder.get();
       Graph<Node, Edge> currentGraph = currentBuilder.get();
 
-      String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
-      String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
+//      String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
+//      String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
 
       // 4. analyze the diff hunks
       GroupGenerator groupGenerator =
@@ -62,6 +66,7 @@ public class WorkingTree {
       groupGenerator.analyzeNonJavaFiles();
       groupGenerator.analyzeHardLinks();
       groupGenerator.analyzeSoftLinks();
+      groupGenerator.analyzeRemainingDiffHunks();
       groupGenerator.exportGroupingResults(TEMP_DIR);
 
       // 6. commit

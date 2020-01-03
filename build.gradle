@@ -16,6 +16,31 @@ tasks.withType(JavaCompile) {
     options.encoding = "UTF-8"
 }
 
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'com.github.smartcommit.client.WorkingTree'
+        )
+    }
+}
+
+task fatJar(type: Jar) {
+    manifest.from jar.manifest
+//    classifier = 'all'
+    from {
+        configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
+    } {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    with jar
+}
+
+artifacts {
+    archives fatJar
+}
+
 test {
     useJUnitPlatform()
     testLogging {
@@ -26,7 +51,6 @@ test {
 dependencies {
     compile fileTree(dir: 'lib', include: ['*.jar'])
     compile group: 'org.eclipse.jdt', name: 'org.eclipse.jdt.core', version: '3.16.0'
-    compile group: 'io.reflectoring.diffparser', name: 'diffparser', version: '1.4'
     compile group: 'org.jgrapht', name: 'jgrapht-core', version: '1.3.0'
     compile group: 'org.jgrapht', name: 'jgrapht-io', version: '1.3.0'
 

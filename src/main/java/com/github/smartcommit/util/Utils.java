@@ -4,6 +4,7 @@ import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -269,5 +270,19 @@ public class Utils {
    */
   public static List<String> convertStringToLines(String s) {
     return Arrays.asList(s.split("\\r?\\n"));
+  }
+
+  /**
+   * Parse fileIndex and diffHunkIndex from fileIndex:diffHunkIndex
+   *
+   * @param s
+   * @return
+   */
+  public static Pair<Integer, Integer> parseIndicesFromString(String s) {
+    String[] pair = s.split(":");
+    if (pair.length == 2) {
+      return Pair.of(Integer.valueOf(pair[0]), Integer.valueOf(pair[1]));
+    }
+    return Pair.of(-1, -1);
   }
 }

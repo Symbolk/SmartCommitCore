@@ -17,10 +17,11 @@ public enum EdgeType {
   // call method
   CALL(false, "call_method"),
   // declare/initialize object
-  DECLARE(false, "declare_object"),
+//  DECLARE(false, "declare_object"),
   PARAM(false, "parameter_type"),
   TYPE(false, "field_type"),
-  INITIALIZE(false, "initialize");
+  INITIALIZE(false, "initialize"),
+  RETURN(false, "return_type");
 
   Boolean isStructural;
   String label;

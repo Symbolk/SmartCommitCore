@@ -17,11 +17,14 @@ import java.util.List;
 import java.util.Optional;
 
 public class MemberVisitor extends ASTVisitor {
+  private Integer fileIndex;
   private EntityPool entityPool;
   private Graph<Node, Edge> graph;
   private JDTService jdtService;
 
-  public MemberVisitor(EntityPool entityPool, Graph<Node, Edge> graph, JDTService jdtService) {
+  public MemberVisitor(
+      Integer fileIndex, EntityPool entityPool, Graph<Node, Edge> graph, JDTService jdtService) {
+    this.fileIndex = fileIndex;
     this.entityPool = entityPool;
     this.graph = graph;
     this.jdtService = jdtService;
@@ -73,7 +76,7 @@ public class MemberVisitor extends ASTVisitor {
     for (FieldDeclaration fieldDeclaration : fieldDeclarations) {
       // each field declaration can declare multiple fields with the common properties
       List<FieldInfo> fieldInfos =
-          jdtService.createFieldInfos(fieldDeclaration, qualifiedNameForType);
+          jdtService.createFieldInfos(fileIndex, fieldDeclaration, qualifiedNameForType);
       for (FieldInfo fieldInfo : fieldInfos) {
         Node fieldNode =
             new Node(generateNodeID(), NodeType.FIELD, fieldInfo.name, fieldInfo.uniqueName());
@@ -88,7 +91,8 @@ public class MemberVisitor extends ASTVisitor {
 
     MethodDeclaration[] methodDeclarations = type.getMethods();
     for (MethodDeclaration methodDeclaration : methodDeclarations) {
-      MethodInfo methodInfo = jdtService.createMethodInfo(methodDeclaration, qualifiedNameForType);
+      MethodInfo methodInfo =
+          jdtService.createMethodInfo(fileIndex, methodDeclaration, qualifiedNameForType);
       Node methodNode =
           new Node(
               generateNodeID(),
