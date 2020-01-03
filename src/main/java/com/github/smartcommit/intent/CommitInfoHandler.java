@@ -99,7 +99,7 @@ public class CommitInfoHandler {
 
             String commitID = tempCommitInfo.getCommitID();
             // RepoAnalyzer
-            RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_NAME, REPO_DIR);
+            RepoAnalyzer repoAnalyzer = new RepoAnalyzer(String.valueOf(REPO_NAME.hashCode()), REPO_NAME, REPO_DIR);
             List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
 
             List<MyAction> tempActionList = new ArrayList<>();
