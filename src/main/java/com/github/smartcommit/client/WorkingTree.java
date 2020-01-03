@@ -10,6 +10,8 @@ import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.Utils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
 import org.jgrapht.Graph;
 
 import java.util.List;
@@ -28,6 +30,9 @@ public class WorkingTree {
     String TEMP_DIR = Config.TEMP_DIR;
 
     Utils.clearDir(TEMP_DIR);
+    // use basic configuration when packaging
+    BasicConfigurator.configure();
+    org.apache.log4j.Logger.getRootLogger().setLevel(Level.INFO);
 
     try {
       // 1. analyze the repo
