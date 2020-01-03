@@ -64,14 +64,16 @@ public class GroupGenerator {
 
   public void analyzeImports() {}
 
+  public void analyzeRemainingDiffHunks() {}
+
   public void analyzeHardLinks() {
     Map<String, List<String>> unionHardLinks =
         combineHardLinks(analyzeDefUse(baseGraph), analyzeDefUse(currentGraph));
     for (Map.Entry<String, List<String>> entry : unionHardLinks.entrySet()) {
       Set<String> diffHunksInGroup = new HashSet<>();
-      diffHunksInGroup.add(getIDByIndexString(diffFiles, entry.getKey()));
+      diffHunksInGroup.add(getDiffHunkIDFromIndex(diffFiles, entry.getKey()));
       for (String target : entry.getValue()) {
-        diffHunksInGroup.add(getIDByIndexString(diffFiles, target));
+        diffHunksInGroup.add(getDiffHunkIDFromIndex(diffFiles, target));
       }
       Group group =
           new Group(repoID, repoName, Utils.generateUUID(), new ArrayList<>(diffHunksInGroup));
@@ -207,14 +209,13 @@ public class GroupGenerator {
     return res;
   }
 
-  private String getIDByIndexString(List<DiffFile> diffFiles, String s) {
-    String[] pair = s.split(":");
-    if (pair.length == 2) {
-      Pair<Integer, Integer> index = Pair.of(Integer.valueOf(pair[0]), Integer.valueOf(pair[1]));
-      DiffFile diffFile = diffFiles.get(index.getLeft());
+  private String getDiffHunkIDFromIndex(List<DiffFile> diffFiles, String index) {
+    Pair<Integer, Integer> indices = Utils.parseIndicesFromString(index);
+    if (indices.getLeft() >= 0 && indices.getRight() >= 0) {
+      DiffFile diffFile = diffFiles.get(indices.getLeft());
       return diffFile.getFileID()
           + ":"
-          + diffFile.getDiffHunks().get(index.getRight()).getDiffHunkID();
+          + diffFile.getDiffHunks().get(indices.getRight()).getDiffHunkID();
     }
     return ":";
   }
