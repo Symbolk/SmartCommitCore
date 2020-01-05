@@ -90,7 +90,7 @@ public class CommitInfoHandler {
 
     public static boolean LabelExtractor(String REPO_DIR, String REPO_NAME, List<CommitInfo> commitInfo) {
         Integer size = commitInfo.size();
-        for(int i = 1 ; i < size ; i++) {
+        for(int i = 0 ; i < size ; i++) {
             CommitInfo tempCommitInfo = commitInfo.get(i);
             String commitMsg = tempCommitInfo.getCommitMsg();
 
@@ -98,8 +98,11 @@ public class CommitInfoHandler {
             tempCommitInfo.setIntent(intent);
 
             String commitID = tempCommitInfo.getCommitID();
+            String REPO_ID = String.valueOf(REPO_NAME.hashCode());
             // RepoAnalyzer
-            RepoAnalyzer repoAnalyzer = new RepoAnalyzer(String.valueOf(REPO_NAME.hashCode()), REPO_NAME, REPO_DIR);
+
+            RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_ID, REPO_NAME, REPO_DIR);
+
             List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
 
             List<MyAction> tempActionList = new ArrayList<>();
@@ -174,12 +177,20 @@ public class CommitInfoHandler {
     public static boolean DBLoader(String REPO_NAME, List<CommitInfo> commitInfo) {
         MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
         MongoClient mongoClient = new MongoClient(connectionString);
-        MongoDatabase commitsDB = mongoClient.getDatabase("commitInfo");
+        MongoDatabase commitsDB = mongoClient.getDatabase("commitsDB");
         MongoCollection<Document> repoCol = commitsDB.getCollection(REPO_NAME);
         repoCol.drop();
         repoCol = commitsDB.getCollection(REPO_NAME);
+
+
+        // Actions stored in seperated collection part1
+        MongoDatabase ActionLists = mongoClient.getDatabase("ActionLists");
+        MongoCollection<Document> actionListsCollection = ActionLists.getCollection(REPO_NAME+"ActionLists");
+        actionListsCollection.drop();
+        actionListsCollection = ActionLists.getCollection(REPO_NAME+"ActionLists");
+
         Integer size = commitInfo.size();
-        for(int i = 1 ; i < size ; i++) {
+        for(int i = 0 ; i < size ; i++) {
             // key:value
             Document tempDoc = new Document("repo_name", REPO_NAME);
             CommitInfo tempCommitInfo = commitInfo.get(i);
@@ -198,7 +209,15 @@ public class CommitInfoHandler {
             ;
             repoCol.insertOne(tempDoc);
 
+            // Actions stored in seperated collection part2
+            Document actionDocument = new Document("repo_name", REPO_NAME+"Actions");
+            Integer sizeActionList = actionList.size();
+            for(int j = 0 ; j < sizeActionList ; j++) {
+                actionDocument.append("action "+j+" in commits "+i, actionList.get(j).getActions());
+            }
+            actionListsCollection.insertOne(actionDocument);
         }
+
         mongoClient.close();
         return true;
     }
