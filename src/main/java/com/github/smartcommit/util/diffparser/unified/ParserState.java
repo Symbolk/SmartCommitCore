@@ -30,7 +30,7 @@ public enum ParserState {
     @Override
     public ParserState nextState(ParseWindow window) {
       String line = window.getFocusLine();
-      if (matchesFromFilePattern(line)) {
+      if (matchesFromFilePattern(line, window.getFutureLine(1))) {
         logTransition(line, INITIAL, FROM_FILE);
         return FROM_FILE;
       } else {
@@ -45,7 +45,7 @@ public enum ParserState {
     @Override
     public ParserState nextState(ParseWindow window) {
       String line = window.getFocusLine();
-      if (matchesFromFilePattern(line)) {
+      if (matchesFromFilePattern(line, window.getFutureLine(1))) {
         logTransition(line, HEADER, FROM_FILE);
         return FROM_FILE;
       } else {
@@ -239,8 +239,8 @@ public enum ParserState {
     logger.debug(String.format("%12s -> %12s: %s", fromState, toState, currentLine));
   }
 
-  protected boolean matchesFromFilePattern(String line) {
-    return line.startsWith("---");
+  protected boolean matchesFromFilePattern(String line, String nextLine) {
+    return line.startsWith("---") && nextLine.startsWith("+++");
   }
 
   protected boolean matchesToFilePattern(String line) {
@@ -271,7 +271,7 @@ public enum ParserState {
       int i = 1;
       String futureLine;
       while ((futureLine = window.getFutureLine(i)) != null) {
-        if (matchesFromFilePattern(futureLine)) {
+        if (matchesFromFilePattern(futureLine, window.getFutureLine(1))) {
           // We found the start of a new diff without another newline in between. That makes the
           // current line the delimiter
           // between this diff and the next.
@@ -291,7 +291,8 @@ public enum ParserState {
       // some diff tools like "svn diff" do not put an empty line between two diffs
       // we add that empty line and call the method again
       String nextFromFileLine = window.getFutureLine(3);
-      if (nextFromFileLine != null && matchesFromFilePattern(nextFromFileLine)) {
+      if (nextFromFileLine != null
+          && matchesFromFilePattern(nextFromFileLine, window.getFutureLine(1))) {
         window.addLine(1, "");
         return matchesEndPattern(line, window);
       } else {
