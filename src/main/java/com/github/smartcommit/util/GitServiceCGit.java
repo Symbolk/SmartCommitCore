@@ -180,7 +180,7 @@ public class GitServiceCGit implements GitService {
 
   @Override
   public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath, List<DiffFile> diffFiles) {
-    String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "-U1");
+    String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "-U0");
     DiffParser parser = new UnifiedDiffParser();
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
     return generateDiffHunks(diffs, diffFiles);
@@ -210,7 +210,7 @@ public class GitServiceCGit implements GitService {
                 new com.github.smartcommit.model.Hunk(
                     Version.CURRENT,
                     diffFile.getCurrentRelativePath(),
-                    0,
+                    1,
                     lines.size(),
                     Utils.checkContentType(lines),
                     lines),
@@ -220,6 +220,7 @@ public class GitServiceCGit implements GitService {
         diffHunk.setFileIndex(diffFile.getIndex());
         List<DiffHunk> diffHunksInFile = new ArrayList<>();
         diffHunksInFile.add(diffHunk);
+        allDiffHunks.add(diffHunk);
         diffFile.setDiffHunks(diffHunksInFile);
       }
     }
@@ -245,16 +246,16 @@ public class GitServiceCGit implements GitService {
             new com.github.smartcommit.model.Hunk(
                 Version.BASE,
                 removeVersionLabel(baseFilePath),
-                hunk.getFromFileRange().getLineStart() + 1,
-                hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 2,
+                hunk.getFromFileRange().getLineStart(),
+                hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 1,
                 Utils.checkContentType(baseCodeLines),
                 baseCodeLines);
         com.github.smartcommit.model.Hunk currentHunk =
             new com.github.smartcommit.model.Hunk(
                 Version.CURRENT,
                 removeVersionLabel(currentFilePath),
-                hunk.getToFileRange().getLineStart() + 1,
-                hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 2,
+                hunk.getToFileRange().getLineStart(),
+                hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 1,
                 Utils.checkContentType(currentCodeLines),
                 currentCodeLines);
         ChangeType changeType = ChangeType.MODIFIED;
@@ -317,10 +318,8 @@ public class GitServiceCGit implements GitService {
     // git diff <start_commit> <end_commit>
     // on Windows the ~ character must be used instead of ^
     String diffOutput =
-        Utils.runSystemCommand(repoPath, "git", "diff", "-U1", commitID + "~", commitID);
+        Utils.runSystemCommand(repoPath, "git", "diff", "-U0", commitID + "~", commitID);
     DiffParser parser = new UnifiedDiffParser();
-    // TODO fix the bug within the library when parsing diff with only added lines with -U0 or
-    // default -U3
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
     return generateDiffHunks(diffs, diffFiles);
   }
