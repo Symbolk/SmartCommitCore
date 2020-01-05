@@ -141,9 +141,12 @@ public enum ParserState {
       } else if (matchesHunkStartPattern(line)) {
         logTransition(line, FROM_LINE, HUNK_START);
         return HUNK_START;
-      } else {
-        logTransition(line, FROM_LINE, NEUTRAL_LINE);
+      } else if (matchesNeutralPattern(line)) {
+        logTransition(line, TO_LINE, NEUTRAL_LINE);
         return NEUTRAL_LINE;
+      } else {
+        logTransition(line, TO_LINE, HEADER);
+        return HEADER;
       }
     }
   },
@@ -171,9 +174,12 @@ public enum ParserState {
       } else if (matchesHunkStartPattern(line)) {
         logTransition(line, TO_LINE, HUNK_START);
         return HUNK_START;
-      } else {
+      } else if (matchesNeutralPattern(line)) {
         logTransition(line, TO_LINE, NEUTRAL_LINE);
         return NEUTRAL_LINE;
+      } else {
+        logTransition(line, TO_LINE, HEADER);
+        return HEADER;
       }
     }
   },
@@ -243,6 +249,10 @@ public enum ParserState {
 
   protected boolean matchesFromLinePattern(String line) {
     return line.startsWith("-");
+  }
+
+  protected boolean matchesNeutralPattern(String line) {
+    return line.startsWith(" ") || line.startsWith("\\");
   }
 
   protected boolean matchesToLinePattern(String line) {
