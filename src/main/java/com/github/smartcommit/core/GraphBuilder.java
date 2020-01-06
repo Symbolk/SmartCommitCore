@@ -476,11 +476,15 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         switch (version) {
           case BASE:
             startPos = cu.getPosition(diffHunk.getBaseStartLine(), 0);
-            endPos = cu.getPosition(diffHunk.getBaseEndLine() + 1, 0);
+            endPos =
+                cu.getPosition(
+                    diffHunk.getBaseEndLine(), diffHunk.getBaseHunk().getLastLineLength());
             break;
           case CURRENT:
             startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
-            endPos = cu.getPosition(diffHunk.getCurrentEndLine() + 1, 0);
+            endPos =
+                cu.getPosition(
+                    diffHunk.getCurrentEndLine(), diffHunk.getCurrentHunk().getLastLineLength());
         }
         int length = endPos - startPos;
         // construct the location map

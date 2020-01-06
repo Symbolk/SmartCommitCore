@@ -2,6 +2,7 @@ package com.github.smartcommit.model;
 
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.Version;
+import com.google.common.collect.Iterables;
 
 import java.util.List;
 
@@ -50,5 +51,19 @@ public class Hunk {
 
   public ContentType getContentType() {
     return contentType;
+  }
+
+  /**
+   * Get the length of the last line in the code snippets
+   *
+   * @return
+   */
+  public int getLastLineLength() {
+    String lastLineRaw = Iterables.getLast(codeSnippet, null);
+    if (lastLineRaw == null) {
+      return 0;
+    } else {
+      return lastLineRaw.length();
+    }
   }
 }
