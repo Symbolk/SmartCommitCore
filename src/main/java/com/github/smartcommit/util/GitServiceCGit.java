@@ -180,7 +180,8 @@ public class GitServiceCGit implements GitService {
 
   @Override
   public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath, List<DiffFile> diffFiles) {
-    String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "-U0");
+    // git diff + git diff --cached/staged == git diff HEAD (show all the changes since the last commit)
+    String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
     DiffParser parser = new UnifiedDiffParser();
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
     return generateDiffHunks(diffs, diffFiles);
