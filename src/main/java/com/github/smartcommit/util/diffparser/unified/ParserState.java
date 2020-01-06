@@ -204,9 +204,14 @@ public enum ParserState {
       } else if (matchesHunkStartPattern(line)) {
         logTransition(line, NEUTRAL_LINE, HUNK_START);
         return HUNK_START;
-      } else {
-        logTransition(line, NEUTRAL_LINE, NEUTRAL_LINE);
+      } else if (matchesNeutralPattern(line)) {
+        logTransition(line, TO_LINE, NEUTRAL_LINE);
         return NEUTRAL_LINE;
+      } else {
+//        logTransition(line, NEUTRAL_LINE, NEUTRAL_LINE);
+//        return NEUTRAL_LINE;
+        logTransition(line, NEUTRAL_LINE, HEADER);
+        return HEADER;
       }
     }
   },
