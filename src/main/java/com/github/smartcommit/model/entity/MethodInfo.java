@@ -6,7 +6,7 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import java.util.HashSet;
 import java.util.Set;
 
-public class MethodInfo extends EntityInfo {
+public class MethodInfo extends MemberInfo {
   public String visibility;
   public boolean isConstructor;
   public boolean isAbstract;

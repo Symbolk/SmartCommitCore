@@ -5,7 +5,10 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import java.util.HashSet;
 import java.util.Set;
 
-public class EntityInfo {
+/**
+ * Information for members (e.g. field, method/constructor, annotation member, enum constant)
+ */
+public class MemberInfo {
   // which file the entity belongs to
   public Integer fileIndex;
 

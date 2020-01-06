@@ -358,7 +358,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 hunkInfo.typeDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
               } else {
-                logger.error("Not Found: " + astNode);
+                logger.warn("Not Found: " + astNode);
               }
               break;
             case ASTNode.TYPE_DECLARATION:
@@ -383,7 +383,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 hunkInfo.typeDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
               } else {
-                logger.error("Not Found: " + astNode);
+                logger.warn("Not Found: " + astNode);
               }
               break;
             case ASTNode.ENUM_CONSTANT_DECLARATION:
@@ -414,7 +414,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 hunkInfo.fieldDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
               } else {
-                logger.error("Not Found: " + astNode);
+                logger.warn("Not Found: " + astNode);
               }
               break;
             case ASTNode.FIELD_DECLARATION:
@@ -440,7 +440,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                   hunkInfo.fieldDefs.add(node.getQualifiedName());
                   hunkInfo.node = node;
                 } else {
-                  logger.error("Not Found: " + astNode);
+                  logger.warn("Not Found: " + astNode);
                 }
               }
               break;
@@ -467,11 +467,12 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 hunkInfo.methodDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
               } else {
-                logger.error("Not Found: " + astNode);
+                logger.warn("Not Found: " + astNode);
               }
               break;
             default:
-              logger.error("Other type: " + astNode.getNodeType());
+              logger.warn(
+                  "Unconsidered type: " + Annotation.nodeClassForType(astNode.getNodeType()));
           }
         } else if (astNode instanceof Statement) {
           jdtService.parseStatement(hunkInfo, (Statement) astNode);

@@ -58,36 +58,15 @@ public class JDTService {
   }
 
   /**
-   * Get the fully qualified name of an enum declaration
-   *
-   * @param enumDeclaration
-   * @return
-   */
-  public String getQualifiedNameForEnum(EnumDeclaration enumDeclaration) {
-    String name = enumDeclaration.getName().getIdentifier();
-    ASTNode parent = enumDeclaration.getParent();
-    // inside a type declaration
-    while (parent != null && parent.getClass() == TypeDeclaration.class) {
-      name = ((TypeDeclaration) parent).getName().getIdentifier() + "." + name;
-      parent = parent.getParent();
-    }
-    // resolve fully qualified name e.g.: some.package.A.B
-    if (enumDeclaration.getRoot().getClass() == CompilationUnit.class) {
-      name = getPackageName(enumDeclaration) + "." + name;
-    }
-    return name;
-  }
-
-  /**
    * Get the fully qualified name of a type declaration
    *
    * @param type
    * @return
    */
-  public String getQualifiedNameForType(TypeDeclaration type) {
+  public String getQualifiedNameForType(AbstractTypeDeclaration type) {
     String name = type.getName().getIdentifier();
     ASTNode parent = type.getParent();
-    // resolve full name e.g.: A.B
+    // for inner type, resolve full name e.g.: A.B
     while (parent != null && parent.getClass() == TypeDeclaration.class) {
       name = ((TypeDeclaration) parent).getName().getIdentifier() + "." + name;
       parent = parent.getParent();
@@ -684,7 +663,7 @@ public class JDTService {
    * @param entityInfo
    * @param statement
    */
-  public void parseStatement(EntityInfo entityInfo, Statement statement) {
+  public void parseStatement(MemberInfo entityInfo, Statement statement) {
     List<Statement> statements = new ArrayList<>();
     statements.add(statement);
     for (int i = 0; i < statements.size(); i++) {
@@ -832,7 +811,7 @@ public class JDTService {
    * @param entityInfo
    * @param expression
    */
-  private void parseExpression(EntityInfo entityInfo, Expression expression) {
+  private void parseExpression(MemberInfo entityInfo, Expression expression) {
     if (expression == null) {
       return;
     }

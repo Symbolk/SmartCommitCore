@@ -35,7 +35,7 @@ public class MemberVisitor extends ASTVisitor {
 
   @Override
   public boolean visit(EnumDeclaration node) {
-    String qualifiedName = jdtService.getQualifiedNameForEnum(node);
+    String qualifiedName = jdtService.getQualifiedNameForType(node);
     Node enumNode =
         new Node(generateNodeID(), NodeType.ENUM, node.getName().getIdentifier(), qualifiedName);
     graph.addVertex(enumNode);
