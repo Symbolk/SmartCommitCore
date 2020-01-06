@@ -8,7 +8,7 @@ import java.util.Set;
 
 public class MethodInfo extends EntityInfo {
   public String visibility;
-  public boolean isConstruct;
+  public boolean isConstructor;
   public boolean isAbstract;
   public boolean isFinal;
   public boolean isStatic;

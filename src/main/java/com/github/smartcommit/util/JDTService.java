@@ -167,7 +167,7 @@ public class JDTService {
     boolean isStatic = isStatic(node);
     boolean isFinal = isFinal(node);
     String comment = "";
-    if (node.getJavadoc() != null){
+    if (node.getJavadoc() != null) {
       comment =
           sourceContent.substring(
               node.getJavadoc().getStartPosition(),
@@ -210,7 +210,7 @@ public class JDTService {
     methodInfo.returnString = returnType == null ? "void" : returnType.toString();
     methodInfo.returnTypes = getTypes(returnType);
     methodInfo.visibility = getVisibility(node);
-    methodInfo.isConstruct = node.isConstructor();
+    methodInfo.isConstructor = node.isConstructor();
     methodInfo.isAbstract = isAbstract(node);
     methodInfo.isFinal = isFinal(node);
     methodInfo.isStatic = isStatic(node);
@@ -218,7 +218,7 @@ public class JDTService {
     methodInfo.content =
         sourceContent.substring(
             node.getStartPosition(), node.getStartPosition() + node.getLength());
-    if (node.getJavadoc() != null){
+    if (node.getJavadoc() != null) {
       methodInfo.comment =
           sourceContent.substring(
               node.getJavadoc().getStartPosition(),
@@ -353,6 +353,12 @@ public class JDTService {
         }
         continue;
       }
+      if (statement.getNodeType() == ASTNode.RETURN_STATEMENT) {
+        Expression expression = ((ReturnStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpressionInMethod(methodInfo, expression);
+        }
+      }
       if (statement.getNodeType() == ASTNode.ASSERT_STATEMENT) {
         Expression expression = ((AssertStatement) statement).getExpression();
         if (expression != null) {
@@ -418,12 +424,6 @@ public class JDTService {
         }
         if (thenStatement != null) {
           statements.add(i + 1, thenStatement);
-        }
-      }
-      if (statement.getNodeType() == ASTNode.RETURN_STATEMENT) {
-        Expression expression = ((ReturnStatement) statement).getExpression();
-        if (expression != null) {
-          parseExpressionInMethod(methodInfo, expression);
         }
       }
       if (statement.getNodeType() == ASTNode.SWITCH_STATEMENT) {
@@ -573,6 +573,17 @@ public class JDTService {
         methodInfo.fieldUses.add(name);
       }
       parseExpressionInMethod(methodInfo, ((QualifiedName) expression).getQualifier());
+    }
+
+    if (expression.getNodeType() == ASTNode.SIMPLE_NAME) {
+      // resolve the simple name to determine whether it is a local var, para, or self field
+      IBinding binding = ((SimpleName) expression).resolveBinding();
+      if (binding != null && binding instanceof IVariableBinding) {
+        if (((IVariableBinding) binding).isField()) {
+          methodInfo.fieldUses.add(
+              methodInfo.belongTo + ":" + ((SimpleName) expression).getIdentifier());
+        }
+      }
     }
   }
 

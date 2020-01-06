@@ -8,15 +8,14 @@ public enum NodeType {
 
   // nonterminal (children classes of AbstractTypeDeclaration)
   CLASS("class"),
-  INNER_CLASS("class"),
-  LOCAL_CLASS("local_class"),
+  //  INNER_CLASS("class"),
   INTERFACE("interface"),
 
   ENUM("enum"),
   ANNOTATION("@interface"), // annotation type declaration
 
   // terminal
-  CONSTRUCTOR("constructor"),
+  //  CONSTRUCTOR("constructor"),
   FIELD("field"),
   METHOD("method"),
   ENUM_CONSTANT("enum_constant"),
