@@ -278,6 +278,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       return Optional.of(entityPool.interfaceInfoMap.get(type).node);
     } else if (entityPool.importInfoMap.containsKey(type)) {
       return Optional.of(entityPool.importInfoMap.get(type).node);
+    } else if (entityPool.enumInfoMap.containsKey(type)) {
+      return Optional.of(entityPool.enumInfoMap.get(type).node);
     }
     // for unqualified name: fuzzy matching in the imports of the current file
     for (Map.Entry<String, HunkInfo> entry : entityPool.importInfoMap.entrySet()) {
@@ -335,6 +337,30 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           Optional<Node> nodeOpt = Optional.empty();
           // find the corresponding nodeOpt in the entity pool (expected to exist)
           switch (astNode.getNodeType()) {
+            case ASTNode.ENUM_DECLARATION:
+              ITypeBinding enumBinding = ((EnumDeclaration) astNode).resolveBinding();
+              if (enumBinding != null) {
+                nodeOpt =
+                    findNodeByNameAndType(enumBinding.getQualifiedName(), NodeType.ENUM, true);
+              } else {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        ((TypeDeclaration) astNode).getName().getIdentifier(),
+                        NodeType.ENUM,
+                        false);
+              }
+              if (nodeOpt.isPresent()) {
+                existInGraph = true;
+                Node node = nodeOpt.get();
+                node.isInDiffHunk = true;
+                node.diffHunkIndex = index;
+
+                hunkInfo.typeDefs.add(node.getQualifiedName());
+                hunkInfo.node = node;
+              } else {
+                logger.error("Not Found: " + astNode);
+              }
+              break;
             case ASTNode.TYPE_DECLARATION:
               ITypeBinding typeBinding = ((TypeDeclaration) astNode).resolveBinding();
               if (typeBinding != null) {
@@ -355,6 +381,37 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 node.diffHunkIndex = index;
 
                 hunkInfo.typeDefs.add(node.getQualifiedName());
+                hunkInfo.node = node;
+              } else {
+                logger.error("Not Found: " + astNode);
+              }
+              break;
+            case ASTNode.ENUM_CONSTANT_DECLARATION:
+              IVariableBinding varBinding = ((EnumConstantDeclaration) astNode).resolveVariable();
+              if (varBinding != null) {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        varBinding.getDeclaringClass().getQualifiedName()
+                            + ":"
+                            + ((EnumConstantDeclaration) astNode).getName().getFullyQualifiedName(),
+                        NodeType.ENUM_CONSTANT,
+                        true);
+              } else {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        ((EnumConstantDeclaration) astNode).getName().getIdentifier(),
+                        NodeType.ENUM_CONSTANT,
+                        false);
+              }
+
+              if (nodeOpt.isPresent()) {
+                existInGraph = true;
+                Node node = nodeOpt.get();
+                node.isInDiffHunk = true;
+                node.diffHunkIndex = index;
+
+                // consider constant as fields
+                hunkInfo.fieldDefs.add(node.getQualifiedName());
                 hunkInfo.node = node;
               } else {
                 logger.error("Not Found: " + astNode);

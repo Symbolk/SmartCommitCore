@@ -10,12 +10,12 @@ public class EntityInfo {
   public Integer fileIndex;
 
   // def internal
-  public Set<String> typeDefs = new HashSet<>();
+  public Set<String> typeDefs = new HashSet<>(); // AbstractType, including Type, Enum, Annotation
   public Set<String> fieldDefs = new HashSet<>();
   public Set<String> methodDefs = new HashSet<>();
 
   // use internal
-  public Set<String> typeUses = new HashSet<>();
+  public Set<String> typeUses = new HashSet<>(); // AbstractType, including Type, Enum, Annotation
   public Set<IMethodBinding> methodCalls = new HashSet<>();
   public Set<String> fieldUses = new HashSet<>();
   public Set<String> paraUses = new HashSet<>();
