@@ -45,8 +45,13 @@ class NodeShapeAttribute implements Attribute {
       case PACKAGE:
         return "folder";
       case CLASS:
-        //        return "circle";
         return "component";
+      case INTERFACE:
+        return "polygon";
+      case ENUM:
+        return "septagon";
+      case ANNOTATION:
+        return "cds";
       case METHOD:
         return "ellipse";
       case FIELD:

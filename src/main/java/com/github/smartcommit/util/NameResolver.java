@@ -63,6 +63,20 @@ public class NameResolver {
     return name;
   }
 
+  public static String getFullName(AnnotationTypeDeclaration decl) {
+    String name = decl.getName().getIdentifier();
+    ASTNode parent = decl.getParent();
+    // resolve fully qualified name e.g.: some.package.A.B
+    if (decl.getRoot().getClass() == CompilationUnit.class) {
+      CompilationUnit root = (CompilationUnit) decl.getRoot();
+      if (root.getPackage() != null) {
+        PackageDeclaration pack = root.getPackage();
+        name = pack.getName().getFullyQualifiedName() + "." + name;
+      }
+    }
+    return name;
+  }
+
   /** Evaluates fully qualified name of the Type object. */
   public static String getFullName(Type t) {
     if (t == null) return null;

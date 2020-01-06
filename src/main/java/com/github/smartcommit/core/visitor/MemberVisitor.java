@@ -34,6 +34,44 @@ public class MemberVisitor extends ASTVisitor {
   }
 
   @Override
+  public boolean visit(AnnotationTypeDeclaration node) {
+    String qualifiedName = jdtService.getQualifiedNameForType(node);
+    Node enumNode =
+        new Node(
+            generateNodeID(), NodeType.ANNOTATION, node.getName().getIdentifier(), qualifiedName);
+    graph.addVertex(enumNode);
+
+    if (node.isPackageMemberTypeDeclaration()) {
+      String packageName = jdtService.getPackageName(node);
+      if (!packageName.isEmpty()) {
+        Node pkgNode = getOrCreatePkgNode(packageName);
+        graph.addEdge(pkgNode, enumNode, new Edge(generateEdgeID(), EdgeType.CONTAIN));
+      }
+    }
+    AnnotationInfo annotationInfo = jdtService.createAnnotationInfo(node);
+    annotationInfo.node = enumNode;
+    entityPool.annotationInfoMap.put(annotationInfo.fullName, annotationInfo);
+
+    List<AnnotationTypeMemberDeclaration> memberDeclarations = node.bodyDeclarations();
+    for (AnnotationTypeMemberDeclaration declaration : memberDeclarations) {
+      AnnotationMemberInfo memberInfo =
+          jdtService.createAnnotationMemberInfo(fileIndex, declaration, qualifiedName);
+      Node memberNode =
+          new Node(
+              generateNodeID(),
+              NodeType.ANNOTATION_MEMBER,
+              memberInfo.name,
+              memberInfo.uniqueName());
+      graph.addVertex(memberNode);
+      graph.addEdge(enumNode, memberNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
+      memberInfo.node = memberNode;
+    }
+
+    return true;
+  }
+
+  @Override
   public boolean visit(EnumDeclaration node) {
     String qualifiedName = jdtService.getQualifiedNameForType(node);
     Node enumNode =

@@ -177,6 +177,13 @@ public class JDTService {
     return enumInfo;
   }
 
+  public AnnotationInfo createAnnotationInfo(AnnotationTypeDeclaration node) {
+    AnnotationInfo annotationInfo = new AnnotationInfo();
+    annotationInfo.name = node.getName().getFullyQualifiedName();
+    annotationInfo.fullName = NameResolver.getFullName(node);
+    return annotationInfo;
+  }
+
   /**
    * Collect information from a FieldDeclaration. Each FieldDeclaration can declare multiple fields
    *
@@ -242,6 +249,16 @@ public class JDTService {
       }
     }
     return enumConstantInfo;
+  }
+
+  public AnnotationMemberInfo createAnnotationMemberInfo(
+      Integer fileIndex, AnnotationTypeMemberDeclaration node, String belongTo) {
+    AnnotationMemberInfo memberInfo = new AnnotationMemberInfo();
+    memberInfo.name = node.getName().getFullyQualifiedName();
+    memberInfo.belongTo = belongTo;
+    memberInfo.type = node.getType().toString();
+    memberInfo.defaultValue = node.getDefault().toString();
+    return memberInfo;
   }
 
   /**

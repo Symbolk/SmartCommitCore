@@ -337,6 +337,61 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           Optional<Node> nodeOpt = Optional.empty();
           // find the corresponding nodeOpt in the entity pool (expected to exist)
           switch (astNode.getNodeType()) {
+            // TODO: for type declarations, members should all be in diff
+            case ASTNode.ANNOTATION_TYPE_DECLARATION:
+              ITypeBinding annoBinding = ((AnnotationTypeDeclaration) astNode).resolveBinding();
+              if (annoBinding != null) {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        annoBinding.getQualifiedName(), NodeType.ANNOTATION, true);
+              } else {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        ((AnnotationTypeDeclaration) astNode).getName().getIdentifier(),
+                        NodeType.ANNOTATION,
+                        false);
+              }
+              if (nodeOpt.isPresent()) {
+                existInGraph = true;
+                Node node = nodeOpt.get();
+                node.isInDiffHunk = true;
+                node.diffHunkIndex = index;
+
+                hunkInfo.typeDefs.add(node.getQualifiedName());
+                hunkInfo.node = node;
+              } else {
+                logger.warn("Not Found: " + astNode);
+              }
+              break;
+            case ASTNode.ANNOTATION_TYPE_MEMBER_DECLARATION:
+              IMethodBinding memberBinding =
+                  ((AnnotationTypeMemberDeclaration) astNode).resolveBinding();
+              if (memberBinding != null) {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        memberBinding.getDeclaringClass().getQualifiedName()
+                            + ":"
+                            + memberBinding.getName(),
+                        NodeType.ANNOTATION_MEMBER,
+                        true);
+              } else {
+                nodeOpt =
+                    findNodeByNameAndType(
+                        ((AnnotationTypeMemberDeclaration) astNode).getName().getIdentifier(),
+                        NodeType.ANNOTATION_MEMBER,
+                        false);
+              }
+              if (nodeOpt.isPresent()) {
+                existInGraph = true;
+                Node node = nodeOpt.get();
+                node.isInDiffHunk = true;
+                node.diffHunkIndex = index;
+
+                hunkInfo.node = node;
+              } else {
+                logger.warn("Not Found: " + astNode);
+              }
+              break;
             case ASTNode.ENUM_DECLARATION:
               ITypeBinding enumBinding = ((EnumDeclaration) astNode).resolveBinding();
               if (enumBinding != null) {
