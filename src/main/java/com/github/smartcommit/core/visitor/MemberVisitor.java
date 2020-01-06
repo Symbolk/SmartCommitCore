@@ -1,10 +1,7 @@
 package com.github.smartcommit.core.visitor;
 
 import com.github.smartcommit.model.EntityPool;
-import com.github.smartcommit.model.entity.ClassInfo;
-import com.github.smartcommit.model.entity.FieldInfo;
-import com.github.smartcommit.model.entity.InterfaceInfo;
-import com.github.smartcommit.model.entity.MethodInfo;
+import com.github.smartcommit.model.entity.*;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.EdgeType;
 import com.github.smartcommit.model.graph.Node;
@@ -37,9 +34,86 @@ public class MemberVisitor extends ASTVisitor {
   }
 
   @Override
+  public boolean visit(EnumDeclaration node) {
+    String qualifiedName = jdtService.getQualifiedNameForEnum(node);
+    Node enumNode =
+        new Node(generateNodeID(), NodeType.ENUM, node.getName().getIdentifier(), qualifiedName);
+    graph.addVertex(enumNode);
+
+    if (node.isPackageMemberTypeDeclaration()) {
+      String packageName = jdtService.getPackageName(node);
+      if (!packageName.isEmpty()) {
+        Node pkgNode = getOrCreatePkgNode(packageName);
+        graph.addEdge(pkgNode, enumNode, new Edge(generateEdgeID(), EdgeType.CONTAIN));
+      }
+    } else if (node.isLocalTypeDeclaration() || node.isMemberTypeDeclaration()) {
+      String parentTypeName = qualifiedName.replace("." + node.getName().getIdentifier(), "");
+      Optional<Node> nodeOpt = getParentTypeNode(parentTypeName);
+      if (nodeOpt.isPresent()) {
+        graph.addEdge(nodeOpt.get(), enumNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+      }
+    }
+
+    EnumInfo enumInfo = jdtService.createEnumInfo(node);
+    enumInfo.node = enumNode;
+    entityPool.enumInfoMap.put(enumInfo.fullName, enumInfo);
+
+    for (Object obj : node.enumConstants()) {
+      if (obj instanceof EnumConstantDeclaration) {
+        EnumConstantInfo enumConstantInfo =
+            jdtService.createEnumConstantInfo(
+                fileIndex, (EnumConstantDeclaration) obj, qualifiedName);
+        Node enumConstantNode =
+            new Node(
+                generateNodeID(),
+                NodeType.ENUM_CONSTANT,
+                enumConstantInfo.name,
+                enumConstantInfo.uniqueName());
+        graph.addVertex(enumConstantNode);
+        graph.addEdge(enumNode, enumConstantNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
+        enumConstantInfo.node = enumConstantNode;
+        entityPool.enumConstantInfoMap.put(enumConstantInfo.uniqueName(), enumConstantInfo);
+      }
+    }
+
+    for (Object obj : node.bodyDeclarations()) {
+      if (obj instanceof FieldDeclaration) {
+        // each field declaration can declare multiple fields with the common properties
+        List<FieldInfo> fieldInfos =
+            jdtService.createFieldInfos(fileIndex, (FieldDeclaration) obj, qualifiedName);
+        for (FieldInfo fieldInfo : fieldInfos) {
+          Node fieldNode =
+              new Node(generateNodeID(), NodeType.FIELD, fieldInfo.name, fieldInfo.uniqueName());
+          graph.addVertex(fieldNode);
+          graph.addEdge(enumNode, fieldNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
+          fieldInfo.node = fieldNode;
+
+          entityPool.fieldInfoMap.put(fieldInfo.uniqueName(), fieldInfo);
+        }
+      } else if (obj instanceof MethodDeclaration) {
+        MethodInfo methodInfo =
+            jdtService.createMethodInfo(fileIndex, (MethodDeclaration) obj, qualifiedName);
+        Node methodNode =
+            new Node(generateNodeID(), NodeType.METHOD, methodInfo.name, methodInfo.uniqueName());
+        graph.addVertex(methodNode);
+        graph.addEdge(enumNode, methodNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
+        methodInfo.node = methodNode;
+        entityPool.methodInfoMap.put(methodInfo.uniqueName(), methodInfo);
+      }
+    }
+
+    return true;
+  }
+
+  @Override
   public boolean visit(TypeDeclaration type) {
     // create the node for the current type declaration
     NodeType nodeType = type.isInterface() ? NodeType.INTERFACE : NodeType.CLASS;
+    //    nodeType = (type.isMemberTypeDeclaration() || type.isMemberTypeDeclaration()) ?
+    // NodeType.INNER_CLASS : nodeType;
     String qualifiedNameForType = jdtService.getQualifiedNameForType(type);
     Node typeNode =
         new Node(generateNodeID(), nodeType, type.getName().getIdentifier(), qualifiedNameForType);

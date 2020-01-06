@@ -6,14 +6,45 @@ import java.util.Set;
 
 /**
  * Evaluates fully qualified name of TypeDeclaration, Type and Name objects.
+ *
  * @thanks_to https://github.com/linzeqipku/SnowGraph
  */
 public class NameResolver {
 
   private static Set<String> srcPathSet = null;
 
-  /** Evaluates fully qualified name of the TypeDeclaration object. */
+  /**
+   * Evaluates fully qualified name of the TypeDeclaration object.
+   *
+   * @param decl
+   * @return
+   */
   public static String getFullName(TypeDeclaration decl) {
+    String name = decl.getName().getIdentifier();
+    ASTNode parent = decl.getParent();
+    // resolve full name e.g.: A.B
+    while (parent != null && parent.getClass() == TypeDeclaration.class) {
+      name = ((TypeDeclaration) parent).getName().getIdentifier() + "." + name;
+      parent = parent.getParent();
+    }
+    // resolve fully qualified name e.g.: some.package.A.B
+    if (decl.getRoot().getClass() == CompilationUnit.class) {
+      CompilationUnit root = (CompilationUnit) decl.getRoot();
+      if (root.getPackage() != null) {
+        PackageDeclaration pack = root.getPackage();
+        name = pack.getName().getFullyQualifiedName() + "." + name;
+      }
+    }
+    return name;
+  }
+
+  /**
+   * Evaluates fully qualified name of the TypeDeclaration object.
+   *
+   * @param decl
+   * @return
+   */
+  public static String getFullName(EnumDeclaration decl) {
     String name = decl.getName().getIdentifier();
     ASTNode parent = decl.getParent();
     // resolve full name e.g.: A.B

@@ -9,6 +9,9 @@ public class EntityPool {
   private String srcDir;
   public Map<String, ClassInfo> classInfoMap;
   public Map<String, InterfaceInfo> interfaceInfoMap;
+  public Map<String, EnumInfo> enumInfoMap;
+  public Map<String, EnumConstantInfo> enumConstantInfoMap;
+  public Map<String, AnnotationInfo> annotationInfoMap;
   public Map<String, MethodInfo> methodInfoMap;
   public Map<String, FieldInfo> fieldInfoMap;
   public Map<String, HunkInfo> hunkInfoMap;
@@ -19,6 +22,9 @@ public class EntityPool {
     this.srcDir = srcDir;
     classInfoMap = new HashMap<>();
     interfaceInfoMap = new HashMap<>();
+    enumInfoMap = new HashMap<>();
+    enumConstantInfoMap = new HashMap<>();
+    annotationInfoMap = new HashMap<>();
     methodInfoMap = new HashMap<>();
     fieldInfoMap = new HashMap<>();
     hunkInfoMap = new HashMap<>();

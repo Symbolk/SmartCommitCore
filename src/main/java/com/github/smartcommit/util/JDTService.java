@@ -58,6 +58,27 @@ public class JDTService {
   }
 
   /**
+   * Get the fully qualified name of an enum declaration
+   *
+   * @param enumDeclaration
+   * @return
+   */
+  public String getQualifiedNameForEnum(EnumDeclaration enumDeclaration) {
+    String name = enumDeclaration.getName().getIdentifier();
+    ASTNode parent = enumDeclaration.getParent();
+    // inside a type declaration
+    while (parent != null && parent.getClass() == TypeDeclaration.class) {
+      name = ((TypeDeclaration) parent).getName().getIdentifier() + "." + name;
+      parent = parent.getParent();
+    }
+    // resolve fully qualified name e.g.: some.package.A.B
+    if (enumDeclaration.getRoot().getClass() == CompilationUnit.class) {
+      name = getPackageName(enumDeclaration) + "." + name;
+    }
+    return name;
+  }
+
+  /**
    * Get the fully qualified name of a type declaration
    *
    * @param type
@@ -84,7 +105,7 @@ public class JDTService {
    * @param decl
    * @return
    */
-  public String getPackageName(TypeDeclaration decl) {
+  public String getPackageName(BodyDeclaration decl) {
     CompilationUnit root = (CompilationUnit) decl.getRoot();
     if (root.getPackage() != null) {
       PackageDeclaration pack = root.getPackage();
@@ -107,14 +128,15 @@ public class JDTService {
     List<Type> superInterfaceList = node.superInterfaceTypes();
     for (Type superInterface : superInterfaceList)
       interfaceInfo.superInterfaceTypeList.add(NameResolver.getFullName(superInterface));
-    if (node.getJavadoc() != null)
-      interfaceInfo.comment =
-          sourceContent.substring(
-              node.getJavadoc().getStartPosition(),
-              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
-    interfaceInfo.content =
-        sourceContent.substring(
-            node.getStartPosition(), node.getStartPosition() + node.getLength());
+    //    if (node.getJavadoc() != null){
+    //      interfaceInfo.comment =
+    //          sourceContent.substring(
+    //              node.getJavadoc().getStartPosition(),
+    //              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    //    }
+    //    interfaceInfo.content =
+    //        sourceContent.substring(
+    //            node.getStartPosition(), node.getStartPosition() + node.getLength());
     return interfaceInfo;
   }
 
@@ -139,17 +161,43 @@ public class JDTService {
     for (Type superInterface : superInterfaceList) {
       classInfo.superInterfaceTypeList.add(NameResolver.getFullName(superInterface));
     }
-    if (node.getJavadoc() != null) {
-      classInfo.comment =
-          sourceContent.substring(
-              node.getJavadoc().getStartPosition(),
-              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
-      classInfo.content =
-          sourceContent.substring(
-              node.getStartPosition(), node.getStartPosition() + node.getLength());
-    }
+    //    if (node.getJavadoc() != null) {
+    //      classInfo.comment =
+    //          sourceContent.substring(
+    //              node.getJavadoc().getStartPosition(),
+    //              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    //    }
+    //    classInfo.content =
+    //          sourceContent.substring(
+    //              node.getStartPosition(), node.getStartPosition() + node.getLength());
     return classInfo;
   }
+
+  /**
+   * Collect information from enum declaration
+   *
+   * @param node
+   * @return
+   */
+  public EnumInfo createEnumInfo(EnumDeclaration node) {
+    EnumInfo enumInfo = new EnumInfo();
+    enumInfo.name = node.getName().getFullyQualifiedName();
+    enumInfo.fullName = NameResolver.getFullName(node);
+    enumInfo.visibility = getVisibility(node);
+    // not used so disabled to save memory
+    //    if (node.getJavadoc() != null) {
+    //      enumInfo.comment =
+    //              sourceContent.substring(
+    //                      node.getJavadoc().getStartPosition(),
+    //                      node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    //    }
+    //
+    //    enumInfo.content =
+    //              sourceContent.substring(
+    //                      node.getStartPosition(), node.getStartPosition() + node.getLength());
+    return enumInfo;
+  }
+
   /**
    * Collect information from a FieldDeclaration. Each FieldDeclaration can declare multiple fields
    *
@@ -191,6 +239,30 @@ public class JDTService {
       fieldInfos.add(fieldInfo);
     }
     return fieldInfos;
+  }
+
+  /**
+   * Collect information from an EnumConstantDeclaration
+   *
+   * @return
+   */
+  public EnumConstantInfo createEnumConstantInfo(
+      Integer fileIndex, EnumConstantDeclaration node, String belongTo) {
+    EnumConstantInfo enumConstantInfo = new EnumConstantInfo();
+    enumConstantInfo.name = node.getName().getFullyQualifiedName();
+    enumConstantInfo.belongTo = belongTo;
+    if (node.getJavadoc() != null) {
+      enumConstantInfo.comment =
+          sourceContent.substring(
+              node.getJavadoc().getStartPosition(),
+              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    }
+    for (Object obj : node.arguments()) {
+      if (obj instanceof ASTNode) {
+        enumConstantInfo.arguments.add(((ASTNode) obj).toString());
+      }
+    }
+    return enumConstantInfo;
   }
 
   /**
