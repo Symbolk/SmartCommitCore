@@ -167,11 +167,13 @@ public class JDTService {
     boolean isStatic = isStatic(node);
     boolean isFinal = isFinal(node);
     String comment = "";
-    if (node.getJavadoc() != null)
+    if (node.getJavadoc() != null){
       comment =
           sourceContent.substring(
               node.getJavadoc().getStartPosition(),
               node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    }
+
     List<VariableDeclarationFragment> fragments = node.fragments();
     for (VariableDeclarationFragment fragment : fragments) {
       FieldInfo fieldInfo = new FieldInfo();
@@ -216,11 +218,12 @@ public class JDTService {
     methodInfo.content =
         sourceContent.substring(
             node.getStartPosition(), node.getStartPosition() + node.getLength());
-    if (node.getJavadoc() != null)
+    if (node.getJavadoc() != null){
       methodInfo.comment =
           sourceContent.substring(
               node.getJavadoc().getStartPosition(),
               node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    }
     methodInfo.belongTo = belongTo;
     List<SingleVariableDeclaration> params = node.parameters();
     List<String> paramStringList = new ArrayList<>();

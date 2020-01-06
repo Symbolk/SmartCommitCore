@@ -16,7 +16,7 @@ public class ClassInfo {
   public String superClassType;
   public List<String> superInterfaceTypeList = new ArrayList<>();
   public String comment = "";
-  public String content;
+  public String content = "";
 
   public Node node;
 

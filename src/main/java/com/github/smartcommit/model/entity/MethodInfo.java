@@ -19,7 +19,7 @@ public class MethodInfo extends EntityInfo {
   public String returnString;
   public Set<String> returnTypes = new HashSet<>();
 
-  public String content;
+  public String content = "";
   public String comment = "";
   public String paramString;
   public Set<String> paramTypes = new HashSet<>();

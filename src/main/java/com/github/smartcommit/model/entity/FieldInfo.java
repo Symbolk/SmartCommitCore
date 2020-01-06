@@ -4,7 +4,7 @@ import com.github.smartcommit.model.graph.Node;
 
 import java.util.Set;
 
-public class FieldInfo extends EntityInfo{
+public class FieldInfo extends EntityInfo {
 
   public String name;
   public String belongTo;
