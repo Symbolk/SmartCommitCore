@@ -245,6 +245,25 @@ public class JDTService {
   }
 
   /**
+   * Get the unique identifier of a method declaraion, including the parameter string
+   *
+   * @param node
+   * @return
+   */
+  public String getUniqueNameForMethod(String belongTo, MethodDeclaration node) {
+    List<SingleVariableDeclaration> params = node.parameters();
+    List<String> paramStringList = new ArrayList<>();
+    for (SingleVariableDeclaration param : params) {
+      String name = param.getName().getFullyQualifiedName();
+      Type type = param.getType();
+      String paramString = (isFinal(param) ? "final" : "") + " " + type.toString() + " " + name;
+      paramStringList.add(paramString);
+    }
+    String paramString = String.join(", ", paramStringList).trim();
+    return belongTo + ":" + node.getName() + "(" + paramString + ")";
+  }
+
+  /**
    * Parse the field initializer expression to collect useful information.
    *
    * @param fieldInfo

@@ -62,7 +62,7 @@ public class MemberVisitor extends ASTVisitor {
         Node pkgNode = getOrCreatePkgNode(packageName);
         graph.addEdge(pkgNode, typeNode, new Edge(generateEdgeID(), EdgeType.CONTAIN));
       }
-    } else if (type.isMemberTypeDeclaration()) {
+    } else if (type.isLocalTypeDeclaration() || type.isMemberTypeDeclaration()) {
       String parentTypeName =
           qualifiedNameForType.replace("." + type.getName().getIdentifier(), "");
       Optional<Node> nodeOpt = getParentTypeNode(parentTypeName);
@@ -94,11 +94,7 @@ public class MemberVisitor extends ASTVisitor {
       MethodInfo methodInfo =
           jdtService.createMethodInfo(fileIndex, methodDeclaration, qualifiedNameForType);
       Node methodNode =
-          new Node(
-              generateNodeID(),
-              NodeType.METHOD,
-              methodDeclaration.getName().getFullyQualifiedName(),
-              qualifiedNameForType + ":" + methodDeclaration.getName().getFullyQualifiedName());
+          new Node(generateNodeID(), NodeType.METHOD, methodInfo.name, methodInfo.uniqueName());
       graph.addVertex(methodNode);
       graph.addEdge(typeNode, methodNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
 

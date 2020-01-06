@@ -388,21 +388,17 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               }
               break;
             case ASTNode.METHOD_DECLARATION:
-              IMethodBinding methodBinding = ((MethodDeclaration) astNode).resolveBinding();
+              MethodDeclaration methodDeclaration = (MethodDeclaration) astNode;
+              String uniqueMethodName = methodDeclaration.getName().getIdentifier();
+              IMethodBinding methodBinding = methodDeclaration.resolveBinding();
               if (methodBinding != null && methodBinding.getDeclaringClass() != null) {
-                nodeOpt =
-                    findNodeByNameAndType(
-                        methodBinding.getDeclaringClass().getQualifiedName()
-                            + ":"
-                            + methodBinding.getName(),
-                        NodeType.METHOD,
-                        true);
+                // get the unique name of the method, including the parameter string
+                uniqueMethodName =
+                    jdtService.getUniqueNameForMethod(
+                        methodBinding.getDeclaringClass().getQualifiedName(), methodDeclaration);
+                nodeOpt = findNodeByNameAndType(uniqueMethodName, NodeType.METHOD, true);
               } else {
-                nodeOpt =
-                    findNodeByNameAndType(
-                        ((MethodDeclaration) astNode).getName().getIdentifier(),
-                        NodeType.METHOD,
-                        false);
+                nodeOpt = findNodeByNameAndType(uniqueMethodName, NodeType.METHOD, false);
               }
 
               if (nodeOpt.isPresent()) {
