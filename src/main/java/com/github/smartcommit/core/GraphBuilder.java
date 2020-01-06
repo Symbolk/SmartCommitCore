@@ -337,7 +337,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           Optional<Node> nodeOpt = Optional.empty();
           // find the corresponding nodeOpt in the entity pool (expected to exist)
           switch (astNode.getNodeType()) {
-            // TODO: for type declarations, members should all be in diff
+              // TODO: for type declarations, members should all be in diff
             case ASTNode.ANNOTATION_TYPE_DECLARATION:
               ITypeBinding annoBinding = ((AnnotationTypeDeclaration) astNode).resolveBinding();
               if (annoBinding != null) {
@@ -675,11 +675,17 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     switch (version) {
       case BASE:
         return this.diffFiles.stream()
-            .filter(diffFile -> formattedPath.endsWith(diffFile.getBaseRelativePath()))
+            .filter(
+                diffFile ->
+                    !diffFile.getBaseRelativePath().isEmpty()
+                        && formattedPath.endsWith(diffFile.getBaseRelativePath()))
             .findAny();
       case CURRENT:
         return this.diffFiles.stream()
-            .filter(diffFile -> formattedPath.endsWith(diffFile.getCurrentRelativePath()))
+            .filter(
+                diffFile ->
+                    !diffFile.getCurrentRelativePath().isEmpty()
+                        && formattedPath.endsWith(diffFile.getCurrentRelativePath()))
             .findAny();
       default:
         return Optional.empty();
