@@ -12,8 +12,15 @@ repositories {
     mavenCentral()
 }
 
+gradle.buildFinished { buildResult ->
+    println "BUILD FINISHED"
+    println "build failure - " + buildResult.failure
+}
+
 tasks.withType(JavaCompile) {
     options.encoding = "UTF-8"
+    options.fork = true
+    options.forkOptions.jvmArgs += ["-Duser.language=en"]
 }
 
 jar {
