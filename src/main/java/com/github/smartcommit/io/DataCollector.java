@@ -22,7 +22,7 @@ public class DataCollector {
 
   public DataCollector(String repoName, String tempDir) {
     this.repoName = repoName;
-    this.tempDir = tempDir;
+    this.tempDir = Utils.createDir(tempDir);
   }
 
   /**
@@ -74,6 +74,8 @@ public class DataCollector {
    */
   private int collect(String baseDir, String currentDir, List<DiffFile> diffFiles) {
     int count = 0;
+    Utils.createDir(baseDir);
+    Utils.createDir(currentDir);
     for (DiffFile diffFile : diffFiles) {
       String basePath, currentPath;
       switch (diffFile.getStatus()) {

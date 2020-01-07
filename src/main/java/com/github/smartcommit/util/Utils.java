@@ -124,6 +124,20 @@ public class Utils {
   }
 
   /**
+   * Create a folder if not exists
+   * @param dir abs path
+   * @return
+   */
+  public static String createDir(String dir) {
+    File directory = new File(dir);
+    if (!directory.exists()) {
+      // create the entire directory path including parents
+      directory.mkdirs();
+    }
+    return directory.getAbsolutePath();
+  }
+
+  /**
    * Delete all files and subfolders to clear the directory
    *
    * @param dir absolute path
