@@ -573,7 +573,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       DiffFile diffFile, CompilationUnit cu, Version version) {
     Map<String, Pair<Integer, Integer>> indexToPositionMap = new HashMap<>();
     if (cu != null) {
-
       List<DiffHunk> diffHunksContainCode =
           diffFile.getDiffHunks().stream()
               .filter(diffHunk -> diffHunk.containsCode())
@@ -582,18 +581,23 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         // compute the pos of all diff hunks that contains code
         int startPos = -1;
         int endPos = -1;
+        // cu.getPosition(line, column)
+        //   * @param line the one-based line number
+        //	 * @param column the zero-based column number
+        //	 * @return the 0-based character position in the source string
         switch (version) {
           case BASE:
             startPos = cu.getPosition(diffHunk.getBaseStartLine(), 0);
             endPos =
                 cu.getPosition(
-                    diffHunk.getBaseEndLine(), diffHunk.getBaseHunk().getLastLineLength());
+                    diffHunk.getBaseEndLine(), diffHunk.getBaseHunk().getLastLineLength() - 1);
             break;
           case CURRENT:
             startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
             endPos =
                 cu.getPosition(
-                    diffHunk.getCurrentEndLine(), diffHunk.getCurrentHunk().getLastLineLength());
+                    diffHunk.getCurrentEndLine(),
+                    diffHunk.getCurrentHunk().getLastLineLength() - 1);
         }
         int length = endPos - startPos;
         // construct the location map
