@@ -90,7 +90,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     String[] srcFolderPaths = new String[srcFolderSet.size()];
     srcFolderSet.toArray(srcFolderPaths);
 
-    ASTParser parser = ASTParser.newParser(9);
+    ASTParser parser = ASTParser.newParser(8);
     //        parser.setProject(WorkspaceUtilities.javaProject);
     parser.setKind(ASTParser.K_COMPILATION_UNIT);
     parser.setEnvironment(null, srcFolderPaths, null, true);
