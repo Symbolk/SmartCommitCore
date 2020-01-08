@@ -62,13 +62,21 @@ public class WorkingTree {
       // 4. analyze the diff hunks
       GroupGenerator groupGenerator =
           new GroupGenerator(
-              REPO_ID, REPO_NAME, diffFiles, repoAnalyzer.getDiffHunks(), baseGraph, currentGraph);
+              REPO_ID,
+              REPO_NAME,
+              Config.THRESHOLD,
+              diffFiles,
+              repoAnalyzer.getDiffHunks(),
+              baseGraph,
+              currentGraph);
       groupGenerator.analyzeNonJavaFiles();
       groupGenerator.analyzeHardLinks();
       groupGenerator.analyzeSoftLinks();
       groupGenerator.analyzeRemainingDiffHunks();
       groupGenerator.exportGroupingResults(TEMP_DIR);
 
+      String diffGraphString =
+          DiffGraphExporter.exportAsDotWithType(groupGenerator.getDiffHunkGraph());
       // 6. commit
       Map<String, DiffFile> idToDiffFileMap = repoAnalyzer.getIdToDiffFileMap();
       Map<String, DiffHunk> idToDiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();

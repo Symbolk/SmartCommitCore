@@ -63,13 +63,21 @@ public class SpecificCommit {
       // 4. analyze the diff hunks to generate groups
       GroupGenerator groupGenerator =
           new GroupGenerator(
-              REPO_ID, REPO_NAME, diffFiles, repoAnalyzer.getDiffHunks(), baseGraph, currentGraph);
+              REPO_ID,
+              REPO_NAME,
+              Config.THRESHOLD,
+              diffFiles,
+              repoAnalyzer.getDiffHunks(),
+              baseGraph,
+              currentGraph);
       groupGenerator.analyzeNonJavaFiles();
       groupGenerator.analyzeHardLinks();
       groupGenerator.analyzeSoftLinks();
       groupGenerator.analyzeRemainingDiffHunks();
       groupGenerator.exportGroupingResults(TEMP_DIR);
 
+      String diffGraphString =
+          DiffGraphExporter.exportAsDotWithType(groupGenerator.getDiffHunkGraph());
       // 5. commit
       Map<String, DiffFile> idToDiffFileMap = repoAnalyzer.getIdToDiffFileMap();
       Map<String, DiffHunk> idToDiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();
