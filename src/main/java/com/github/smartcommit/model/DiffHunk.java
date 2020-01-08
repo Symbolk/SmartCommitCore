@@ -118,6 +118,10 @@ public class DiffHunk {
     this.fileIndex = fileIndex;
   }
 
+  public String getUniqueIndex() {
+    return fileIndex + ":" + index;
+  }
+
   //  public void addCodeAction(ActionCluster actionCluster) {
   //    if (this.changeActions == null) {
   //      this.changeActions = new ArrayList<>();

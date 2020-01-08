@@ -200,7 +200,7 @@ public class GitServiceCGit implements GitService {
     for (DiffFile diffFile : diffFiles) {
       if (diffFile.getStatus().equals(FileStatus.ADDED)
           || diffFile.getStatus().equals(FileStatus.UNTRACKED)) {
-        List<String> lines = Utils.convertStringToLines(diffFile.getCurrentContent());
+        List<String> lines = Utils.convertStringToList(diffFile.getCurrentContent());
         DiffHunk diffHunk =
             new DiffHunk(
                 0,

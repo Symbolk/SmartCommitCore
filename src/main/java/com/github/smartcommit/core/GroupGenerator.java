@@ -4,7 +4,9 @@ import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
 import com.github.smartcommit.model.constant.FileType;
-import com.github.smartcommit.model.graph.DiffNode;
+import com.github.smartcommit.model.diffgraph.DiffEdge;
+import com.github.smartcommit.model.diffgraph.DiffEdgeType;
+import com.github.smartcommit.model.diffgraph.DiffNode;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.Utils;
@@ -22,6 +24,7 @@ public class GroupGenerator {
 
   private String repoID;
   private String repoName;
+  private Double threshold;
   private List<DiffFile> diffFiles;
   private List<DiffHunk> diffHunks;
 
@@ -30,17 +33,19 @@ public class GroupGenerator {
   private Graph<Node, Edge> baseGraph;
   private Graph<Node, Edge> currentGraph;
   private Map<String, Group> generatedGroups;
-  private Graph<DiffNode, Edge> diffHunkGraph;
+  private Graph<DiffNode, DiffEdge> diffHunkGraph;
 
   public GroupGenerator(
       String repoID,
       String repoName,
+      Double threshold,
       List<DiffFile> diffFiles,
       List<DiffHunk> diffHunks,
       Graph<Node, Edge> baseGraph,
       Graph<Node, Edge> currentGraph) {
     this.repoID = repoID;
     this.repoName = repoName;
+    this.threshold = threshold;
     this.diffFiles = diffFiles;
     this.diffHunks = diffHunks;
 
@@ -100,6 +105,10 @@ public class GroupGenerator {
 
       for (String target : entry.getValue()) {
         diffHunkID = getDiffHunkIDFromIndex(diffFiles, target);
+        diffHunkGraph.addEdge(
+            findNodeByIndex(entry.getKey()),
+            findNodeByIndex(target),
+            new DiffEdge(generateEdgeID(), DiffEdgeType.HARD, 1.0));
         diffHunksInGroup.add(diffHunkID);
         visited.add(diffHunkID);
       }
@@ -111,17 +120,36 @@ public class GroupGenerator {
 
   /** soft links: systematic edits and similar edits */
   public void analyzeSoftLinks() {
-    for (DiffHunk diffHunk : diffHunks) {
-      for (DiffHunk diffHunk1 : diffHunks) {
-        if (diffHunk1 != diffHunk
-            && diffHunk.getBaseHunk().getCodeSnippet().size()
+    for (int i = 0; i < diffHunks.size(); ++i) {
+      for (int j = i + 1; j < diffHunks.size(); ++j) {
+        DiffHunk diffHunk = diffHunks.get(i);
+        DiffHunk diffHunk1 = diffHunks.get(j);
+        if (diffHunk.getBaseHunk().getCodeSnippet().size()
                 == diffHunk1.getBaseHunk().getCodeSnippet().size()
             && diffHunk.getCurrentHunk().getCodeSnippet().size()
                 == diffHunk1.getCurrentHunk().getCodeSnippet().size()) {
+          Double similarity = estimateSimilarity(diffHunk, diffHunk1);
+          boolean success =
+              diffHunkGraph.addEdge(
+                  findNodeByIndex(diffHunk.getUniqueIndex()),
+                  findNodeByIndex(diffHunk1.getUniqueIndex()),
+                  new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, similarity));
           addDiffHunkIntoGroup(repoID, repoName, generatedGroups, diffHunk, diffHunk1);
         }
       }
     }
+  }
+
+  private double estimateSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
+    double baseSimi =
+        Utils.computeStringSimilarity(
+            Utils.convertListToString(diffHunk.getBaseHunk().getCodeSnippet()),
+            Utils.convertListToString(diffHunk1.getBaseHunk().getCodeSnippet()));
+    double currentSimi =
+        Utils.computeStringSimilarity(
+            Utils.convertListToString(diffHunk.getCurrentHunk().getCodeSnippet()),
+            Utils.convertListToString(diffHunk1.getCurrentHunk().getCodeSnippet()));
+    return (double) Math.round((baseSimi + currentSimi) / 2 * 100) / 100;
   }
 
   private void addDiffHunkIntoGroup(
@@ -239,6 +267,10 @@ public class GroupGenerator {
     return res;
   }
 
+  public Graph<DiffNode, DiffEdge> getDiffHunkGraph() {
+    return diffHunkGraph;
+  }
+
   private String getDiffHunkIDFromIndex(List<DiffFile> diffFiles, String index) {
     Pair<Integer, Integer> indices = Utils.parseIndicesFromString(index);
     if (indices.getLeft() >= 0 && indices.getRight() >= 0) {
@@ -264,19 +296,35 @@ public class GroupGenerator {
     }
   }
 
-  private Graph<DiffNode, Edge> initDiffViewGraph(List<DiffHunk> diffHunks) {
-    Graph<DiffNode, Edge> diffViewGraph =
-        GraphTypeBuilder.<DiffNode, Edge>directed()
-            .allowingMultipleEdges(true)
+  private Graph<DiffNode, DiffEdge> initDiffViewGraph(List<DiffHunk> diffHunks) {
+    Graph<DiffNode, DiffEdge> diffViewGraph =
+        GraphTypeBuilder.<DiffNode, DiffEdge>directed()
+            .allowingMultipleEdges(false)
             .allowingSelfLoops(false)
-            .edgeClass(Edge.class)
+            .edgeClass(DiffEdge.class)
             .weighted(true)
             .buildGraph();
+    int nodeID = 0;
     for (DiffHunk diffHunk : diffHunks) {
-      DiffNode diffNode =
-          new DiffNode(diffHunk.getFileIndex().toString(), diffHunk.getIndex().toString());
+      DiffNode diffNode = new DiffNode(nodeID++, diffHunk.getUniqueIndex());
       diffViewGraph.addVertex(diffNode);
     }
     return diffViewGraph;
+  }
+
+  private DiffNode findNodeByIndex(String index) {
+    Optional<DiffNode> nodeOpt =
+        diffHunkGraph.vertexSet().stream()
+            .filter(diffNode -> diffNode.getIndex().equals(index))
+            .findAny();
+    return nodeOpt.orElse(null);
+  }
+
+  private Integer generateNodeID() {
+    return this.diffHunkGraph.vertexSet().size() + 1;
+  }
+
+  private Integer generateEdgeID() {
+    return this.diffHunkGraph.edgeSet().size() + 1;
   }
 }

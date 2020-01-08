@@ -3,6 +3,7 @@ package com.github.smartcommit.util;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
+import info.debatty.java.stringsimilarity.Cosine;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -125,6 +126,7 @@ public class Utils {
 
   /**
    * Create a folder if not exists
+   *
    * @param dir abs path
    * @return
    */
@@ -282,8 +284,18 @@ public class Utils {
    * @param s
    * @return
    */
-  public static List<String> convertStringToLines(String s) {
+  public static List<String> convertStringToList(String s) {
     return Arrays.asList(s.split("\\r?\\n"));
+  }
+
+  /**
+   * Convert a list of lines to one string (to compare)
+   *
+   * @param list
+   * @return
+   */
+  public static String convertListToString(List<String> list) {
+    return list.stream().map(String::trim).collect(Collectors.joining(""));
   }
 
   /**
@@ -298,5 +310,17 @@ public class Utils {
       return Pair.of(Integer.valueOf(pair[0]), Integer.valueOf(pair[1]));
     }
     return Pair.of(-1, -1);
+  }
+
+  /**
+   * Compute the string similarity between 2 strings
+   *
+   * @param s1
+   * @param s2
+   * @return
+   */
+  public static double computeStringSimilarity(String s1, String s2) {
+    Cosine cosine = new Cosine();
+    return cosine.similarity(s1, s2);
   }
 }
