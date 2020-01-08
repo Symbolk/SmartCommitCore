@@ -90,12 +90,13 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     String[] srcFolderPaths = new String[srcFolderSet.size()];
     srcFolderSet.toArray(srcFolderPaths);
 
-    ASTParser parser = ASTParser.newParser(9);
+    ASTParser parser = ASTParser.newParser(8);
     //        parser.setProject(WorkspaceUtilities.javaProject);
     parser.setKind(ASTParser.K_COMPILATION_UNIT);
     parser.setEnvironment(null, srcFolderPaths, null, true);
     parser.setResolveBindings(true);
     Map<String, String> options = new Hashtable<>();
+    options.put(JavaCore.COMPILER_COMPLIANCE, "8");
     options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_1_8);
     options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_1_8);
     options.put(JavaCore.COMPILER_DOC_COMMENT_SUPPORT, JavaCore.ENABLED);
