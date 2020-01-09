@@ -133,6 +133,10 @@ public class SmartCommit {
     // get the diff hunk graph
     String diffGraphString =
         DiffGraphExporter.exportAsDotWithType(groupGenerator.getDiffHunkGraph());
+
+    if (groupGenerator.getVisited().size() != allDiffHunks.size()) {
+      logger.error("Incorrect diff hunk nums!");
+    }
     return groupGenerator.getGeneratedGroups();
   }
 }

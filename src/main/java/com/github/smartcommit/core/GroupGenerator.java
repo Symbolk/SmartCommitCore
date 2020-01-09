@@ -28,7 +28,7 @@ public class GroupGenerator {
   private List<DiffFile> diffFiles;
   private List<DiffHunk> diffHunks;
 
-  private Set<String> visited;
+  private Map<String, String> visited;
 
   private Graph<Node, Edge> baseGraph;
   private Graph<Node, Edge> currentGraph;
@@ -49,7 +49,7 @@ public class GroupGenerator {
     this.diffFiles = diffFiles;
     this.diffHunks = diffHunks;
 
-    this.visited = new HashSet<>();
+    this.visited = new HashMap<>();
 
     this.baseGraph = baseGraph;
     this.currentGraph = currentGraph;
@@ -64,11 +64,11 @@ public class GroupGenerator {
       if (!diffFile.getFileType().equals(FileType.JAVA)) {
         String diffHunkID = diffFile.getFileID() + ":" + diffFile.getFileID();
         nonJavaDiffHunks.add(diffHunkID);
-        visited.add(diffHunkID);
       }
     }
     if (nonJavaDiffHunks.size() > 0) {
       String groupID = "group" + generatedGroups.size();
+      nonJavaDiffHunks.forEach(id -> visited.put(id, groupID));
       Group nonJavaGroup = new Group(repoID, repoName, groupID, nonJavaDiffHunks);
       generatedGroups.put(groupID, nonJavaGroup);
     }
@@ -82,27 +82,24 @@ public class GroupGenerator {
     List<String> remainingDiffHunks = new ArrayList<>();
     for (DiffHunk diffHunk : diffHunks) {
       String id = diffHunk.getFileID() + ":" + diffHunk.getDiffHunkID();
-      if (visited.contains(id)) {
-        continue;
-      } else {
+      if (!visited.containsKey(id)) {
         remainingDiffHunks.add(id);
       }
     }
 
-    String groupID = "group" + generatedGroups.size();
-    Group group = new Group(repoID, repoName, groupID, new ArrayList<>(remainingDiffHunks));
-    generatedGroups.put(groupID, group);
+    if (remainingDiffHunks.size() > 0) {
+      String groupID = "group" + generatedGroups.size();
+      remainingDiffHunks.forEach(id -> visited.put(id, groupID));
+      Group group = new Group(repoID, repoName, groupID, new ArrayList<>(remainingDiffHunks));
+      generatedGroups.put(groupID, group);
+    }
   }
 
   public void analyzeHardLinks() {
     Map<String, List<String>> unionHardLinks =
         combineHardLinks(analyzeDefUse(baseGraph), analyzeDefUse(currentGraph));
     for (Map.Entry<String, List<String>> entry : unionHardLinks.entrySet()) {
-      Set<String> diffHunksInGroup = new HashSet<>();
       String id1 = getDiffHunkIDFromIndex(diffFiles, entry.getKey());
-      diffHunksInGroup.add(id1);
-      visited.add(id1);
-
       for (String target : entry.getValue()) {
         String id2 = getDiffHunkIDFromIndex(diffFiles, target);
         if (entry.getKey() != target) {
@@ -110,8 +107,11 @@ public class GroupGenerator {
               findNodeByIndex(entry.getKey()),
               findNodeByIndex(target),
               new DiffEdge(generateEdgeID(), DiffEdgeType.HARD, 1.0));
-          addDiffHunkIntoGroup(id1, id2);
-          visited.add(id2);
+          String groupID = groupTwoIDs(id1, id2);
+          if (groupID != null) {
+            visited.put(id1, groupID);
+            visited.put(id2, groupID);
+          }
         }
       }
     }
@@ -121,21 +121,28 @@ public class GroupGenerator {
   public void analyzeSoftLinks() {
     for (int i = 0; i < diffHunks.size(); ++i) {
       for (int j = i + 1; j < diffHunks.size(); ++j) {
-        DiffHunk diffHunk = diffHunks.get(i);
+        DiffHunk diffHunk2 = diffHunks.get(i);
         DiffHunk diffHunk1 = diffHunks.get(j);
-        if (diffHunk.getBaseHunk().getCodeSnippet().size()
+        if (diffHunk2.getBaseHunk().getCodeSnippet().size()
                 == diffHunk1.getBaseHunk().getCodeSnippet().size()
-            && diffHunk.getCurrentHunk().getCodeSnippet().size()
+            && diffHunk2.getCurrentHunk().getCodeSnippet().size()
                 == diffHunk1.getCurrentHunk().getCodeSnippet().size()) {
-          Double similarity = estimateSimilarity(diffHunk, diffHunk1);
+          Double similarity = estimateSimilarity(diffHunk2, diffHunk1);
           boolean success =
               diffHunkGraph.addEdge(
-                  findNodeByIndex(diffHunk.getUniqueIndex()),
+                  findNodeByIndex(diffHunk2.getUniqueIndex()),
                   findNodeByIndex(diffHunk1.getUniqueIndex()),
                   new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, similarity));
-          addDiffHunkIntoGroup(
-              diffHunk.getFileID() + ":" + diffHunk.getDiffHunkID(),
-              diffHunk1.getFileID() + ":" + diffHunk1.getDiffHunkID());
+          if (similarity >= threshold) {
+            String id1 = diffHunk2.getFileID() + ":" + diffHunk2.getDiffHunkID();
+            String id2 = diffHunk1.getFileID() + ":" + diffHunk1.getDiffHunkID();
+
+            String groupID = groupTwoIDs(id1, id2);
+            if (groupID != null) {
+              visited.put(id1, groupID);
+              visited.put(id2, groupID);
+            }
+          }
         }
       }
     }
@@ -153,28 +160,42 @@ public class GroupGenerator {
     return (double) Math.round((baseSimi + currentSimi) / 2 * 100) / 100;
   }
 
-  private void addDiffHunkIntoGroup(String id1, String id2) {
-    boolean added = false;
-    for (Map.Entry<String, Group> entry : generatedGroups.entrySet()) {
-      List<String> existingDiffHunks = entry.getValue().getDiffHunks();
-      if (existingDiffHunks.contains(id1) || existingDiffHunks.contains(id2)) {
-        entry.getValue().addDiffHunk(id1);
-        entry.getValue().addDiffHunk(id2);
-        visited.add(id1);
-        visited.add(id2);
-        added = true;
+  /**
+   * Group the given two ids: if both visited, merge the two groups; if both not visited, create a
+   * new group; if visited, find the one and add the other
+   *
+   * @param id1
+   * @param id2
+   */
+  private String groupTwoIDs(String id1, String id2) {
+    // the group id that finally the two diffhunks are assigned
+    String groupID = null;
+    if (visited.containsKey(id1) && visited.containsKey(id2)) {
+      groupID = visited.get(id1);
+      String groupID2 = visited.get(id2);
+      if (groupID != groupID2) {
+        // merge the later groups into the earlier one
+        for (String tmp : generatedGroups.get(id2).getDiffHunks()) {
+          generatedGroups.get(groupID).addDiffHunk(tmp);
+        }
+        generatedGroups.remove(id2);
       }
-    }
-    if (!added) {
+    } else if (visited.containsKey(id1)) {
+      groupID = visited.get(id1);
+      generatedGroups.get(groupID).addDiffHunk(id2);
+    } else if (visited.containsKey(id2)) {
+      groupID = visited.get(id2);
+      generatedGroups.get(groupID).addDiffHunk(id1);
+    } else {
+      // both not visited
       Set<String> diffHunksInGroup = new HashSet<>();
       diffHunksInGroup.add(id1);
       diffHunksInGroup.add(id2);
-      visited.add(id1);
-      visited.add(id2);
-      String groupID = "group" + getGeneratedGroups().size();
+      groupID = "group" + getGeneratedGroups().size();
       Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunksInGroup));
       generatedGroups.put(groupID, group);
     }
+    return groupID;
   }
 
   private static Map<String, List<String>> combineHardLinks(
@@ -325,5 +346,9 @@ public class GroupGenerator {
 
   public Map<String, Group> getGeneratedGroups() {
     return generatedGroups;
+  }
+
+  public Map<String, String> getVisited() {
+    return visited;
   }
 }
