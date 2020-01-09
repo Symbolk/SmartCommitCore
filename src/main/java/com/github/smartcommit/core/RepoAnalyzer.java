@@ -97,8 +97,10 @@ public class RepoAnalyzer {
       Map<String, DiffHunk> diffHunksMap = new HashMap<>();
       for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
         String diffHunkID = Utils.generateUUID();
+        // for entire file change as a whole diff hunk, fileID == diffHunkID
         if (diffFile.getStatus().equals(FileStatus.UNTRACKED)
-            || diffFile.getStatus().equals(FileStatus.ADDED)) {
+            || diffFile.getStatus().equals(FileStatus.ADDED)
+            || diffFile.getStatus().equals(FileStatus.DELETED)) {
           diffHunkID = fileID;
         }
         diffHunksMap.put(diffHunkID, diffHunk);
