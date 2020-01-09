@@ -327,4 +327,8 @@ public class GroupGenerator {
   private Integer generateEdgeID() {
     return this.diffHunkGraph.edgeSet().size() + 1;
   }
+
+  public Map<String, Group> getGeneratedGroups() {
+    return generatedGroups;
+  }
 }

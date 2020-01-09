@@ -31,11 +31,19 @@ public class Group {
     return diffHunks;
   }
 
-  public void addDiffHunk(String diffID){
-    if(diffHunks.contains(diffID)){
+  public void addDiffHunk(String diffID) {
+    if (diffHunks.contains(diffID)) {
       return;
-    }else{
+    } else {
       diffHunks.add(diffID);
     }
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    builder.append(commitMsg).append("\n");
+    diffHunks.forEach(diffHunk -> builder.append(diffHunk).append("\n"));
+    return builder.toString();
   }
 }
