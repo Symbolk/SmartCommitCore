@@ -309,6 +309,10 @@ public class GroupGenerator {
               + File.separator
               + entry.getKey()
               + ".json");
+      // the copy to accept the user feedback
+      Utils.writeStringToFile(
+          gson.toJson(entry.getValue()),
+          outputDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
     }
   }
 
