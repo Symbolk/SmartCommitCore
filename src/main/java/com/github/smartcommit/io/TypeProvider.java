@@ -96,7 +96,7 @@ class NodeColorAttribute implements Attribute {
 
   @Override
   public String getValue() {
-    return node.isInDiffHunk ? "blue" : "black";
+    return node.isInDiffHunk ? "red" : "black";
   }
 
   @Override
@@ -132,7 +132,7 @@ class EdgeColorAttribute implements Attribute {
 
   @Override
   public String getValue() {
-    return edge.getType().isStructural() ? "black" : "red";
+    return edge.getType().isStructural() ? "black" : "blue";
   }
 
   @Override

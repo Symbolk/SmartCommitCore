@@ -45,7 +45,8 @@ public class GraphExporter {
                   : node.getIdentifier();
       ComponentAttributeProvider<Node> vertexAttributeProvider = new TypeProvider();
 
-      ComponentNameProvider<Edge> edgeLabelProvider = edge -> edge.getType().asString();
+      ComponentNameProvider<Edge> edgeLabelProvider =
+          edge -> edge.getType().asString() + "(" + edge.getWeight() + ")";
       ComponentAttributeProvider<Edge> edgeAttributeProvider = new TypeProvider();
       org.jgrapht.io.GraphExporter<Node, Edge> exporter =
           new DOTExporter<>(
