@@ -175,7 +175,7 @@ public class GroupGenerator {
       String groupID2 = alreadyGrouped.get(id2);
       if (groupID != groupID2) {
         // merge the later groups into the earlier one
-        for (String tmp : generatedGroups.get(id2).getDiffHunks()) {
+        for (String tmp : generatedGroups.get(groupID2).getDiffHunks()) {
           generatedGroups.get(groupID).addDiffHunk(tmp);
         }
         generatedGroups.remove(id2);
