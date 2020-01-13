@@ -53,7 +53,7 @@ public class GroupGenerator {
 
     this.baseGraph = baseGraph;
     this.currentGraph = currentGraph;
-    this.generatedGroups = new HashMap<>();
+    this.generatedGroups = new TreeMap<>();
     this.diffHunkGraph = initDiffViewGraph(diffHunks);
   }
 
