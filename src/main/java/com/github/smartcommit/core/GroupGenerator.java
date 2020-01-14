@@ -10,6 +10,7 @@ import com.github.smartcommit.model.diffgraph.DiffEdgeType;
 import com.github.smartcommit.model.diffgraph.DiffNode;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
+import com.github.smartcommit.model.graph.NodeType;
 import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -82,7 +83,7 @@ public class GroupGenerator {
       String id1 = getDiffHunkIDFromIndex(diffFiles, entry.getKey());
       for (String target : entry.getValue()) {
         String id2 = getDiffHunkIDFromIndex(diffFiles, target);
-        if (id1 != id2) {
+        if (!id1.equals(id2)) {
           diffHunkGraph.addEdge(
               findNodeByIndex(entry.getKey()),
               findNodeByIndex(target),
@@ -142,12 +143,14 @@ public class GroupGenerator {
     return map1;
   }
 
-  private Map<String, Set<String>> analyzeDefUse(Graph<Node, Edge> graph) {
+  private Map<String, Set<String>> analyzeDefUse2(Graph<Node, Edge> graph) {
     Map<String, Set<String>> results = new HashMap<>();
 
     ConnectivityInspector inspector = new ConnectivityInspector(graph);
     List<Node> hunkNodes =
-        graph.vertexSet().stream().filter(node -> node.isInDiffHunk).collect(Collectors.toList());
+        graph.vertexSet().stream()
+            .filter(node -> node.getType().equals(NodeType.HUNK))
+            .collect(Collectors.toList());
     for (int i = 0; i < hunkNodes.size(); ++i) {
       Node srcNode = hunkNodes.get(i);
       Set<String> connectedHunkNodes = new HashSet<>();
@@ -166,8 +169,8 @@ public class GroupGenerator {
     return results;
   }
 
-  private Map<String, List<String>> analyzeDefUse2(Graph<Node, Edge> graph) {
-    Map<String, List<String>> defUseLinks = new HashMap<>();
+  private Map<String, Set<String>> analyzeDefUse(Graph<Node, Edge> graph) {
+    Map<String, Set<String>> defUseLinks = new HashMap<>();
     List<Node> hunkNodes =
         graph.vertexSet().stream().filter(node -> node.isInDiffHunk).collect(Collectors.toList());
     for (Node node : hunkNodes) {
@@ -176,7 +179,7 @@ public class GroupGenerator {
       // record the links an return
       if (!defHunkNodes.isEmpty() || !useHunkNodes.isEmpty()) {
         if (!defUseLinks.containsKey(node.diffHunkIndex)) {
-          defUseLinks.put(node.diffHunkIndex, new ArrayList<>());
+          defUseLinks.put(node.diffHunkIndex, new HashSet<>());
         }
         for (String s : defHunkNodes) {
           defUseLinks.get(node.diffHunkIndex).add(s);
@@ -253,7 +256,7 @@ public class GroupGenerator {
   }
 
   public void exportGroupingResults(String outputDir) {
-    // get the diff hunk graph
+    // visualize the diff hunk graph
     String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffHunkGraph);
 
     ConnectivityInspector inspector = new ConnectivityInspector(diffHunkGraph);

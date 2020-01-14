@@ -131,6 +131,7 @@ public class DiffHunk {
 
   public boolean containsCode() {
     return baseHunk.getContentType().equals(ContentType.CODE)
+        || baseHunk.getContentType().equals(ContentType.IMPORT)
         || currentHunk.getContentType().equals(ContentType.CODE)
         || currentHunk.getContentType().equals(ContentType.IMPORT);
   }

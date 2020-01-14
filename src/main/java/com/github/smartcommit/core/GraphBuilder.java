@@ -306,10 +306,13 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       return Optional.of(entityPool.classInfoMap.get(type).node);
     } else if (entityPool.interfaceInfoMap.containsKey(type)) {
       return Optional.of(entityPool.interfaceInfoMap.get(type).node);
-    } else if (entityPool.importInfoMap.containsKey(type)) {
-      return Optional.of(entityPool.importInfoMap.get(type).node);
     } else if (entityPool.enumInfoMap.containsKey(type)) {
       return Optional.of(entityPool.enumInfoMap.get(type).node);
+    } else if (entityPool.importInfoMap.containsKey(type)) {
+      Node node = entityPool.importInfoMap.get(type).node;
+      if (Utils.parseIndicesFromString(node.getDiffHunkIndex()).getLeft() == fileIndex) {
+        return Optional.of(node);
+      }
     }
     // for unqualified name: fuzzy matching in the imports of the current file
     for (Map.Entry<String, HunkInfo> entry : entityPool.importInfoMap.entrySet()) {
@@ -347,6 +350,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           }
           coveredNodes.add(node);
         }
+      } else {
+        continue;
       }
 
       // coveredNodes.isEmpty() --> added for BASE and deleted for CURRENT
@@ -625,14 +630,19 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
             startPos = cu.getPosition(diffHunk.getBaseStartLine(), 0);
             endPos =
                 cu.getPosition(
-                    diffHunk.getBaseEndLine(), diffHunk.getBaseHunk().getLastLineLength() - 1);
+                    diffHunk.getBaseEndLine(),
+                    diffHunk.getBaseHunk().getLastLineLength() > 0
+                        ? diffHunk.getBaseHunk().getLastLineLength() - 1
+                        : 0);
             break;
           case CURRENT:
             startPos = cu.getPosition(diffHunk.getCurrentStartLine(), 0);
             endPos =
                 cu.getPosition(
                     diffHunk.getCurrentEndLine(),
-                    diffHunk.getCurrentHunk().getLastLineLength() - 1);
+                    diffHunk.getCurrentHunk().getLastLineLength() > 0
+                        ? diffHunk.getCurrentHunk().getLastLineLength() - 1
+                        : 0);
         }
         int length = endPos - startPos;
         // construct the location map

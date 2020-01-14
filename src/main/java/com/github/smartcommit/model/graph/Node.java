@@ -35,4 +35,8 @@ public class Node {
   public String getQualifiedName() {
     return qualifiedName;
   }
+
+  public String getDiffHunkIndex() {
+    return diffHunkIndex;
+  }
 }
