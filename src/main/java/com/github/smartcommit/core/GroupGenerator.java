@@ -4,6 +4,7 @@ import com.github.smartcommit.io.DiffGraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
+import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.diffgraph.DiffEdge;
 import com.github.smartcommit.model.diffgraph.DiffEdgeType;
@@ -117,15 +118,21 @@ public class GroupGenerator {
   }
 
   private double estimateSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
-    double baseSimi =
-        Utils.computeStringSimilarity(
-            Utils.convertListToString(diffHunk.getBaseHunk().getCodeSnippet()),
-            Utils.convertListToString(diffHunk1.getBaseHunk().getCodeSnippet()));
-    double currentSimi =
-        Utils.computeStringSimilarity(
-            Utils.convertListToString(diffHunk.getCurrentHunk().getCodeSnippet()),
-            Utils.convertListToString(diffHunk1.getCurrentHunk().getCodeSnippet()));
-    return (double) Math.round((baseSimi + currentSimi) / 2 * 100) / 100;
+    // ignore special cases: imports, empty, blank_lines
+    if (diffHunk.getBaseHunk().getContentType().equals(ContentType.CODE)
+        || diffHunk.getCurrentHunk().getContentType().equals(ContentType.CODE)) {
+      double baseSimi =
+          Utils.computeStringSimilarity(
+              Utils.convertListToString(diffHunk.getBaseHunk().getCodeSnippet()),
+              Utils.convertListToString(diffHunk1.getBaseHunk().getCodeSnippet()));
+      double currentSimi =
+          Utils.computeStringSimilarity(
+              Utils.convertListToString(diffHunk.getCurrentHunk().getCodeSnippet()),
+              Utils.convertListToString(diffHunk1.getCurrentHunk().getCodeSnippet()));
+      return (double) Math.round((baseSimi + currentSimi) / 2 * 100) / 100;
+    } else {
+      return 0D;
+    }
   }
 
   private static Map<String, Set<String>> mergeTwoMaps(
