@@ -4,7 +4,6 @@ import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
-import com.github.smartcommit.io.DiffGraphExporter;
 import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
@@ -12,11 +11,14 @@ import com.github.smartcommit.model.Group;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.Utils;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -93,7 +95,37 @@ public class SmartCommit {
       DataCollector dataCollector = new DataCollector(repoName, tempDir);
       Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(commitID, diffFiles);
 
-      return analyze(diffFiles, allDiffHunks, dataPaths);
+      // save the grouped diff hunk detailed information into files
+      Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
+      Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+      int diffHunkCount = 0;
+      for (Map.Entry<String, Group> entry : results.entrySet()) {
+        String path =
+            tempDir + File.separator + "versions" + File.separator + entry.getKey() + ".json";
+        StringBuilder builder = new StringBuilder();
+        for (String id : entry.getValue().getDiffHunks()) {
+          diffHunkCount++;
+          String[] pair = id.split(":");
+          if (pair.length == 2) {
+            DiffHunk diffHunk = repoAnalyzer.getIdToDiffHunkMap().get(pair[1]);
+            builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
+            builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");
+            builder.append("------------").append("\n");
+          } else {
+            logger.error("Invalid id: " + id);
+          }
+        }
+        Utils.writeStringToFile(builder.toString(), path);
+      }
+
+      if (diffHunkCount != allDiffHunks.size()) {
+        logger.error(
+            "1. Incorrect #diffhunks: Actual/Expected= "
+                + diffHunkCount
+                + "/"
+                + allDiffHunks.size());
+      }
+      return results;
     }
   }
 
@@ -127,16 +159,8 @@ public class SmartCommit {
     groupGenerator.analyzeNonJavaFiles();
     groupGenerator.analyzeHardLinks();
     groupGenerator.analyzeSoftLinks();
-    groupGenerator.analyzeRemainingDiffHunks();
     groupGenerator.exportGroupingResults(tempDir);
 
-    // get the diff hunk graph
-    String diffGraphString =
-        DiffGraphExporter.exportAsDotWithType(groupGenerator.getDiffHunkGraph());
-
-    if (groupGenerator.getAlreadyGrouped().size() != allDiffHunks.size()) {
-      logger.error("Incorrect diff hunk nums!");
-    }
     return groupGenerator.getGeneratedGroups();
   }
 }
