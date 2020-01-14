@@ -6,6 +6,7 @@ import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
+import com.github.smartcommit.model.constant.GroupLabel;
 import com.github.smartcommit.model.diffgraph.DiffEdge;
 import com.github.smartcommit.model.diffgraph.DiffEdgeType;
 import com.github.smartcommit.model.diffgraph.DiffNode;
@@ -71,7 +72,7 @@ public class GroupGenerator {
       }
     }
     if (nonJavaDiffHunks.size() > 0) {
-      createGroup(nonJavaDiffHunks);
+      createGroup(nonJavaDiffHunks, GroupLabel.NONJAVA);
     }
   }
 
@@ -133,7 +134,7 @@ public class GroupGenerator {
       }
     }
     if (!formatOnlyDiffHunks.isEmpty()) {
-      createGroup(formatOnlyDiffHunks);
+      createGroup(formatOnlyDiffHunks, GroupLabel.REFORMAT);
     }
   }
 
@@ -293,7 +294,7 @@ public class GroupGenerator {
       if (diffNodesSet.size() > 1) {
         Set<String> diffHunkIDs = new LinkedHashSet<>();
         diffNodesSet.forEach(diffNode -> diffHunkIDs.add(diffNode.getUUID()));
-        createGroup(diffHunkIDs);
+        createGroup(diffHunkIDs, GroupLabel.LINKED);
       } else {
         // assert: diffNodesSet.size()==1
         diffNodesSet.forEach(
@@ -305,7 +306,7 @@ public class GroupGenerator {
       }
     }
 
-    createGroup(individuals);
+    createGroup(individuals, GroupLabel.OHTER);
 
     //    BiconnectivityInspector inspector1 =
     //            new BiconnectivityInspector(diffHunkGraph);
@@ -338,11 +339,7 @@ public class GroupGenerator {
             .buildGraph();
     int nodeID = 0;
     for (DiffHunk diffHunk : diffHunks) {
-      DiffNode diffNode =
-          new DiffNode(
-              nodeID++,
-              diffHunk.getUniqueIndex(),
-              diffHunk.getUUID());
+      DiffNode diffNode = new DiffNode(nodeID++, diffHunk.getUniqueIndex(), diffHunk.getUUID());
       diffViewGraph.addVertex(diffNode);
     }
     return diffViewGraph;
@@ -361,13 +358,13 @@ public class GroupGenerator {
    *
    * @param diffHunkIDs
    */
-  private void createGroup(Set<String> diffHunkIDs) {
+  private void createGroup(Set<String> diffHunkIDs, GroupLabel label) {
     if (!diffHunkIDs.isEmpty()) {
       String groupID = "group" + generatedGroups.size();
-      Group nonJavaGroup = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs));
+      Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs), label);
       // bidirectional mapping
       diffHunkIDs.forEach(id -> diffHunkID2GroupID.put(id, groupID));
-      generatedGroups.put(groupID, nonJavaGroup);
+      generatedGroups.put(groupID, group);
     }
   }
 

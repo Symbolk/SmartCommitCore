@@ -105,6 +105,7 @@ public class SmartCommit {
         String path =
             tempDir + File.separator + "versions" + File.separator + entry.getKey() + ".json";
         StringBuilder builder = new StringBuilder();
+        builder.append(entry.getValue().getIntentLabel()).append("\n");
         for (String id : entry.getValue().getDiffHunks()) {
           if (groupedDiffHunks.contains(id)) {
             DiffHunk diffHunk = repoAnalyzer.getIdToDiffHunkMap().get(id.split(":")[1]);
@@ -113,10 +114,10 @@ public class SmartCommit {
           groupedDiffHunks.add(id);
           String[] pair = id.split(":");
           if (pair.length == 2) {
+            builder.append("------------").append("\n");
             DiffHunk diffHunk = repoAnalyzer.getIdToDiffHunkMap().get(pair[1]);
             builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
             builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");
-            builder.append("------------").append("\n");
           } else {
             logger.error("Invalid id: " + id);
           }
