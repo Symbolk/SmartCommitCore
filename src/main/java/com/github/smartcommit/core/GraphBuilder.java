@@ -59,8 +59,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
    */
   public static Graph<Node, Edge> initGraph() {
     return GraphTypeBuilder.<Node, Edge>directed()
-        .allowingMultipleEdges(true)
-        .allowingSelfLoops(true) // recursion
+        .allowingMultipleEdges(true) // allow multiple edges with different types
+        .allowingSelfLoops(true) // allow recursion
         .edgeClass(Edge.class)
         .weighted(true)
         .buildGraph();
@@ -156,8 +156,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (IMethodBinding methodCall : methodInfo.methodCalls) {
         MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
         if (targetMethodInfo != null) {
-          graph.addEdge(
-              methodDeclNode, targetMethodInfo.node, new Edge(edgeCount++, EdgeType.CALL));
+          createEdge(methodDeclNode, targetMethodInfo.node, EdgeType.CALL);
         }
       }
 
@@ -165,8 +164,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (String fieldUse : methodInfo.fieldUses) {
         FieldInfo targetFieldInfo = fieldDecMap.get(fieldUse);
         if (targetFieldInfo != null) {
-          graph.addEdge(
-              methodDeclNode, targetFieldInfo.node, new Edge(edgeCount++, EdgeType.ACCESS));
+          createEdge(methodDeclNode, targetFieldInfo.node, EdgeType.ACCESS);
         }
       }
 
@@ -174,7 +172,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (String type : methodInfo.returnTypes) {
         Optional<Node> typeDecNode = findTypeNode(type, methodInfo.fileIndex);
         if (typeDecNode.isPresent()) {
-          graph.addEdge(methodDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.RETURN));
+          createEdge(methodDeclNode, typeDecNode.get(), EdgeType.RETURN);
         }
       }
 
@@ -182,7 +180,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (String type : methodInfo.paramTypes) {
         Optional<Node> typeDecNode = findTypeNode(type, methodInfo.fileIndex);
         if (typeDecNode.isPresent()) {
-          graph.addEdge(methodDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.PARAM));
+          createEdge(methodDeclNode, typeDecNode.get(), EdgeType.PARAM);
         }
       }
 
@@ -190,8 +188,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (String type : methodInfo.typeUses) {
         Optional<Node> typeDecNode = findTypeNode(type, methodInfo.fileIndex);
         if (typeDecNode.isPresent()) {
-          graph.addEdge(
-              methodDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.INITIALIZE));
+          createEdge(methodDeclNode, typeDecNode.get(), EdgeType.INITIALIZE);
         }
       }
     }
@@ -203,7 +200,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (String type : fieldInfo.types) {
         Optional<Node> typeDecNode = findTypeNode(type, fieldInfo.fileIndex);
         if (typeDecNode.isPresent()) {
-          graph.addEdge(fieldDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.TYPE));
+          createEdge(fieldDeclNode, typeDecNode.get(), EdgeType.TYPE);
         }
       }
 
@@ -211,7 +208,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (IMethodBinding methodCall : fieldInfo.methodCalls) {
         MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
         if (targetMethodInfo != null) {
-          graph.addEdge(fieldDeclNode, targetMethodInfo.node, new Edge(edgeCount++, EdgeType.CALL));
+          createEdge(fieldDeclNode, targetMethodInfo.node, EdgeType.CALL);
         }
       }
 
@@ -219,8 +216,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (String fieldUse : fieldInfo.fieldUses) {
         FieldInfo targetFieldInfo = fieldDecMap.get(fieldUse);
         if (targetFieldInfo != null) {
-          graph.addEdge(
-              fieldDeclNode, targetFieldInfo.node, new Edge(edgeCount++, EdgeType.ACCESS));
+          createEdge(fieldDeclNode, targetFieldInfo.node, EdgeType.ACCESS);
         }
       }
 
@@ -228,8 +224,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (String type : fieldInfo.typeUses) {
         Optional<Node> typeDecNode = findTypeNode(type, fieldInfo.fileIndex);
         if (typeDecNode.isPresent()) {
-          graph.addEdge(
-              fieldDeclNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.INITIALIZE));
+          createEdge(fieldDeclNode, typeDecNode.get(), EdgeType.INITIALIZE);
         }
       }
     }
@@ -241,7 +236,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (IMethodBinding methodCall : hunkInfo.methodCalls) {
         MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
         if (targetMethodInfo != null) {
-          graph.addEdge(hunkNode, targetMethodInfo.node, new Edge(edgeCount++, EdgeType.CALL));
+          createEdge(hunkNode, targetMethodInfo.node, EdgeType.CALL);
         }
       }
 
@@ -249,7 +244,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (String fieldUse : hunkInfo.fieldUses) {
         FieldInfo targetFieldInfo = fieldDecMap.get(fieldUse);
         if (targetFieldInfo != null) {
-          graph.addEdge(hunkNode, targetFieldInfo.node, new Edge(edgeCount++, EdgeType.ACCESS));
+          createEdge(hunkNode, targetFieldInfo.node, EdgeType.ACCESS);
         }
       }
 
@@ -257,12 +252,46 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       for (String type : hunkInfo.typeUses) {
         Optional<Node> typeDecNode = findTypeNode(type, hunkInfo.fileIndex);
         if (typeDecNode.isPresent()) {
-          graph.addEdge(hunkNode, typeDecNode.get(), new Edge(edgeCount++, EdgeType.INITIALIZE));
+          createEdge(hunkNode, typeDecNode.get(), EdgeType.INITIALIZE);
         }
       }
     }
 
     return graph;
+  }
+
+  /**
+   * Create an (logical) edge in the graph: if not exists, create; else increase the weight by one
+   *
+   * @param source
+   * @param target
+   * @param edgeType
+   * @return whether the operation succeeds
+   */
+  private boolean createEdge(Node source, Node target, EdgeType edgeType) {
+    int edgeCount = graph.edgeSet().size();
+    boolean success = false;
+    Set<Edge> edges = graph.getAllEdges(source, target);
+    if (edges.isEmpty()) {
+      success = graph.addEdge(source, target, new Edge(edgeCount++, edgeType));
+    } else {
+      // find the edge with the same type and increase the weight by one
+      for (Edge e : edges) {
+        if (e.getType().equals(edgeType)) {
+          Integer lastWeight = e.getWeight();
+          e.increaseWeight();
+          success = (e.getWeight() - lastWeight == 1);
+        }
+      }
+      // allow for multiple edges with different types
+      if (!success) {
+        success = graph.addEdge(source, target, new Edge(edgeCount++, edgeType));
+      }
+    }
+    if (!success) {
+      logger.warn("Unsuccessful edge creation: " + edgeType);
+    }
+    return success;
   }
 
   /**
@@ -320,7 +349,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         }
       }
 
-      // if the hunk is empty, process the next hunk
+      // coveredNodes.isEmpty() --> added for BASE and deleted for CURRENT
+      // if empty, process the next hunk
       if (coveredNodes.isEmpty()) {
         continue;
       }
@@ -328,9 +358,17 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       HunkInfo hunkInfo = new HunkInfo(index);
       hunkInfo.fileIndex = fileIndex;
       hunkInfo.coveredNodes = coveredNodes;
-      boolean existInGraph = false;
 
-      // coveredNodes.isEmpty() --> added for BASE and deleted for CURRENT
+      int nodeID = graph.vertexSet().size() + 1;
+      int edgeID = graph.edgeSet().size() + 1;
+      Node hunkNode = new Node(nodeID, NodeType.HUNK, hunkInfo.uniqueName(), hunkInfo.uniqueName());
+      hunkNode.isInDiffHunk = true;
+      hunkNode.diffHunkIndex = index;
+
+      hunkInfo.node = hunkNode;
+      graph.addVertex(hunkNode);
+
+      boolean existInGraph = false;
       for (ASTNode astNode : coveredNodes) {
         if (astNode instanceof ImportDeclaration) {
           hunkInfo.typeDefs.add(((ImportDeclaration) astNode).getName().toString());
@@ -359,7 +397,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 node.diffHunkIndex = index;
 
                 hunkInfo.typeDefs.add(node.getQualifiedName());
-                hunkInfo.node = node;
+                graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
+
               } else {
                 logger.warn("Not Found: " + astNode);
               }
@@ -388,7 +427,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 node.isInDiffHunk = true;
                 node.diffHunkIndex = index;
 
-                hunkInfo.node = node;
+                graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
               } else {
                 logger.warn("Not Found: " + astNode);
               }
@@ -412,7 +451,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 node.diffHunkIndex = index;
 
                 hunkInfo.typeDefs.add(node.getQualifiedName());
-                hunkInfo.node = node;
+                graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
               } else {
                 logger.warn("Not Found: " + astNode);
               }
@@ -437,7 +476,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 node.diffHunkIndex = index;
 
                 hunkInfo.typeDefs.add(node.getQualifiedName());
-                hunkInfo.node = node;
+                graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
+
               } else {
                 logger.warn("Not Found: " + astNode);
               }
@@ -468,7 +508,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
                 // consider constant as fields
                 hunkInfo.fieldDefs.add(node.getQualifiedName());
-                hunkInfo.node = node;
+                graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
+
               } else {
                 logger.warn("Not Found: " + astNode);
               }
@@ -494,7 +535,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                   node.diffHunkIndex = index;
 
                   hunkInfo.fieldDefs.add(node.getQualifiedName());
-                  hunkInfo.node = node;
+                  graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
+
                 } else {
                   logger.warn("Not Found: " + astNode);
                 }
@@ -521,7 +563,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 node.diffHunkIndex = index;
 
                 hunkInfo.methodDefs.add(node.getQualifiedName());
-                hunkInfo.node = node;
+                graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
+
               } else {
                 logger.warn("Not Found: " + astNode);
               }
@@ -536,15 +579,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       }
       // create the HunkInfo node for hunks inside entities
       if (!existInGraph) {
-        int nodeID = graph.vertexSet().size() + 1;
-        int edgeID = graph.edgeSet().size() + 1;
-        Node hunkNode =
-            new Node(nodeID, NodeType.HUNK, hunkInfo.uniqueName(), hunkInfo.uniqueName());
-        hunkNode.isInDiffHunk = true;
-        hunkNode.diffHunkIndex = index;
-
-        hunkInfo.node = hunkNode;
-        graph.addVertex(hunkNode);
         // find parent entity node (expected to exist) and create the contain edge
         Optional<Node> parentNodeOpt = findParentNode(coveredNodes);
         if (parentNodeOpt.isPresent()) {
