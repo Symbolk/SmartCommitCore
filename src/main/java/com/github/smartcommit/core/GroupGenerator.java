@@ -36,6 +36,7 @@ public class GroupGenerator {
   private Graph<Node, Edge> currentGraph;
   private Map<String, Group> generatedGroups;
   private Graph<DiffNode, DiffEdge> diffHunkGraph;
+  private Map<String, String> diffHunkID2GroupID;
 
   public GroupGenerator(
       String repoID,
@@ -55,22 +56,22 @@ public class GroupGenerator {
     this.currentGraph = currentGraph;
     this.generatedGroups = new TreeMap<>();
     this.diffHunkGraph = initDiffViewGraph(diffHunks);
+
+    this.diffHunkID2GroupID = new HashMap<>();
   }
 
   /** Put non-java hunks as a whole file in the first group, if there exists */
   public void analyzeNonJavaFiles() {
-    List<String> nonJavaDiffHunks = new ArrayList<>();
+    Set<String> nonJavaDiffHunks = new LinkedHashSet<>();
     for (DiffFile diffFile : diffFiles) {
       if (!diffFile.getFileType().equals(FileType.JAVA)) {
         for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
-          nonJavaDiffHunks.add(diffHunk.getFileID() + ":" + diffHunk.getDiffHunkID());
+          nonJavaDiffHunks.add(diffHunk.getUUID());
         }
       }
     }
     if (nonJavaDiffHunks.size() > 0) {
-      String groupID = "group" + generatedGroups.size();
-      Group nonJavaGroup = new Group(repoID, repoName, groupID, nonJavaDiffHunks);
-      generatedGroups.put(groupID, nonJavaGroup);
+      createGroup(nonJavaDiffHunks);
     }
   }
 
@@ -84,7 +85,9 @@ public class GroupGenerator {
       String id1 = getDiffHunkIDFromIndex(diffFiles, entry.getKey());
       for (String target : entry.getValue()) {
         String id2 = getDiffHunkIDFromIndex(diffFiles, target);
-        if (!id1.equals(id2)) {
+        if (!id1.equals(id2)
+            && !diffHunkID2GroupID.containsKey(id1)
+            && !diffHunkID2GroupID.containsKey(id2)) {
           diffHunkGraph.addEdge(
               findNodeByIndex(entry.getKey()),
               findNodeByIndex(target),
@@ -94,18 +97,32 @@ public class GroupGenerator {
     }
   }
 
-  /** soft links: systematic edits and similar edits */
+  /**
+   * Soft links:
+   * <li>1. reformat-only diff hunks
+   * <li>2. systematic edits and similar edits
+   */
   public void analyzeSoftLinks() {
+    Set<String> formatOnlyDiffHunks = new LinkedHashSet<>();
     for (int i = 0; i < diffHunks.size(); ++i) {
+      DiffHunk diffHunk1 = diffHunks.get(i);
+      // check format only diff hunks
+      if (Utils.convertListToStringNoFormat(diffHunk1.getBaseHunk().getCodeSnippet())
+          .equals(Utils.convertListToStringNoFormat(diffHunk1.getCurrentHunk().getCodeSnippet()))) {
+        formatOnlyDiffHunks.add(diffHunk1.getUUID());
+        continue;
+      }
+      // else, compare the diff hunk with other diff hunks
       for (int j = i + 1; j < diffHunks.size(); ++j) {
-        DiffHunk diffHunk2 = diffHunks.get(i);
-        DiffHunk diffHunk1 = diffHunks.get(j);
+        DiffHunk diffHunk2 = diffHunks.get(j);
         if (diffHunk2.getBaseHunk().getCodeSnippet().size()
                 == diffHunk1.getBaseHunk().getCodeSnippet().size()
             && diffHunk2.getCurrentHunk().getCodeSnippet().size()
                 == diffHunk1.getCurrentHunk().getCodeSnippet().size()) {
           Double similarity = estimateSimilarity(diffHunk2, diffHunk1);
-          if (similarity >= threshold) {
+          if (similarity >= threshold
+              && !formatOnlyDiffHunks.contains(diffHunk1.getUUID())
+              && !formatOnlyDiffHunks.contains(diffHunk2.getUUID())) {
             boolean success =
                 diffHunkGraph.addEdge(
                     findNodeByIndex(diffHunk2.getUniqueIndex()),
@@ -115,6 +132,9 @@ public class GroupGenerator {
         }
       }
     }
+    if (!formatOnlyDiffHunks.isEmpty()) {
+      createGroup(formatOnlyDiffHunks);
+    }
   }
 
   private double estimateSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
@@ -123,12 +143,12 @@ public class GroupGenerator {
         || diffHunk.getCurrentHunk().getContentType().equals(ContentType.CODE)) {
       double baseSimi =
           Utils.computeStringSimilarity(
-              Utils.convertListToString(diffHunk.getBaseHunk().getCodeSnippet()),
-              Utils.convertListToString(diffHunk1.getBaseHunk().getCodeSnippet()));
+              Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet()),
+              Utils.convertListToStringNoFormat(diffHunk1.getBaseHunk().getCodeSnippet()));
       double currentSimi =
           Utils.computeStringSimilarity(
-              Utils.convertListToString(diffHunk.getCurrentHunk().getCodeSnippet()),
-              Utils.convertListToString(diffHunk1.getCurrentHunk().getCodeSnippet()));
+              Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()),
+              Utils.convertListToStringNoFormat(diffHunk1.getCurrentHunk().getCodeSnippet()));
       return (double) Math.round((baseSimi + currentSimi) / 2 * 100) / 100;
     } else {
       return 0D;
@@ -268,22 +288,24 @@ public class GroupGenerator {
 
     ConnectivityInspector inspector = new ConnectivityInspector(diffHunkGraph);
     List<Set<DiffNode>> connectedSets = inspector.connectedSets();
-    List<String> individuals = new ArrayList<>();
+    Set<String> individuals = new LinkedHashSet<>();
     for (Set<DiffNode> diffNodesSet : connectedSets) {
       if (diffNodesSet.size() > 1) {
-        List<String> diffHunkIDs = new ArrayList<>();
-        diffNodesSet.forEach(diffNode -> diffHunkIDs.add(diffNode.getUuid()));
-        String groupID = "group" + generatedGroups.size();
-        Group group = new Group(repoID, repoName, groupID, diffHunkIDs);
-        generatedGroups.put(groupID, group);
+        Set<String> diffHunkIDs = new LinkedHashSet<>();
+        diffNodesSet.forEach(diffNode -> diffHunkIDs.add(diffNode.getUUID()));
+        createGroup(diffHunkIDs);
       } else {
-        diffNodesSet.forEach(diffNode -> individuals.add(diffNode.getUuid()));
+        // assert: diffNodesSet.size()==1
+        diffNodesSet.forEach(
+            diffNode -> {
+              if (!diffHunkID2GroupID.containsKey(diffNode.getUUID())) {
+                individuals.add(diffNode.getUUID());
+              }
+            });
       }
     }
 
-    String groupID = "group" + generatedGroups.size();
-    Group group = new Group(repoID, repoName, groupID, individuals);
-    generatedGroups.put(groupID, group);
+    createGroup(individuals);
 
     //    BiconnectivityInspector inspector1 =
     //            new BiconnectivityInspector(diffHunkGraph);
@@ -320,7 +342,7 @@ public class GroupGenerator {
           new DiffNode(
               nodeID++,
               diffHunk.getUniqueIndex(),
-              diffHunk.getFileID() + ":" + diffHunk.getDiffHunkID());
+              diffHunk.getUUID());
       diffViewGraph.addVertex(diffNode);
     }
     return diffViewGraph;
@@ -332,6 +354,21 @@ public class GroupGenerator {
             .filter(diffNode -> diffNode.getIndex().equals(index))
             .findAny();
     return nodeOpt.orElse(null);
+  }
+
+  /**
+   * Create new group by appending after the current generateGroups
+   *
+   * @param diffHunkIDs
+   */
+  private void createGroup(Set<String> diffHunkIDs) {
+    if (!diffHunkIDs.isEmpty()) {
+      String groupID = "group" + generatedGroups.size();
+      Group nonJavaGroup = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs));
+      // bidirectional mapping
+      diffHunkIDs.forEach(id -> diffHunkID2GroupID.put(id, groupID));
+      generatedGroups.put(groupID, nonJavaGroup);
+    }
   }
 
   private Integer generateNodeID() {

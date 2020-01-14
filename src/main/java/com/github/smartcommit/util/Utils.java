@@ -289,13 +289,13 @@ public class Utils {
   }
 
   /**
-   * Convert a list of lines to one string (to compare)
+   * Convert a list of lines to one string without format (to compare)
    *
    * @param list
    * @return
    */
-  public static String convertListToString(List<String> list) {
-    return list.stream().map(String::trim).collect(Collectors.joining(""));
+  public static String convertListToStringNoFormat(List<String> list) {
+    return list.stream().map(str -> str.replaceAll("\\s+", "")).collect(Collectors.joining(""));
   }
 
   /**

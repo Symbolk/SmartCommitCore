@@ -20,7 +20,7 @@ public class DiffNode {
     return index;
   }
 
-  public String getUuid() {
+  public String getUUID() {
     return uuid;
   }
 }

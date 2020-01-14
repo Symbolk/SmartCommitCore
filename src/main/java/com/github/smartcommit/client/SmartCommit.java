@@ -4,6 +4,7 @@ import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
+import com.github.smartcommit.io.DiffGraphExporter;
 import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
@@ -19,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -98,13 +100,17 @@ public class SmartCommit {
       // save the grouped diff hunk detailed information into files
       Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
       Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-      int diffHunkCount = 0;
+      List<String> groupedDiffHunks = new ArrayList<>();
       for (Map.Entry<String, Group> entry : results.entrySet()) {
         String path =
             tempDir + File.separator + "versions" + File.separator + entry.getKey() + ".json";
         StringBuilder builder = new StringBuilder();
         for (String id : entry.getValue().getDiffHunks()) {
-          diffHunkCount++;
+          if (groupedDiffHunks.contains(id)) {
+            DiffHunk diffHunk = repoAnalyzer.getIdToDiffHunkMap().get(id.split(":")[1]);
+            logger.error("Duplicate DiffHunk: " + diffHunk.getUniqueIndex());
+          }
+          groupedDiffHunks.add(id);
           String[] pair = id.split(":");
           if (pair.length == 2) {
             DiffHunk diffHunk = repoAnalyzer.getIdToDiffHunkMap().get(pair[1]);
@@ -118,10 +124,10 @@ public class SmartCommit {
         Utils.writeStringToFile(builder.toString(), path);
       }
 
-      if (diffHunkCount != allDiffHunks.size()) {
+      if (groupedDiffHunks.size() != allDiffHunks.size()) {
         logger.error(
-            "1. Incorrect #diffhunks: Actual/Expected= "
-                + diffHunkCount
+            "Incorrect #diffhunks: Actual/Expected= "
+                + groupedDiffHunks.size()
                 + "/"
                 + allDiffHunks.size());
       }
@@ -157,9 +163,13 @@ public class SmartCommit {
         new GroupGenerator(
             repoID, repoName, Config.THRESHOLD, diffFiles, allDiffHunks, baseGraph, currentGraph);
     groupGenerator.analyzeNonJavaFiles();
-    groupGenerator.analyzeHardLinks();
     groupGenerator.analyzeSoftLinks();
+    groupGenerator.analyzeHardLinks();
     groupGenerator.exportGroupingResults(tempDir);
+
+    // visualize the diff hunk graph
+    String diffGraphString =
+        DiffGraphExporter.exportAsDotWithType(groupGenerator.getDiffHunkGraph());
 
     return groupGenerator.getGeneratedGroups();
   }

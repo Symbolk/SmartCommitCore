@@ -122,6 +122,9 @@ public class DiffHunk {
     return fileIndex + ":" + index;
   }
 
+  public String getUUID() {
+    return fileID + ":" + diffHunkID;
+  }
   //  public void addCodeAction(ActionCluster actionCluster) {
   //    if (this.changeActions == null) {
   //      this.changeActions = new ArrayList<>();
