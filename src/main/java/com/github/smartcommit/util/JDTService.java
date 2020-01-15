@@ -383,7 +383,16 @@ public class JDTService {
     if (expression.getNodeType() == ASTNode.METHOD_INVOCATION) {
       List<Expression> arguments = ((MethodInvocation) expression).arguments();
       IMethodBinding methodBinding = ((MethodInvocation) expression).resolveMethodBinding();
-      if (methodBinding != null) fieldInfo.methodCalls.add(methodBinding);
+      if (methodBinding != null) {
+        fieldInfo.methodCalls.add(methodBinding);
+      }
+      Expression caller = ((MethodInvocation) expression).getExpression();
+      // support static method invocation
+      if (caller instanceof Name && caller != null) {
+        if (Character.isUpperCase(caller.toString().codePointAt(0))) {
+          fieldInfo.typeUses.add(caller.toString());
+        }
+      }
       for (Expression exp : arguments) parseFieldInitializer(fieldInfo, exp);
       parseFieldInitializer(fieldInfo, ((MethodInvocation) expression).getExpression());
     }
@@ -534,6 +543,19 @@ public class JDTService {
         if (tryStatement != null) {
           statements.add(i + 1, tryStatement);
         }
+        List<CatchClause> catchClauses = ((TryStatement) statement).catchClauses();
+        if (catchClauses != null && !catchClauses.isEmpty()) {
+          for (CatchClause catchClause : catchClauses) {
+            methodInfo.typeUses.addAll(getTypes(catchClause.getException().getType()));
+            // use a temp MethodInfo to collect information
+            MethodInfo temp = new MethodInfo();
+            temp.name = "CATCH";
+            parseMethodBody(temp, (Block) catchClause.getBody());
+            methodInfo.typeUses.addAll(temp.typeUses);
+            methodInfo.fieldUses.addAll(temp.fieldUses);
+            methodInfo.methodCalls.addAll(temp.methodCalls);
+          }
+        }
         continue;
       }
       if (statement.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT) {
@@ -643,6 +665,13 @@ public class JDTService {
       List<Expression> arguments = ((MethodInvocation) expression).arguments();
       IMethodBinding methodBinding = ((MethodInvocation) expression).resolveMethodBinding();
       if (methodBinding != null) methodInfo.methodCalls.add(methodBinding);
+      // support static method invocation
+      Expression caller = ((MethodInvocation) expression).getExpression();
+      if (caller instanceof SimpleName && caller != null) {
+        if (Character.isUpperCase(caller.toString().codePointAt(0))) {
+          methodInfo.typeUses.add(caller.toString());
+        }
+      }
       for (Expression exp : arguments) parseExpressionInMethod(methodInfo, exp);
       parseExpressionInMethod(methodInfo, ((MethodInvocation) expression).getExpression());
     }
@@ -658,8 +687,32 @@ public class JDTService {
                 + ":"
                 + ((QualifiedName) expression).getName().getIdentifier();
         methodInfo.fieldUses.add(name);
+      } else {
+        // support static field access
+        String qualifier = ((QualifiedName) expression).getQualifier().getFullyQualifiedName();
+        if (Character.isUpperCase(qualifier.codePointAt(0))) {
+          methodInfo.typeUses.add(qualifier);
+          methodInfo.fieldUses.add(
+              qualifier + ":" + ((QualifiedName) expression).getName().getIdentifier());
+        }
       }
+
       parseExpressionInMethod(methodInfo, ((QualifiedName) expression).getQualifier());
+    }
+
+    if (expression.getNodeType() == ASTNode.LAMBDA_EXPRESSION) {
+      ASTNode body = ((LambdaExpression) expression).getBody();
+      if (body instanceof Block) {
+        // use a temp MethodInfo to collect information
+        MethodInfo temp = new MethodInfo();
+        temp.name = "ANONYMOUS";
+        parseMethodBody(temp, (Block) body);
+        methodInfo.typeUses.addAll(temp.typeUses);
+        methodInfo.fieldUses.addAll(temp.fieldUses);
+        methodInfo.methodCalls.addAll(temp.methodCalls);
+      } else if (body instanceof Expression) {
+        parseExpressionInMethod(methodInfo, (Expression) body);
+      }
     }
 
     if (expression.getNodeType() == ASTNode.SIMPLE_NAME) {
@@ -787,6 +840,19 @@ public class JDTService {
         if (tryStatement != null) {
           statements.add(i + 1, tryStatement);
         }
+        List<CatchClause> catchClauses = ((TryStatement) current).catchClauses();
+        if (catchClauses != null && !catchClauses.isEmpty()) {
+          for (CatchClause catchClause : catchClauses) {
+            entityInfo.typeUses.addAll(getTypes(catchClause.getException().getType()));
+            // use a temp MethodInfo to collect information
+            MethodInfo methodInfo = new MethodInfo();
+            methodInfo.name = "CATCH";
+            parseMethodBody(methodInfo, (Block) catchClause.getBody());
+            entityInfo.typeUses.addAll(methodInfo.typeUses);
+            entityInfo.fieldUses.addAll(methodInfo.fieldUses);
+            entityInfo.methodCalls.addAll(methodInfo.methodCalls);
+          }
+        }
         continue;
       }
       if (current.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT) {
@@ -896,8 +962,16 @@ public class JDTService {
     }
     if (expression.getNodeType() == ASTNode.METHOD_INVOCATION) {
       IMethodBinding methodBinding = ((MethodInvocation) expression).resolveMethodBinding();
-      if (methodBinding != null) entityInfo.methodCalls.add(methodBinding);
-
+      if (methodBinding != null) {
+        entityInfo.methodCalls.add(methodBinding);
+      }
+      // support static method invocation
+      Expression caller = ((MethodInvocation) expression).getExpression();
+      if (caller instanceof Name && caller != null) {
+        if (Character.isUpperCase(caller.toString().codePointAt(0))) {
+          entityInfo.typeUses.add(caller.toString());
+        }
+      }
       List<Expression> arguments = ((MethodInvocation) expression).arguments();
       for (Expression exp : arguments) {
         parseExpression(entityInfo, exp);
@@ -908,6 +982,7 @@ public class JDTService {
       parseExpression(entityInfo, ((Assignment) expression).getLeftHandSide());
       parseExpression(entityInfo, ((Assignment) expression).getRightHandSide());
     }
+
     // PersistenceModule.PERSISTENCE_UNIT_NAME
     if (expression.getNodeType() == ASTNode.QUALIFIED_NAME) {
       ITypeBinding typeBinding = ((QualifiedName) expression).getQualifier().resolveTypeBinding();
@@ -953,12 +1028,13 @@ public class JDTService {
       }
     }
 
-    // lambda expression (annoymous method declaration): ()->{}
+    // lambda expression (ANONYMOUS method declaration): ()->{}
     if (expression.getNodeType() == ASTNode.LAMBDA_EXPRESSION) {
       ASTNode body = ((LambdaExpression) expression).getBody();
       if (body instanceof Block) {
         // use a temp MethodInfo to collect information
         MethodInfo methodInfo = new MethodInfo();
+        methodInfo.name = "ANONYMOUS";
         parseMethodBody(methodInfo, (Block) body);
         entityInfo.typeUses.addAll(methodInfo.typeUses);
         entityInfo.fieldUses.addAll(methodInfo.fieldUses);
