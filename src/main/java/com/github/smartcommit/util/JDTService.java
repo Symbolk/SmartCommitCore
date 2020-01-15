@@ -937,12 +937,17 @@ public class JDTService {
                     + ":"
                     + varBinding.getName());
           } else {
-            entityInfo.localVarUses.add(
-                varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
-                    + ":"
-                    + varBinding.getDeclaringMethod().getName()
-                    + ":"
-                    + varBinding.getName());
+            if (varBinding.getDeclaringMethod() != null) {
+              entityInfo.localVarUses.add(
+                  varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
+                      + ":"
+                      + varBinding.getDeclaringMethod().getName()
+                      + ":"
+                      + varBinding.getName());
+
+            } else {
+              entityInfo.localVarUses.add(varBinding.getName());
+            }
           }
         }
       }

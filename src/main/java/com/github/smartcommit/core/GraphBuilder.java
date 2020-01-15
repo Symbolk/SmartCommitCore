@@ -34,6 +34,10 @@ import java.util.stream.Collectors;
 public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
   private static final Logger logger = LoggerFactory.getLogger(GraphBuilder.class);
+  private static final String JRE_PATH =
+      System.getProperty("java.home") + File.separator + "lib/rt.jar";
+  //  private static final String[] CLASS_PATH =
+  // System.getProperty("java.class.path").split(Pattern.quote(File.pathSeparator));
 
   private String srcDir;
   private List<DiffFile> diffFiles;
@@ -89,24 +93,30 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
     NameResolver.setSrcPathSet(srcPathSet);
     String[] srcFolderPaths = new String[srcFolderSet.size()];
     srcFolderSet.toArray(srcFolderPaths);
+    String[] encodings = new String[srcFolderPaths.length];
+    Arrays.fill(encodings, "UTF-8");
 
     ASTParser parser = ASTParser.newParser(8);
-    //        parser.setProject(WorkspaceUtilities.javaProject);
-    parser.setKind(ASTParser.K_COMPILATION_UNIT);
-    parser.setEnvironment(null, srcFolderPaths, null, true);
-    parser.setResolveBindings(true);
-    Map<String, String> options = new Hashtable<>();
+    Map<String, String> options = JavaCore.getOptions();
     options.put(JavaCore.COMPILER_COMPLIANCE, "8");
     options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_1_8);
     options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_1_8);
     options.put(JavaCore.COMPILER_DOC_COMMENT_SUPPORT, JavaCore.ENABLED);
+    JavaCore.setComplianceOptions(JavaCore.VERSION_1_8, options);
     parser.setCompilerOptions(options);
+
+    //        parser.setProject(WorkspaceUtilities.javaProject);
+    parser.setKind(ASTParser.K_COMPILATION_UNIT);
+    parser.setEnvironment(new String[] {JRE_PATH}, srcFolderPaths, encodings, true);
+    parser.setResolveBindings(true);
     parser.setBindingsRecovery(true);
 
     // Vertex: create nodes and nesting edges while visiting the ASTs
+    encodings = new String[srcPaths.length];
+    Arrays.fill(encodings, "UTF-8");
     parser.createASTs(
         srcPaths,
-        null,
+        encodings,
         new String[] {},
         new FileASTRequestor() {
           @Override
