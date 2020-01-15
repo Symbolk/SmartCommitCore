@@ -39,7 +39,6 @@ import org.bson.Document;
 import com.github.smartcommit.intent.model.CommitInfo;
 import com.github.smartcommit.core.*;
 import com.github.smartcommit.intent.model.*;
-import sun.jvm.hotspot.debugger.win32.coff.COMDATSelectionTypes;
 
 import javax.lang.model.type.IntersectionType;
 
