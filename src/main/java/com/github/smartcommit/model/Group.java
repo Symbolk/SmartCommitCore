@@ -38,6 +38,18 @@ public class Group {
     return intentLabel;
   }
 
+  public void setIntentLabel(GroupLabel intentLabel) {
+    this.intentLabel = intentLabel;
+  }
+
+  public String getCommitMsg() {
+    return commitMsg;
+  }
+
+  public void setCommitMsg(String commitMsg) {
+    this.commitMsg = commitMsg;
+  }
+
   public void addDiffHunk(String diffID) {
     if (diffHunks.contains(diffID)) {
       return;
