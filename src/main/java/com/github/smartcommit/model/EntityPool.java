@@ -15,8 +15,8 @@ public class EntityPool {
   public Map<String, MethodInfo> methodInfoMap;
   public Map<String, FieldInfo> fieldInfoMap;
   public Map<String, HunkInfo> hunkInfoMap;
-  // only import in hunks
-  public Map<String, HunkInfo> importInfoMap;
+  // fileIndex : importedType : hunkInfo
+  public Map<Integer, Map<String, HunkInfo>> importInfoMap;
 
   public EntityPool(String srcDir) {
     this.srcDir = srcDir;

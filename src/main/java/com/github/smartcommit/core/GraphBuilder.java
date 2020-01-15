@@ -150,7 +150,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         null);
 
     // Edge: create inter-entity edges with the EntityPool and EntityInfo
-    int edgeCount = graph.edgeSet().size();
     Map<String, MethodInfo> methodDecMap = entityPool.methodInfoMap;
     Map<String, FieldInfo> fieldDecMap = entityPool.fieldInfoMap;
     Map<String, HunkInfo> hunkMap = entityPool.hunkInfoMap;
@@ -318,16 +317,20 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       return Optional.of(entityPool.interfaceInfoMap.get(type).node);
     } else if (entityPool.enumInfoMap.containsKey(type)) {
       return Optional.of(entityPool.enumInfoMap.get(type).node);
-    } else if (entityPool.importInfoMap.containsKey(type)) {
-      Node node = entityPool.importInfoMap.get(type).node;
-      if (Utils.parseIndicesFromString(node.getDiffHunkIndex()).getLeft() == fileIndex) {
-        return Optional.of(node);
-      }
     }
-    // for unqualified name: fuzzy matching in the imports of the current file
-    for (Map.Entry<String, HunkInfo> entry : entityPool.importInfoMap.entrySet()) {
-      if (entry.getValue().fileIndex == fileIndex && entry.getKey().endsWith(type)) {
-        return Optional.of(entry.getValue().node);
+
+    if (entityPool.importInfoMap.containsKey(fileIndex)) {
+      // qualified type
+      Map<String, HunkInfo> type2HunkMap = entityPool.importInfoMap.get(fileIndex);
+      if (type2HunkMap.containsKey(type)) {
+        return Optional.of(type2HunkMap.get(type).node);
+      } else {
+        // unqualified type
+        for (Map.Entry<String, HunkInfo> entry : type2HunkMap.entrySet()) {
+          if (entry.getKey().endsWith(type)) {
+            return Optional.of(entry.getValue().node);
+          }
+        }
       }
     }
     return Optional.empty();
@@ -344,6 +347,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       Map<String, Pair<Integer, Integer>> hunksPosition,
       CompilationUnit cu,
       JDTService jdtService) {
+    Map<String, HunkInfo> importType2HunkMap = new HashMap<>();
     for (String index : hunksPosition.keySet()) {
       // for each diff hunk, find and analyze covered nodes, create hunk node and info
       Set<ASTNode> coveredNodes = new LinkedHashSet<>();
@@ -386,6 +390,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       boolean existInGraph = false;
       for (ASTNode astNode : coveredNodes) {
         if (astNode instanceof ImportDeclaration) {
+          // save type defs in import statements
           hunkInfo.typeDefs.add(((ImportDeclaration) astNode).getName().toString());
         } else if (astNode instanceof BodyDeclaration) {
           Optional<Node> nodeOpt = Optional.empty();
@@ -599,16 +604,20 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         if (parentNodeOpt.isPresent()) {
           graph.addEdge(parentNodeOpt.get(), hunkNode, new Edge(edgeID, EdgeType.CONTAIN));
         }
-      }
 
-      // for import declarations, map imported type to HunkInfo
-      if (hunkInfo.typeDefs.size() > 0) {
-        for (String s : hunkInfo.typeDefs) {
-          entityPool.importInfoMap.put(s, hunkInfo);
+        // save imported types into the entityPool
+        if (!hunkInfo.typeDefs.isEmpty()) {
+          for (String type : hunkInfo.typeDefs) {
+            importType2HunkMap.put(type, hunkInfo);
+          }
         }
       }
+
       // add HunkInfo into the pool
       entityPool.hunkInfoMap.put(hunkInfo.uniqueName(), hunkInfo);
+    }
+    if (!importType2HunkMap.isEmpty()) {
+      entityPool.importInfoMap.put(fileIndex, importType2HunkMap);
     }
   }
 
