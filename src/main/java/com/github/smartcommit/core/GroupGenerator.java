@@ -116,7 +116,8 @@ public class GroupGenerator {
       // else, compare the diff hunk with other diff hunks
       for (int j = i + 1; j < diffHunks.size(); ++j) {
         DiffHunk diffHunk2 = diffHunks.get(j);
-        if (diffHunk2.getBaseHunk().getCodeSnippet().size()
+        if (!diffHunk1.getUniqueIndex().equals(diffHunk2.getUniqueIndex())
+            && diffHunk2.getBaseHunk().getCodeSnippet().size()
                 == diffHunk1.getBaseHunk().getCodeSnippet().size()
             && diffHunk2.getCurrentHunk().getCodeSnippet().size()
                 == diffHunk1.getCurrentHunk().getCodeSnippet().size()) {
@@ -294,7 +295,7 @@ public class GroupGenerator {
       if (diffNodesSet.size() > 1) {
         Set<String> diffHunkIDs = new LinkedHashSet<>();
         diffNodesSet.forEach(diffNode -> diffHunkIDs.add(diffNode.getUUID()));
-        createGroup(diffHunkIDs, GroupLabel.LINKED);
+        createGroup(diffHunkIDs, GroupLabel.FEATURE);
       } else {
         // assert: diffNodesSet.size()==1
         diffNodesSet.forEach(
@@ -362,6 +363,7 @@ public class GroupGenerator {
     if (!diffHunkIDs.isEmpty()) {
       String groupID = "group" + generatedGroups.size();
       Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs), label);
+      group.setCommitMsg(label.getLabel());
       // bidirectional mapping
       diffHunkIDs.forEach(id -> diffHunkID2GroupID.put(id, groupID));
       generatedGroups.put(groupID, group);
