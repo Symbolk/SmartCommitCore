@@ -9,12 +9,12 @@ import java.util.List;
 /** Implementation of helper functions based on jGit (the java implementation of Git). */
 public class GitServiceJGit implements GitService {
   @Override
-  public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoDir) {
+  public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoPath) {
     return null;
   }
 
   @Override
-  public ArrayList<DiffFile> getChangedFilesAtCommit(String repoDir, String commitID) {
+  public ArrayList<DiffFile> getChangedFilesAtCommit(String repoPath, String commitID) {
     return null;
   }
 

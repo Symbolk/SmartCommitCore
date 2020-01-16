@@ -13,14 +13,14 @@ public interface GitService {
    *
    * @return
    */
-  ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoDir);
+  ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoPath);
 
   /**
    * Get the diff files between one commit and its previous commit
    *
    * @return
    */
-  ArrayList<DiffFile> getChangedFilesAtCommit(String repoDir, String commitID);
+  ArrayList<DiffFile> getChangedFilesAtCommit(String repoPath, String commitID);
 
   /**
    * Get the diff hunks in the current working tree

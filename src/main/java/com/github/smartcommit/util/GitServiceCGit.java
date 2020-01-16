@@ -22,10 +22,13 @@ public class GitServiceCGit implements GitService {
    * @return
    */
   @Override
-  public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoDir) {
+  public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoPath) {
+    // unstage the staged files first
+    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
+
     ArrayList<DiffFile> diffFileList = new ArrayList<>();
     // run git status --porcelain to get changeset
-    String output = Utils.runSystemCommand(repoDir, "git", "status", "--porcelain", "-uall");
+    String output = Utils.runSystemCommand(repoPath, "git", "status", "--porcelain", "-uall");
     if (output.isEmpty()) {
       // working tree clean
       return diffFileList;
@@ -37,7 +40,7 @@ public class GitServiceCGit implements GitService {
       String symbol = temp[0];
       String relativePath = temp[1];
       FileType fileType = Utils.checkFileType(relativePath);
-      String absolutePath = repoDir + File.separator + relativePath;
+      String absolutePath = repoPath + File.separator + relativePath;
       FileStatus status = Utils.convertSymbolToStatus(symbol);
       DiffFile DiffFile = null;
       switch (status) {
@@ -49,7 +52,7 @@ public class GitServiceCGit implements GitService {
                   fileType,
                   relativePath,
                   relativePath,
-                  getContentAtHEAD(repoDir, relativePath),
+                  getContentAtHEAD(repoPath, relativePath),
                   Utils.readFileToString(absolutePath));
           break;
         case ADDED:
@@ -66,7 +69,7 @@ public class GitServiceCGit implements GitService {
                   fileType,
                   relativePath,
                   "",
-                  getContentAtHEAD(repoDir, relativePath),
+                  getContentAtHEAD(repoPath, relativePath),
                   "");
           break;
         case RENAMED:
@@ -74,7 +77,7 @@ public class GitServiceCGit implements GitService {
           if (temp.length == 4) {
             String oldPath = temp[1];
             String newPath = temp[3];
-            String newAbsPath = repoDir + File.separator + temp[3];
+            String newAbsPath = repoPath + File.separator + temp[3];
             DiffFile =
                 new DiffFile(
                     i,
@@ -82,7 +85,7 @@ public class GitServiceCGit implements GitService {
                     fileType,
                     oldPath,
                     newPath,
-                    getContentAtHEAD(repoDir, oldPath),
+                    getContentAtHEAD(repoPath, oldPath),
                     Utils.readFileToString(newAbsPath));
           }
           break;
@@ -102,11 +105,11 @@ public class GitServiceCGit implements GitService {
    * @return
    */
   @Override
-  public ArrayList<DiffFile> getChangedFilesAtCommit(String repoDir, String commitID) {
+  public ArrayList<DiffFile> getChangedFilesAtCommit(String repoPath, String commitID) {
     // git diff <start_commit> <end_commit>
     // on Windows the ~ character must be used instead of ^
     String output =
-        Utils.runSystemCommand(repoDir, "git", "diff", "--name-status", commitID + "~", commitID);
+        Utils.runSystemCommand(repoPath, "git", "diff", "--name-status", commitID + "~", commitID);
     ArrayList<DiffFile> DiffFileList = new ArrayList<>();
     String lines[] = output.split("\\r?\\n");
     for (int i = 0; i < lines.length; i++) {
@@ -126,8 +129,8 @@ public class GitServiceCGit implements GitService {
                   fileType,
                   relativePath,
                   relativePath,
-                  getContentAtCommit(repoDir, relativePath, commitID + "~"),
-                  getContentAtCommit(repoDir, relativePath, commitID));
+                  getContentAtCommit(repoPath, relativePath, commitID + "~"),
+                  getContentAtCommit(repoPath, relativePath, commitID));
           break;
         case ADDED:
         case UNTRACKED:
@@ -139,7 +142,7 @@ public class GitServiceCGit implements GitService {
                   "",
                   relativePath,
                   "",
-                  getContentAtCommit(repoDir, relativePath, commitID));
+                  getContentAtCommit(repoPath, relativePath, commitID));
           break;
         case DELETED:
           DiffFile =
@@ -149,7 +152,7 @@ public class GitServiceCGit implements GitService {
                   fileType,
                   relativePath,
                   "",
-                  getContentAtCommit(repoDir, relativePath, commitID + "~"),
+                  getContentAtCommit(repoPath, relativePath, commitID + "~"),
                   "");
           break;
         case RENAMED:
@@ -164,8 +167,8 @@ public class GitServiceCGit implements GitService {
                     fileType,
                     oldPath,
                     newPath,
-                    getContentAtCommit(repoDir, oldPath, commitID + "~"),
-                    getContentAtCommit(repoDir, newPath, commitID));
+                    getContentAtCommit(repoPath, oldPath, commitID + "~"),
+                    getContentAtCommit(repoPath, newPath, commitID));
           }
           break;
         default:
@@ -180,7 +183,11 @@ public class GitServiceCGit implements GitService {
 
   @Override
   public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath, List<DiffFile> diffFiles) {
-    // git diff + git diff --cached/staged == git diff HEAD (show all the changes since the last commit)
+    // unstage the staged files first
+    //    Utils.runSystemCommand(repoPath, "git", "reset", "--mixed");
+    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
+    // git diff + git diff --cached/staged == git diff HEAD (show all the changes since the last
+    // commit)
     String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
     DiffParser parser = new UnifiedDiffParser();
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
