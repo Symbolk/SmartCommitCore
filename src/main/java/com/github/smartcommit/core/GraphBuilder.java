@@ -537,6 +537,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
             case ASTNode.FIELD_DECLARATION:
               List<VariableDeclarationFragment> fragments =
                   ((FieldDeclaration) astNode).fragments();
+//              hunkInfo.typeUses.addAll(
+//                  processAnnotations(((FieldDeclaration) astNode).modifiers()));
               for (VariableDeclarationFragment fragment : fragments) {
                 IVariableBinding binding = fragment.resolveBinding();
                 if (binding != null && binding.getDeclaringClass() != null) {

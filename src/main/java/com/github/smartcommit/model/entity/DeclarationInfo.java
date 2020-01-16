@@ -6,9 +6,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Information for members (e.g. field, method/constructor, annotation member, enum constant)
+ * Information collected in declarations (e.g. type, field, method/constructor, annotation member,
+ * enum constant)
  */
-public class MemberInfo {
+public class DeclarationInfo {
   // which file the entity belongs to
   public Integer fileIndex;
 
@@ -23,5 +24,4 @@ public class MemberInfo {
   public Set<String> fieldUses = new HashSet<>();
   public Set<String> paraUses = new HashSet<>();
   public Set<String> localVarUses = new HashSet<>();
-
 }

@@ -5,7 +5,7 @@ import com.github.smartcommit.model.graph.Node;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ClassInfo {
+public class ClassInfo extends DeclarationInfo {
 
   public String name;
   //  public String belongTo;

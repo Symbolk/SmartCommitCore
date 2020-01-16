@@ -149,6 +149,8 @@ public class JDTService {
     //    classInfo.content =
     //          sourceContent.substring(
     //              node.getStartPosition(), node.getStartPosition() + node.getLength());
+    List<String> annotationUses = getAnnotationUses(node.modifiers());
+    classInfo.typeUses.addAll(annotationUses);
     return classInfo;
   }
 
@@ -208,6 +210,7 @@ public class JDTService {
               node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
     }
 
+    List<String> annotationUses = getAnnotationUses(node.modifiers());
     List<VariableDeclarationFragment> fragments = node.fragments();
     for (VariableDeclarationFragment fragment : fragments) {
       FieldInfo fieldInfo = new FieldInfo();
@@ -220,11 +223,29 @@ public class JDTService {
       fieldInfo.isFinal = isFinal;
       fieldInfo.isStatic = isStatic;
       fieldInfo.comment = comment;
+      fieldInfo.typeUses.addAll(annotationUses);
       parseFieldInitializer(fieldInfo, fragment.getInitializer());
 
       fieldInfos.add(fieldInfo);
     }
     return fieldInfos;
+  }
+
+  /**
+   * Detect annotation types
+   *
+   * @param modifiers
+   * @return
+   */
+  private List<String> getAnnotationUses(List modifiers) {
+    List<String> annotations = new ArrayList<>();
+    for (int i = 0; i < modifiers.size(); i++) {
+      if (modifiers.get(i) instanceof MarkerAnnotation) {
+        annotations.add(
+            ((MarkerAnnotation) modifiers.get(i)).getTypeName().getFullyQualifiedName());
+      }
+    }
+    return annotations;
   }
 
   /**
@@ -293,6 +314,10 @@ public class JDTService {
               node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
     }
     methodInfo.belongTo = belongTo;
+
+    List<String> annotationUses = getAnnotationUses(node.modifiers());
+    methodInfo.typeUses.addAll(annotationUses);
+
     List<SingleVariableDeclaration> params = node.parameters();
     List<String> paramStringList = new ArrayList<>();
     for (SingleVariableDeclaration param : params) {
@@ -733,7 +758,7 @@ public class JDTService {
    * @param entityInfo
    * @param statement
    */
-  public void parseStatement(MemberInfo entityInfo, Statement statement) {
+  public void parseStatement(DeclarationInfo entityInfo, Statement statement) {
     List<Statement> statements = new ArrayList<>();
     statements.add(statement);
     for (int i = 0; i < statements.size(); i++) {
@@ -894,7 +919,7 @@ public class JDTService {
    * @param entityInfo
    * @param expression
    */
-  private void parseExpression(MemberInfo entityInfo, Expression expression) {
+  private void parseExpression(DeclarationInfo entityInfo, Expression expression) {
     if (expression == null) {
       return;
     }

@@ -6,7 +6,7 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class HunkInfo extends MemberInfo {
+public class HunkInfo extends DeclarationInfo {
   public String identifier = "-1:-1";
   public Integer fileIndex = -1;
   public Integer hunkIndex = -1;
