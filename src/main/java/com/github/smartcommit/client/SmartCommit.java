@@ -97,42 +97,53 @@ public class SmartCommit {
       DataCollector dataCollector = new DataCollector(repoName, tempDir);
       Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(commitID, diffFiles);
 
-      // save the grouped diff hunk detailed information into files
       Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
-      Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-      List<String> groupedDiffHunks = new ArrayList<>();
-      for (Map.Entry<String, Group> entry : results.entrySet()) {
-        String path =
-            tempDir + File.separator + "versions" + File.separator + entry.getKey() + ".json";
-        StringBuilder builder = new StringBuilder();
-        builder.append(entry.getValue().getIntentLabel()).append("\n");
-        for (String id : entry.getValue().getDiffHunks()) {
-          if (groupedDiffHunks.contains(id)) {
-            DiffHunk diffHunk = repoAnalyzer.getIdToDiffHunkMap().get(id.split(":")[1]);
-            logger.error("Duplicate DiffHunk: " + diffHunk.getUniqueIndex());
-          }
-          groupedDiffHunks.add(id);
-          String[] pair = id.split(":");
-          if (pair.length == 2) {
-            builder.append("------------").append("\n");
-            DiffHunk diffHunk = repoAnalyzer.getIdToDiffHunkMap().get(pair[1]);
-            builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
-            builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");
-          } else {
-            logger.error("Invalid id: " + id);
-          }
-        }
-        Utils.writeStringToFile(builder.toString(), path);
-      }
-
-      if (groupedDiffHunks.size() != allDiffHunks.size()) {
-        logger.error(
-            "Incorrect #diffhunks: Actual/Expected= "
-                + groupedDiffHunks.size()
-                + "/"
-                + allDiffHunks.size());
-      }
+      // comment when packaging
+      generateIntermediateVersions(results, repoAnalyzer.getIdToDiffHunkMap());
       return results;
+    }
+  }
+
+  /**
+   * Generate and save the intermediate versions to manually validate
+   *
+   * @param results
+   * @param id2DiffHunkMap
+   */
+  private void generateIntermediateVersions(
+      Map<String, Group> results, Map<String, DiffHunk> id2DiffHunkMap) {
+    Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+    List<String> groupedDiffHunks = new ArrayList<>();
+    for (Map.Entry<String, Group> entry : results.entrySet()) {
+      String path =
+          tempDir + File.separator + "versions" + File.separator + entry.getKey() + ".json";
+      StringBuilder builder = new StringBuilder();
+      builder.append(entry.getValue().getIntentLabel()).append("\n");
+      for (String id : entry.getValue().getDiffHunks()) {
+        if (groupedDiffHunks.contains(id)) {
+          DiffHunk diffHunk = id2DiffHunkMap.get(id.split(":")[1]);
+          logger.error("Duplicate DiffHunk: " + diffHunk.getUniqueIndex());
+        }
+        groupedDiffHunks.add(id);
+        String[] pair = id.split(":");
+        if (pair.length == 2) {
+          builder.append("------------").append("\n");
+          DiffHunk diffHunk = id2DiffHunkMap.get(pair[1]);
+          builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
+          builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");
+        } else {
+          logger.error("Invalid id: " + id);
+        }
+      }
+      Utils.writeStringToFile(builder.toString(), path);
+    }
+
+    if (groupedDiffHunks.size() != id2DiffHunkMap.keySet().size()) {
+      logger.error(
+          "Incorrect #diffhunks: Actual/Expected= "
+              + groupedDiffHunks.size()
+              + "/"
+              + id2DiffHunkMap.keySet().size());
     }
   }
 
