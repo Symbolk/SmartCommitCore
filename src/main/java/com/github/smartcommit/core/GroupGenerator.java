@@ -306,7 +306,7 @@ public class GroupGenerator {
       }
     }
 
-    createGroup(individuals, GroupLabel.OHTER);
+    createGroup(individuals, GroupLabel.OTHER);
 
     //    BiconnectivityInspector inspector1 =
     //            new BiconnectivityInspector(diffHunkGraph);
