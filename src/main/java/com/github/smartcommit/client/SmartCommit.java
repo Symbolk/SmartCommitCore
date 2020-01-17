@@ -69,9 +69,15 @@ public class SmartCommit {
     // (1) diff files (2) file id mapping (3) diff hunks
     DataCollector dataCollector = new DataCollector(repoName, tempDir);
     Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
+
+    Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
+
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
-    return analyze(diffFiles, allDiffHunks, dataPaths);
+    // comment when packaging
+//    generateIntermediateVersions(results, repoAnalyzer.getIdToDiffHunkMap());
+
+    return results;
   }
 
   /**
@@ -89,7 +95,7 @@ public class SmartCommit {
       List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
 
       if (diffFiles.isEmpty() || allDiffHunks.isEmpty()) {
-        logger.info("Files are unchanged.");
+        logger.info("Files are unchanged at commit: " + commitID);
         return null;
       }
 
@@ -129,6 +135,7 @@ public class SmartCommit {
         if (pair.length == 2) {
           builder.append("------------").append("\n");
           DiffHunk diffHunk = id2DiffHunkMap.get(pair[1]);
+          builder.append(diffHunk.getDescription()).append("\n");
           builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
           builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");
         } else {

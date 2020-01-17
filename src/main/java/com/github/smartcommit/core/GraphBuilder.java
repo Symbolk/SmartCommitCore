@@ -140,7 +140,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 cu.accept(new MemberVisitor(diffFile.getIndex(), entityPool, graph, jdtService));
 
                 // collect hunk infos and create nodes
-                createHunkInfos(diffFile.getIndex(), hunksPosition, cu, jdtService);
+                createHunkInfos(version, diffFile.getIndex(), hunksPosition, cu, jdtService);
               }
             } catch (Exception e) {
               e.printStackTrace();
@@ -343,6 +343,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
    * @return
    */
   private void createHunkInfos(
+      Version version,
       Integer fileIndex,
       Map<String, Pair<Integer, Integer>> hunksPosition,
       CompilationUnit cu,
@@ -377,6 +378,17 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       HunkInfo hunkInfo = new HunkInfo(index);
       hunkInfo.fileIndex = fileIndex;
       hunkInfo.coveredNodes = coveredNodes;
+
+      // save covered nodes also in hunks
+      Pair<Integer, Integer> indices = Utils.parseIndicesFromString(index);
+      DiffHunk diffHunk = diffFiles.get(fileIndex).getDiffHunks().get(indices.getRight());
+      if (diffHunk != null) {
+        if (version.equals(Version.BASE)) {
+          diffHunk.getBaseHunk().setCoveredNodes(new ArrayList<>(coveredNodes));
+        } else {
+          diffHunk.getCurrentHunk().setCoveredNodes(new ArrayList<>(coveredNodes));
+        }
+      }
 
       int nodeID = graph.vertexSet().size() + 1;
       int edgeID = graph.edgeSet().size() + 1;
@@ -537,8 +549,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
             case ASTNode.FIELD_DECLARATION:
               List<VariableDeclarationFragment> fragments =
                   ((FieldDeclaration) astNode).fragments();
-//              hunkInfo.typeUses.addAll(
-//                  processAnnotations(((FieldDeclaration) astNode).modifiers()));
+              //              hunkInfo.typeUses.addAll(
+              //                  processAnnotations(((FieldDeclaration) astNode).modifiers()));
               for (VariableDeclarationFragment fragment : fragments) {
                 IVariableBinding binding = fragment.resolveBinding();
                 if (binding != null && binding.getDeclaringClass() != null) {
@@ -667,9 +679,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         }
         int length = endPos - startPos;
         // construct the location map
-        indexToPositionMap.put(
-            diffFile.getIndex().toString() + ":" + diffHunk.getIndex().toString(),
-            Pair.of(startPos, length));
+        indexToPositionMap.put(diffHunk.getUniqueIndex(), Pair.of(startPos, length));
       }
     }
     return indexToPositionMap;

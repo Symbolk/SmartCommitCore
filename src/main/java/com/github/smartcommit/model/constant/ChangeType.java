@@ -4,9 +4,9 @@ package com.github.smartcommit.model.constant;
  * Change type of a DiffHunk
  */
 public enum ChangeType {
-  MODIFIED("M", "modified"),
-  ADDED("A", "added"),
-  DELETED("D", "deleted");
+  MODIFIED("M", "Modify"),
+  ADDED("A", "Add"),
+  DELETED("D", "Delete");
 
   public String symbol;
   public String label;

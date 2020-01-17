@@ -122,6 +122,22 @@ public class DiffHunk {
     return fileIndex + ":" + index;
   }
 
+  public FileType getFileType() {
+    return fileType;
+  }
+
+  public ChangeType getChangeType() {
+    return changeType;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public void setDescription(String description) {
+    this.description = description;
+  }
+
   public String getUUID() {
     return fileID + ":" + diffHunkID;
   }
