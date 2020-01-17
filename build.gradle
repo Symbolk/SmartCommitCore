@@ -12,10 +12,10 @@ repositories {
     mavenCentral()
 }
 
-gradle.buildFinished { buildResult ->
-    println "BUILD FINISHED"
-    println "build failure - " + buildResult.failure
-}
+//gradle.buildFinished { buildResult ->
+//    println "BUILD FINISHED"
+//    println "build failure - " + buildResult.failure
+//}
 
 tasks.withType(JavaCompile) {
     options.encoding = "UTF-8"
