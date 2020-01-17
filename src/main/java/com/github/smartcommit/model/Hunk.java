@@ -3,7 +3,9 @@ package com.github.smartcommit.model;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.Version;
 import com.google.common.collect.Iterables;
+import org.eclipse.jdt.core.dom.ASTNode;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Hunk {
@@ -13,6 +15,7 @@ public class Hunk {
   private Version version;
   private ContentType contentType;
   private List<String> codeSnippet;
+  private transient List<ASTNode> coveredNodes;
 
   public Hunk(
       Version version,
@@ -27,6 +30,7 @@ public class Hunk {
     this.endLine = endLine;
     this.contentType = contentType;
     this.codeSnippet = codeSnippet;
+    this.coveredNodes = new ArrayList<>();
   }
 
   public Version getVersion() {
@@ -51,6 +55,14 @@ public class Hunk {
 
   public ContentType getContentType() {
     return contentType;
+  }
+
+  public List<ASTNode> getCoveredNodes() {
+    return coveredNodes;
+  }
+
+  public void setCoveredNodes(List<ASTNode> coveredNodes) {
+    this.coveredNodes = coveredNodes;
   }
 
   /**

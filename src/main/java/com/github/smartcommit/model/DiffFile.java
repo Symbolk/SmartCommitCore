@@ -2,7 +2,6 @@ package com.github.smartcommit.model;
 
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
-import com.google.gson.annotations.Expose;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,9 +21,8 @@ public class DiffFile {
   private String baseContent;
   private String currentContent;
   private String description;
-  @Expose
-  private List<DiffHunk> diffHunks;
   private Map<String, DiffHunk> diffHunksMap;
+  private transient List<DiffHunk> diffHunks;
 
   public DiffFile(
       Integer index,
