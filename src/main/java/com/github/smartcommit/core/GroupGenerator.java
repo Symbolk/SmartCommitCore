@@ -1,6 +1,5 @@
 package com.github.smartcommit.core;
 
-import com.github.smartcommit.io.DiffGraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
@@ -63,16 +62,19 @@ public class GroupGenerator {
 
   /** Put non-java hunks as a whole file in the first group, if there exists */
   public void analyzeNonJavaFiles() {
-    Set<String> nonJavaDiffHunks = new LinkedHashSet<>();
+    Set<DiffHunk> nonJavaDiffHunks = new TreeSet<>(Comparator.comparing(DiffHunk::getUniqueIndex));
+
     for (DiffFile diffFile : diffFiles) {
       if (!diffFile.getFileType().equals(FileType.JAVA)) {
         for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
-          nonJavaDiffHunks.add(diffHunk.getUUID());
+          nonJavaDiffHunks.add(diffHunk);
         }
       }
     }
-    if (nonJavaDiffHunks.size() > 0) {
-      createGroup(nonJavaDiffHunks, GroupLabel.NONJAVA);
+    if (!nonJavaDiffHunks.isEmpty()) {
+      Set<String> nonJavaDiffHunkIDs = new LinkedHashSet<>();
+      nonJavaDiffHunks.forEach(diffHunk -> nonJavaDiffHunkIDs.add(diffHunk.getUUID()));
+      createGroup(nonJavaDiffHunkIDs, GroupLabel.NONJAVA);
     }
   }
 
@@ -104,13 +106,14 @@ public class GroupGenerator {
    * <li>2. systematic edits and similar edits
    */
   public void analyzeSoftLinks() {
-    Set<String> formatOnlyDiffHunks = new LinkedHashSet<>();
+    Set<DiffHunk> formatOnlyDiffHunks =
+        new TreeSet<>(Comparator.comparing(DiffHunk::getUniqueIndex));
     for (int i = 0; i < diffHunks.size(); ++i) {
       DiffHunk diffHunk1 = diffHunks.get(i);
       // check format only diff hunks
       if (Utils.convertListToStringNoFormat(diffHunk1.getBaseHunk().getCodeSnippet())
           .equals(Utils.convertListToStringNoFormat(diffHunk1.getCurrentHunk().getCodeSnippet()))) {
-        formatOnlyDiffHunks.add(diffHunk1.getUUID());
+        formatOnlyDiffHunks.add(diffHunk1);
         continue;
       }
       // else, compare the diff hunk with other diff hunks
@@ -123,8 +126,8 @@ public class GroupGenerator {
                 == diffHunk1.getCurrentHunk().getCodeSnippet().size()) {
           Double similarity = estimateSimilarity(diffHunk2, diffHunk1);
           if (similarity >= threshold
-              && !formatOnlyDiffHunks.contains(diffHunk1.getUUID())
-              && !formatOnlyDiffHunks.contains(diffHunk2.getUUID())) {
+              && !formatOnlyDiffHunks.contains(diffHunk1)
+              && !formatOnlyDiffHunks.contains(diffHunk2)) {
             boolean success =
                 diffHunkGraph.addEdge(
                     findNodeByIndex(diffHunk2.getUniqueIndex()),
@@ -135,7 +138,9 @@ public class GroupGenerator {
       }
     }
     if (!formatOnlyDiffHunks.isEmpty()) {
-      createGroup(formatOnlyDiffHunks, GroupLabel.REFORMAT);
+      Set<String> formatOnlyDiffHunkIDs = new LinkedHashSet<>();
+      formatOnlyDiffHunks.forEach(diffHunk -> formatOnlyDiffHunkIDs.add(diffHunk.getUUID()));
+      createGroup(formatOnlyDiffHunkIDs, GroupLabel.REFORMAT);
     }
   }
 
@@ -285,15 +290,17 @@ public class GroupGenerator {
   }
 
   public void exportGroupingResults(String outputDir) {
-    // visualize the diff hunk graph
-    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffHunkGraph);
-
     ConnectivityInspector inspector = new ConnectivityInspector(diffHunkGraph);
     List<Set<DiffNode>> connectedSets = inspector.connectedSets();
     Set<String> individuals = new LinkedHashSet<>();
     for (Set<DiffNode> diffNodesSet : connectedSets) {
       if (diffNodesSet.size() > 1) {
         Set<String> diffHunkIDs = new LinkedHashSet<>();
+        // sort by increasing index (fileIndex:diffHunkIndex)
+        diffNodesSet =
+            diffNodesSet.stream()
+                .sorted(Comparator.comparing(DiffNode::getIndex))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
         diffNodesSet.forEach(diffNode -> diffHunkIDs.add(diffNode.getUUID()));
         createGroup(diffHunkIDs, GroupLabel.FEATURE);
       } else {
@@ -307,6 +314,7 @@ public class GroupGenerator {
       }
     }
 
+    // individual nodes are sorted by nature
     createGroup(individuals, GroupLabel.OTHER);
 
     //    BiconnectivityInspector inspector1 =

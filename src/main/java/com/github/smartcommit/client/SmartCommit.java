@@ -135,6 +135,7 @@ public class SmartCommit {
         if (pair.length == 2) {
           builder.append("------------").append("\n");
           DiffHunk diffHunk = id2DiffHunkMap.get(pair[1]);
+          builder.append(diffHunk.getUniqueIndex()).append("\n");
           builder.append(diffHunk.getDescription()).append("\n");
           builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
           builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");

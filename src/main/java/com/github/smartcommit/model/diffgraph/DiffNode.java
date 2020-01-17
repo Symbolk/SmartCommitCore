@@ -3,7 +3,7 @@ package com.github.smartcommit.model.diffgraph;
 /** Nodes in the DiffViewGraph, which stand for one diff hunk */
 public class DiffNode {
   private Integer id;
-  private String index; // identifier
+  private String index; // identifier (fileIndex:diffHunkIndex)
   private String uuid; // fileID:diffHunkID
 
   public DiffNode(Integer id, String index, String uuid) {

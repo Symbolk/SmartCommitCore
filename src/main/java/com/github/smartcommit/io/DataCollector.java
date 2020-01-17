@@ -219,7 +219,9 @@ public class DataCollector {
   private List<String> getNodeTypes(List<ASTNode> coveredNodes) {
     Set<String> types = new LinkedHashSet<>();
     for (ASTNode node : coveredNodes) {
-      types.add(Annotation.nodeClassForType(node.getNodeType()).getSimpleName());
+      if (node != null) {
+        types.add(Annotation.nodeClassForType(node.getNodeType()).getSimpleName());
+      }
     }
     return new ArrayList<>(types);
   }
