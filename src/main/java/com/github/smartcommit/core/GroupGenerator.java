@@ -321,15 +321,13 @@ public class GroupGenerator {
       for (Refactoring refactoring : refactorings) {
         // greedy style: put all refactorings into one group
         for (CodeRange range : refactoring.leftSide()) {
-          Optional<DiffHunk> diffHunkOpt =
-              getOverlappingDiffHunk(Version.BASE, range.getStartLine(), range.getEndLine());
+          Optional<DiffHunk> diffHunkOpt = getOverlappingDiffHunk(Version.BASE, range);
           if (diffHunkOpt.isPresent()) {
             refDiffHunks.add(diffHunkOpt.get());
           }
         }
         for (CodeRange range : refactoring.rightSide()) {
-          Optional<DiffHunk> diffHunkOpt =
-              getOverlappingDiffHunk(Version.CURRENT, range.getStartLine(), range.getEndLine());
+          Optional<DiffHunk> diffHunkOpt = getOverlappingDiffHunk(Version.CURRENT, range);
           if (diffHunkOpt.isPresent()) {
             refDiffHunks.add(diffHunkOpt.get());
             diffHunkOpt.get().setDescription(refactoring.getName());
@@ -349,17 +347,22 @@ public class GroupGenerator {
   /**
    * Try to find the overlapping diff hunk according to the code range
    *
-   * @param startLine
-   * @param endLine
    * @return
    */
-  private Optional<DiffHunk> getOverlappingDiffHunk(
-      Version version, Integer startLine, Integer endLine) {
-    for (DiffHunk diffHunk : diffHunks) {
-      Pair<Integer, Integer> codeRange = diffHunk.getCodeRangeOf(version);
-      // overlapping: !(b1 < a2 || b2 < a1) = (b1 >= a2 && b2 >= a1)
-      if (endLine >= codeRange.getLeft() && codeRange.getRight() >= startLine) {
-        return Optional.of(diffHunk);
+  private Optional<DiffHunk> getOverlappingDiffHunk(Version version, CodeRange codeRange) {
+    for (DiffFile diffFile : diffFiles) {
+      if (!codeRange.getFilePath().isEmpty()
+          && !diffFile.getRelativePathOf(version).isEmpty()
+          && codeRange.getFilePath().endsWith(diffFile.getRelativePathOf(version))) {
+        for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
+          Pair<Integer, Integer> hunkRange = diffHunk.getCodeRangeOf(version);
+          // overlapping: !(b1 < a2 || b2 < a1) = (b1 >= a2 && b2 >= a1)
+          if (codeRange.getEndLine() >= hunkRange.getLeft()
+              && hunkRange.getRight() >= codeRange.getStartLine()) {
+            // suppose that one range is related with only one diff hunk
+            return Optional.of(diffHunk);
+          }
+        }
       }
     }
     return Optional.empty();

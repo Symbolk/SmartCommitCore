@@ -2,6 +2,7 @@ package com.github.smartcommit.model;
 
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
+import com.github.smartcommit.model.constant.Version;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -109,6 +110,15 @@ public class DiffFile {
 
   public String getCurrentRelativePath() {
     return currentRelativePath;
+  }
+
+  public String getRelativePathOf(Version version) {
+    if (version.equals(Version.BASE)) {
+      return getBaseRelativePath();
+    } else if (version.equals(Version.CURRENT)) {
+      return getCurrentRelativePath();
+    }
+    return "";
   }
 
   public String getBaseContent() {
