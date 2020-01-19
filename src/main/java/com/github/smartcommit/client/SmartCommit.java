@@ -43,6 +43,7 @@ public class SmartCommit {
     this.repoName = repoName;
     this.repoPath = repoPath;
     this.tempDir = tempDir;
+    this.detectRefactorings = false;
     Utils.clearDir(tempDir);
   }
 

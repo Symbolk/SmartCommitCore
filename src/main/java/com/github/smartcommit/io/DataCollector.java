@@ -198,6 +198,12 @@ public class DataCollector {
     return changeType.label + " some code";
   }
 
+  /**
+   * Generate description from covered AST nodes
+   * @param changeType
+   * @param coveredNodes
+   * @return
+   */
   private String analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
     StringBuilder builder = new StringBuilder(changeType.label);
     if (coveredNodes.isEmpty()) {

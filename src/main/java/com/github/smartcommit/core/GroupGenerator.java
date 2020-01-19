@@ -70,7 +70,7 @@ public class GroupGenerator {
 
   /** Put non-java hunks as a whole file in the first group, if there exists */
   public void analyzeNonJavaFiles() {
-    Set<DiffHunk> nonJavaDiffHunks = new TreeSet<>(Comparator.comparing(DiffHunk::getUniqueIndex));
+    Set<DiffHunk> nonJavaDiffHunks = new TreeSet<>(ascendingByIndexComparator());
 
     for (DiffFile diffFile : diffFiles) {
       if (!diffFile.getFileType().equals(FileType.JAVA)) {
@@ -112,8 +112,7 @@ public class GroupGenerator {
    * <li>2. systematic edits and similar edits
    */
   public void analyzeSoftLinks() {
-    Set<DiffHunk> formatOnlyDiffHunks =
-        new TreeSet<>(Comparator.comparing(DiffHunk::getUniqueIndex));
+    Set<DiffHunk> formatOnlyDiffHunks = new TreeSet<>(ascendingByIndexComparator());
     for (int i = 0; i < diffHunks.size(); ++i) {
       DiffHunk diffHunk1 = diffHunks.get(i);
       // check format only diff hunks
@@ -318,7 +317,7 @@ public class GroupGenerator {
       List<Refactoring> refactorings = modelDiff.getRefactorings();
 
       // for each refactoring, find the corresponding diff hunk
-      Set<DiffHunk> refDiffHunks = new TreeSet<>(Comparator.comparing(DiffHunk::getUniqueIndex));
+      Set<DiffHunk> refDiffHunks = new TreeSet<>(ascendingByIndexComparator());
       for (Refactoring refactoring : refactorings) {
         // greedy style: put all refactorings into one group
         for (CodeRange range : refactoring.leftSide()) {
@@ -376,7 +375,9 @@ public class GroupGenerator {
         // sort by increasing index (fileIndex:diffHunkIndex)
         diffNodesSet =
             diffNodesSet.stream()
-                .sorted(Comparator.comparing(DiffNode::getIndex))
+                .sorted(
+                    Comparator.comparing(DiffNode::getFileIndex)
+                        .thenComparing(DiffNode::getDiffHunkIndex))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         for (DiffNode diffNode : diffNodesSet) {
           // if not grouped yet, create a new group
@@ -489,6 +490,15 @@ public class GroupGenerator {
 
   private Boolean checkIfGrouped(String diffHunkID) {
     return this.diffHunkID2GroupID.containsKey(diffHunkID);
+  }
+
+  /**
+   * Construct a comparator which rank the diffhunks firstly by fileIndex, secondly by diffHunkIndex
+   *
+   * @return
+   */
+  private Comparator<DiffHunk> ascendingByIndexComparator() {
+    return Comparator.comparing(DiffHunk::getFileIndex).thenComparing(DiffHunk::getIndex);
   }
 
   private Integer generateEdgeID() {
