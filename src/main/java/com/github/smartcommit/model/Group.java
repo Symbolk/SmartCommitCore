@@ -30,6 +30,10 @@ public class Group {
     this.intentLabel = label;
   }
 
+  public String getGroupID() {
+    return groupID;
+  }
+
   public List<String> getDiffHunks() {
     return diffHunks;
   }

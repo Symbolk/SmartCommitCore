@@ -55,8 +55,16 @@ test {
     }
 }
 
+configurations.all {
+    exclude group: "org.slf4j", module: "slf4j-nop"
+    exclude group: "org.slf4j", module: "slf4j-log4j12"
+}
+
 dependencies {
     compile fileTree(dir: 'lib', include: ['*.jar'])
+//    compile('org.refactoringminer:RefactoringMiner:1.0') {
+//        exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+//    }
     compile group: 'org.eclipse.jdt', name: 'org.eclipse.jdt.core', version: '3.16.0'
     compile group: 'org.jgrapht', name: 'jgrapht-core', version: '1.3.0'
     compile group: 'org.jgrapht', name: 'jgrapht-io', version: '1.3.0'

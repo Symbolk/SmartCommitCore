@@ -3,6 +3,8 @@ package com.github.smartcommit.model;
 import com.github.smartcommit.model.constant.ChangeType;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
+import com.github.smartcommit.model.constant.Version;
+import org.apache.commons.lang3.tuple.Pair;
 
 public class DiffHunk {
   private String repoID;
@@ -108,6 +110,15 @@ public class DiffHunk {
 
   public Integer getCurrentEndLine() {
     return currentHunk.getEndLine();
+  }
+
+  public Pair<Integer, Integer> getCodeRangeOf(Version version) {
+    if (version.equals(Version.BASE)) {
+      return Pair.of(getBaseStartLine(), getBaseEndLine());
+    } else if (version.equals(Version.CURRENT)) {
+      return Pair.of(getCurrentStartLine(), getCurrentEndLine());
+    }
+    return Pair.of(-1, -1);
   }
 
   public Integer getFileIndex() {

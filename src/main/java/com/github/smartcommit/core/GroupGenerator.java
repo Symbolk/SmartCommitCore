@@ -6,6 +6,7 @@ import com.github.smartcommit.model.Group;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.GroupLabel;
+import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.model.diffgraph.DiffEdge;
 import com.github.smartcommit.model.diffgraph.DiffEdgeType;
 import com.github.smartcommit.model.diffgraph.DiffNode;
@@ -15,10 +16,17 @@ import com.github.smartcommit.model.graph.NodeType;
 import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import gr.uom.java.xmi.UMLModel;
+import gr.uom.java.xmi.UMLModelASTReader;
+import gr.uom.java.xmi.diff.CodeRange;
+import gr.uom.java.xmi.diff.UMLModelDiff;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.graph.builder.GraphTypeBuilder;
+import org.refactoringminer.api.Refactoring;
+import org.refactoringminer.api.RefactoringMinerTimedOutException;
+import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
 import java.io.File;
 import java.util.*;
@@ -88,9 +96,7 @@ public class GroupGenerator {
       String id1 = getDiffHunkIDFromIndex(diffFiles, entry.getKey());
       for (String target : entry.getValue()) {
         String id2 = getDiffHunkIDFromIndex(diffFiles, target);
-        if (!id1.equals(id2)
-            && !diffHunkID2GroupID.containsKey(id1)
-            && !diffHunkID2GroupID.containsKey(id2)) {
+        if (!id1.equals(id2) && !checkIfGrouped(id1) && !checkIfGrouped(id2)) {
           diffHunkGraph.addEdge(
               findNodeByIndex(entry.getKey()),
               findNodeByIndex(target),
@@ -289,6 +295,77 @@ public class GroupGenerator {
     return ":";
   }
 
+  public void analyzeRefactorings(String tempDir) {
+    try {
+      String baseDir = tempDir + File.separator + Version.BASE.asString() + File.separator;
+      String currentDir = tempDir + File.separator + Version.CURRENT.asString() + File.separator;
+
+      File rootFolder1 = new File(baseDir);
+      File rootFolder2 = new File(currentDir);
+
+      List<String> filePaths1 = Utils.listAllJavaFilePaths(rootFolder1.getAbsolutePath());
+      List<String> filePaths2 = Utils.listAllJavaFilePaths(rootFolder2.getAbsolutePath());
+      GitHistoryRefactoringMinerImpl miner = new GitHistoryRefactoringMinerImpl();
+
+      UMLModel model1 =
+          new UMLModelASTReader(rootFolder1, filePaths1, miner.repositoryDirectories(rootFolder1))
+              .getUmlModel();
+      UMLModel model2 =
+          new UMLModelASTReader(rootFolder2, filePaths2, miner.repositoryDirectories(rootFolder2))
+              .getUmlModel();
+      UMLModelDiff modelDiff = model1.diff(model2);
+
+      List<Refactoring> refactorings = modelDiff.getRefactorings();
+
+      // for each refactoring, find the corresponding diff hunk
+      Set<DiffHunk> refDiffHunks = new TreeSet<>(Comparator.comparing(DiffHunk::getUniqueIndex));
+      for (Refactoring refactoring : refactorings) {
+        // greedy style: put all refactorings into one group
+        for (CodeRange range : refactoring.leftSide()) {
+          Optional<DiffHunk> diffHunkOpt =
+              getOverlappingDiffHunk(Version.BASE, range.getStartLine(), range.getEndLine());
+          if (diffHunkOpt.isPresent()) {
+            refDiffHunks.add(diffHunkOpt.get());
+          }
+        }
+        for (CodeRange range : refactoring.rightSide()) {
+          Optional<DiffHunk> diffHunkOpt =
+              getOverlappingDiffHunk(Version.CURRENT, range.getStartLine(), range.getEndLine());
+          if (diffHunkOpt.isPresent()) {
+            refDiffHunks.add(diffHunkOpt.get());
+            diffHunkOpt.get().setDescription(refactoring.getName());
+          }
+        }
+      }
+      if (!refDiffHunks.isEmpty()) {
+        Set<String> diffHunkIDs = new LinkedHashSet<>();
+        refDiffHunks.forEach(diffHunk -> diffHunkIDs.add(diffHunk.getUUID()));
+        createGroup(diffHunkIDs, GroupLabel.REFACTOR);
+      }
+    } catch (RefactoringMinerTimedOutException e) {
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * Try to find the overlapping diff hunk according to the code range
+   *
+   * @param startLine
+   * @param endLine
+   * @return
+   */
+  private Optional<DiffHunk> getOverlappingDiffHunk(
+      Version version, Integer startLine, Integer endLine) {
+    for (DiffHunk diffHunk : diffHunks) {
+      Pair<Integer, Integer> codeRange = diffHunk.getCodeRangeOf(version);
+      // overlapping: !(b1 < a2 || b2 < a1) = (b1 >= a2 && b2 >= a1)
+      if (endLine >= codeRange.getLeft() && codeRange.getRight() >= startLine) {
+        return Optional.of(diffHunk);
+      }
+    }
+    return Optional.empty();
+  }
+
   public void exportGroupingResults(String outputDir) {
     ConnectivityInspector inspector = new ConnectivityInspector(diffHunkGraph);
     List<Set<DiffNode>> connectedSets = inspector.connectedSets();
@@ -301,13 +378,26 @@ public class GroupGenerator {
             diffNodesSet.stream()
                 .sorted(Comparator.comparing(DiffNode::getIndex))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        diffNodesSet.forEach(diffNode -> diffHunkIDs.add(diffNode.getUUID()));
+        for (DiffNode diffNode : diffNodesSet) {
+          // if not grouped yet, create a new group
+          if (!checkIfGrouped(diffNode.getUUID())) {
+            diffHunkIDs.add(diffNode.getUUID());
+          } else {
+            // if has been grouped, add other ids into the corresponding group and continue to the
+            // next connected set
+            Group group = generatedGroups.get(diffHunkID2GroupID.get(diffNode.getUUID()));
+            Set<String> temp = new LinkedHashSet<>();
+            diffNodesSet.forEach(node -> temp.add(node.getUUID()));
+            addToGroup(group, temp);
+            continue;
+          }
+        }
         createGroup(diffHunkIDs, GroupLabel.FEATURE);
       } else {
         // assert: diffNodesSet.size()==1
         diffNodesSet.forEach(
             diffNode -> {
-              if (!diffHunkID2GroupID.containsKey(diffNode.getUUID())) {
+              if (!checkIfGrouped(diffNode.getUUID())) {
                 individuals.add(diffNode.getUUID());
               }
             });
@@ -378,8 +468,27 @@ public class GroupGenerator {
     }
   }
 
+  /**
+   * Add a set of diff hu
+   *
+   * @param group
+   * @param diffHunkIDs
+   */
+  private void addToGroup(Group group, Set<String> diffHunkIDs) {
+    for (String id : diffHunkIDs) {
+      if (!group.getDiffHunks().contains(id)) {
+        group.getDiffHunks().add(id);
+        diffHunkID2GroupID.put(id, group.getGroupID());
+      }
+    }
+  }
+
   private Integer generateNodeID() {
     return this.diffHunkGraph.vertexSet().size() + 1;
+  }
+
+  private Boolean checkIfGrouped(String diffHunkID) {
+    return this.diffHunkID2GroupID.containsKey(diffHunkID);
   }
 
   private Integer generateEdgeID() {

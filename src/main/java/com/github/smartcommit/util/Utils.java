@@ -13,10 +13,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /** Helper functions to operate the file and the system. */
 public class Utils {
@@ -164,6 +166,26 @@ public class Utils {
       }
     }
     return true;
+  }
+
+  /**
+   * List all java files under a folder/directory
+   * @param dir
+   * @return
+   */
+  public static List<String> listAllJavaFilePaths(String dir) {
+    List<String> result = new ArrayList<>();
+    try (Stream<Path> walk = Files.walk(Paths.get(dir))) {
+      result =
+              walk.filter(Files::isRegularFile)
+                      .map(x -> x.toString())
+                      .filter(f -> f.endsWith(".java"))
+                      .map(s -> s.substring(dir.length()))
+                      .collect(Collectors.toList());
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return result;
   }
 
   /**

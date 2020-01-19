@@ -35,6 +35,8 @@ public class SmartCommit {
   private String repoName;
   private String repoPath;
   private String tempDir;
+  // options
+  private Boolean detectRefactorings;
 
   public SmartCommit(String repoID, String repoName, String repoPath, String tempDir) {
     this.repoID = repoID;
@@ -42,6 +44,10 @@ public class SmartCommit {
     this.repoPath = repoPath;
     this.tempDir = tempDir;
     Utils.clearDir(tempDir);
+  }
+
+  public void setDetectRefactorings(Boolean detectRefactorings) {
+    this.detectRefactorings = detectRefactorings;
   }
 
   /**
@@ -185,6 +191,9 @@ public class SmartCommit {
     groupGenerator.analyzeNonJavaFiles();
     groupGenerator.analyzeSoftLinks();
     groupGenerator.analyzeHardLinks();
+    if(detectRefactorings){
+      groupGenerator.analyzeRefactorings(tempDir);
+    }
     groupGenerator.exportGroupingResults(tempDir);
 
     // visualize the diff hunk graph
