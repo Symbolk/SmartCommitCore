@@ -10,7 +10,7 @@ import java.util.List;
 
 public class MongoDBUtil {
 
-    public static MongoDatabase getConnection(String ipAddress, String port,String dbName) {
+    public static MongoDatabase getConnection(String ipAddress, String port, String dbName) {
         //连接到 mongodb 服务
         MongoClientURI connectionString = new MongoClientURI("mongodb://" + ipAddress + ":" + port);
         MongoClient mongoClient = new MongoClient(connectionString);
