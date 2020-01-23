@@ -1,13 +1,13 @@
 package com.github.smartcommit.intent.model;
 
-public enum ActionType {
+public enum ASTOperation {
   ADD("add"),
   DEL("del"),
   UPD("update"),
   MOV("move");
   public String label;
 
-  ActionType(String label) {
+  ASTOperation(String label) {
     this.label = label;
   }
 }

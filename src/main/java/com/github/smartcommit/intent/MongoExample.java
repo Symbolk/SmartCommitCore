@@ -1,6 +1,6 @@
 package com.github.smartcommit.intent;
 
-import com.github.smartcommit.intent.model.CommitInfo;
+import com.github.smartcommit.intent.model.CommitTrainningSample;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
@@ -19,10 +19,10 @@ public class MongoExample {
       MongoDatabase sampleDB = mongoClient.getDatabase("samples");
       MongoCollection<Document> repoCol = sampleDB.getCollection(REPO_NAME);
       Document commitDoc = new Document("repo_name", REPO_NAME);
-      CommitInfo commitInfo = new CommitInfo();
+      CommitTrainningSample commitTrainningSample = new CommitTrainningSample();
       // key:value
       commitDoc
-          .append("intent", commitInfo.getIntent())
+          .append("intent", commitTrainningSample.getIntent())
           .append("commit_msg", "bugfix: fix a bug introduced in the last version")
           .append("author", "8889")
           .append("email", "990@gmail.com");
