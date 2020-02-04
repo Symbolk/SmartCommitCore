@@ -3,7 +3,6 @@ package com.github.smartcommit.intent;
 import com.github.gumtreediff.actions.ActionClusterFinder;
 import com.github.gumtreediff.actions.ChawatheScriptGenerator;
 import com.github.gumtreediff.actions.EditScript;
-import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
 import com.github.gumtreediff.actions.model.Move;
@@ -15,10 +14,10 @@ import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.matchers.SimilarityMetrics;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
-import com.github.smartcommit.intent.model.ActionType;
-import com.github.smartcommit.intent.model.CommitInfo;
+import com.github.smartcommit.intent.model.ASTOperation;
+import com.github.smartcommit.intent.model.CommitTrainningSample;
 import com.github.smartcommit.intent.model.Intent;
-import com.github.smartcommit.intent.model.MyAction;
+import com.github.smartcommit.intent.model.Action;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.dom.ASTParser;
 
@@ -48,21 +47,21 @@ public class GumtreeExample {
             FileUtils.readFileToString(new File(fileRelativePath2)));
 
     // generate commit info from edit script
-    CommitInfo commitInfo = new CommitInfo();
+    CommitTrainningSample commitTrainningSample = new CommitTrainningSample();
     for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
-      Action action = (Action) iter.next();
-      ActionType actionType = null;
+      com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
+      ASTOperation ASTOperation = null;
       if (action instanceof Insert) {
-        actionType = ActionType.ADD;
+        ASTOperation = ASTOperation.ADD;
       } else if (action instanceof Delete) {
-        actionType = ActionType.DEL;
+        ASTOperation = ASTOperation.DEL;
       } else if (action instanceof Move) {
-          actionType = ActionType.MOV;
+          ASTOperation = ASTOperation.MOV;
       } else if (action instanceof Update) {
-          actionType = ActionType.UPD;
+          ASTOperation = ASTOperation.UPD;
       }
-      MyAction myAction = new MyAction(actionType, action.getNode().getType().toString());
-      commitInfo.addAction(myAction);
+      Action myAction = new Action(ASTOperation, action.getNode().getType().toString());
+      commitTrainningSample.addAction(myAction);
     }
 
   }
@@ -140,8 +139,8 @@ public class GumtreeExample {
    * @param newContent
    * @return
    */
-  public static List<Set<Action>> generateActionClusters(String oldContent, String newContent) {
-    List<Set<Action>> actionClusters = new ArrayList<>();
+  public static List<Set<com.github.gumtreediff.actions.model.Action>> generateActionClusters(String oldContent, String newContent) {
+    List<Set<com.github.gumtreediff.actions.model.Action>> actionClusters = new ArrayList<>();
     JdtTreeGenerator generator = new JdtTreeGenerator();
     //        Generators generator = Generators.getInstance();
     try {
