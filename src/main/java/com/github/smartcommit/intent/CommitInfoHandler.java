@@ -48,7 +48,7 @@ import javax.lang.model.type.IntersectionType;
 // Main Class: Commit message:  Get, Label, Store
 public class CommitInfoHandler {
     public static void main(String[] args) {
-        String REPO_NAME = "vue";
+        String REPO_NAME = "guava";
         String REPO_DIR = "/Users/Chuncen/IdeaProjects/" + REPO_NAME;
 
         // CommitInfo
@@ -114,7 +114,7 @@ public class CommitInfoHandler {
                     List<MyAction> actionList = generateActionList(editScript);
                     tempActionList.addAll(actionList);
                 } catch (Exception e) {
-                    System.out.println("\n Exception in the "+j+"th diffFile of "+i+ "th commit of "+REPO_NAME+"\n");
+                    System.out.println("\n Exception in the "+i+ "th commit of "+REPO_NAME+"\n");
                     e.printStackTrace();
                 }
             }
@@ -141,7 +141,7 @@ public class CommitInfoHandler {
         }
 
     }
-    // generate Action List from Edit Script
+    // generate commit info from different file pathway
     private static List<MyAction> generateActionList(EditScript editScript) {
 
         List<MyAction> actionList = new ArrayList<>();
@@ -182,7 +182,7 @@ public class CommitInfoHandler {
         repoCol = commitsDB.getCollection(REPO_NAME);
 
 
-        // Actions stored in separated collection part1
+        // Actions stored in seperated collection part1
         MongoDatabase ActionLists = mongoClient.getDatabase("ActionLists");
         MongoCollection<Document> actionListsCollection = ActionLists.getCollection(REPO_NAME+"ActionLists");
         actionListsCollection.drop();
@@ -208,10 +208,9 @@ public class CommitInfoHandler {
             ;
             repoCol.insertOne(tempDoc);
 
-            // Actions stored in separated collection part2
-            Document actionDocument = new Document("commitID", tempCommitInfo.getCommitID());
+            // Actions stored in seperated collection part2
+            Document actionDocument = new Document("repo_name", REPO_NAME+"Actions");
             Integer sizeActionList = actionList.size();
-            //actionDocument.append("FilePath", this.getClass().getResource("").getPath());
             for(int j = 0 ; j < sizeActionList ; j++) {
                 actionDocument.append("action "+j+" in commits "+i, actionList.get(j).getActions());
             }
