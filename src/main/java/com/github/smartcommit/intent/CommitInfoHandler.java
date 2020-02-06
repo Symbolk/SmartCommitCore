@@ -1,6 +1,7 @@
 package com.github.smartcommit.intent;
 
 // DataCollector
+
 import com.github.gumtreediff.actions.ChawatheScriptGenerator;
 import com.github.gumtreediff.actions.model.*;
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
@@ -8,23 +9,19 @@ import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.TreeContext;
-import com.github.smartcommit.io.DataCollector;
+import com.github.smartcommit.intent.model.Action;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
 
+import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Set;
-import org.apache.commons.io.FileUtils;
-import java.io.File;
-import java.io.IOException;
 
 // GumtreeExample
 
 import com.github.gumtreediff.actions.EditScript;
-import com.github.smartcommit.intent.GumtreeExample;
 import com.github.smartcommit.model.DiffFile;
 
 // MongoExample
@@ -32,98 +29,117 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import org.apache.commons.lang3.tuple.Pair;
 import org.bson.Document;
 
-// CommitInfo
-import com.github.smartcommit.intent.model.CommitInfo;
+// CommitTrainningSample
+import com.github.smartcommit.intent.model.CommitTrainningSample;
 import com.github.smartcommit.core.*;
 import com.github.smartcommit.intent.model.*;
 
-import javax.lang.model.type.IntersectionType;
 
-
-
-
-// Main Class: Commit message:  Get, Label, Store
+// Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
     public static void main(String[] args) {
-        String REPO_NAME = "guava";
-        String REPO_DIR = "/Users/Chuncen/IdeaProjects/" + REPO_NAME;
+        args = new String[]{"/Users/Chuncen/IdeaProjects/guava", "commitTrainningSample"};
+        String repoPath = args[0];
+        String collectionName = args[1];
+        // CommitTrainningSample
+        List<CommitTrainningSample> commitsInfo = new ArrayList<>();
 
-        // CommitInfo
-        List<CommitInfo> commitsInfo = new ArrayList<>();
-
-        System.out.println("CommitsCollector? " + CommitsCollector(REPO_DIR, commitsInfo));
-        System.out.println("LabelExtractor? " + LabelExtractor(REPO_DIR, REPO_NAME, commitsInfo));
-        System.out.println("DBLoader? " + DBLoader(REPO_NAME, commitsInfo));
-
+        try {
+            CommitsCollector(repoPath, commitsInfo);
+            MongoDatabase database = MongoDBUtil.getConnection("localhost", "27017", "commitsDB");
+            MongoCollection<Document> collection = database.getCollection(collectionName);
+            trainningSampleAnalyzer(repoPath, commitsInfo, collection);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    // Let's Gumtree
-    public static boolean CommitsCollector(String REPO_DIR, List<CommitInfo> commitInfo) {
+    // Split "git commit"
+    public static boolean CommitsCollector(String REPO_DIR, List<CommitTrainningSample> commitTrainningSample) {
         GitService gitService = new GitServiceCGit();
         String log = Utils.runSystemCommand(REPO_DIR, "git", "log");
         String parts[] = log.split("\\ncommit "), body[];
         parts[0] = parts[0].substring("commit ".length());
         for (String part : parts) {
             List<String> tempList = new ArrayList<String>();
-            CommitInfo tempCommitInfo = new CommitInfo();
+            CommitTrainningSample tempCommitTrainningSample = new CommitTrainningSample();
             body = part.split("\\nAuthor: | <|>\\nDate:   |\\n\\n  ");
             // String commitID
-            tempCommitInfo.setCommitID(body[0]);
+            tempCommitTrainningSample.setCommitID(body[0]);
             // String committer
-            tempCommitInfo.setCommitter(body[1]);
+            tempCommitTrainningSample.setCommitter(body[1]);
             // String committerEmail
-            tempCommitInfo.setCommitEmail(body[2]);
+            tempCommitTrainningSample.setCommitEmail(body[2]);
             // String commitTime
-            tempCommitInfo.setCommitTime(body[3]);
+            tempCommitTrainningSample.setCommitTime(body[3]);
             // String commitMsg
-            tempCommitInfo.setCommitMsg(body[4]);
+            tempCommitTrainningSample.setCommitMsg(body[4]);
             // Add into List
-            commitInfo.add(tempCommitInfo);
+            commitTrainningSample.add(tempCommitTrainningSample);
         }
         return true;
     }
 
 
-    public static boolean LabelExtractor(String REPO_DIR, String REPO_NAME, List<CommitInfo> commitInfo) {
-        Integer size = commitInfo.size();
-        for(int i = 0 ; i < size ; i++) {
-            CommitInfo tempCommitInfo = commitInfo.get(i);
-            String commitMsg = tempCommitInfo.getCommitMsg();
+    public static boolean trainningSampleAnalyzer(String repoPath, List<CommitTrainningSample> commitTrainningSample, MongoCollection<Document> collection) {
 
+        // get the final dir name as repoName, thus generate repoID using hash
+        int index = repoPath.lastIndexOf(File.separator);
+        String repoName = repoPath.substring(index + 1);
+        String repoID = String.valueOf(Math.abs(repoName.hashCode()));
+
+        // Analyze the Sample List
+        Integer size = commitTrainningSample.size();
+        for (int i = 0; i < size; i++) {
+            CommitTrainningSample tempCommitTrainningSample = commitTrainningSample.get(i);
+            tempCommitTrainningSample.setRepoID(repoID);
+            tempCommitTrainningSample.setRepoPath(repoPath);
+            tempCommitTrainningSample.setRepoName(repoName);
+
+            // get Intent from commitMsg
+            String commitMsg = tempCommitTrainningSample.getCommitMsg();
             Intent intent = getIntentFromMsg(commitMsg);
-            tempCommitInfo.setIntent(intent);
+            tempCommitTrainningSample.setIntent(intent);
 
-            String commitID = tempCommitInfo.getCommitID();
-            String REPO_ID = String.valueOf(REPO_NAME.hashCode());
-            // RepoAnalyzer
-
-            RepoAnalyzer repoAnalyzer = new RepoAnalyzer(REPO_ID, REPO_NAME, REPO_DIR);
-
+            // get diffFiles using repoAnalyzer
+            String commitID = tempCommitTrainningSample.getCommitID();
+            RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
             List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
 
-            List<MyAction> tempActionList = new ArrayList<>();
+            // get EditScript from diffFiles, and get ActionList from EditScript
+            List<Action> tempActionList = new ArrayList<>();
             Integer sizeDiff = diffFiles.size();
-            for(int j = 0 ; j < sizeDiff ; j++) {
+            for (int j = 0; j < sizeDiff; j++) {
                 String baseContent = diffFiles.get(j).getBaseContent();
                 String currentContent = diffFiles.get(j).getCurrentContent();
+                if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
+                    continue;
+                }
                 try {
                     EditScript editScript = generateEditScript(baseContent, currentContent);
-                    List<MyAction> actionList = generateActionList(editScript);
-                    tempActionList.addAll(actionList);
+                    if (editScript != null) {
+                        List<Action> actionList = generateActionList(editScript);
+                        tempActionList.addAll(actionList);
+                        tempCommitTrainningSample.setActionList(tempActionList);
+                    }
                 } catch (Exception e) {
-                    System.out.println("\n Exception in the "+i+ "th commit of "+REPO_NAME+"\n");
+                    System.out.println("\n Exception in the " + j + "th diffFiles of " + i + "th commit of " + repoName + "\n");
                     e.printStackTrace();
                 }
             }
 
-            tempCommitInfo.setActionList(tempActionList);
-            commitInfo.set(i, tempCommitInfo);
+            // write back
+            //commitTrainningSample.set(i, tempCommitTrainningSample);
+
+            //Load into DB
+            loadTrainSampleToDB(collection, tempCommitTrainningSample);
+            System.out.println("Document inserted successfully in the " + i + "th commit of " + repoName);
         }
         return true;
     }
+
     // generate Edit Script from file contents
     private static EditScript generateEditScript(String baseContent, String currentContent) {
         JdtTreeGenerator generator = new JdtTreeGenerator();
@@ -141,27 +157,28 @@ public class CommitInfoHandler {
         }
 
     }
-    // generate commit info from different file pathway
-    private static List<MyAction> generateActionList(EditScript editScript) {
 
-        List<MyAction> actionList = new ArrayList<>();
+    // generate commit info from different file pathway
+    private static List<Action> generateActionList(EditScript editScript) {
+        List<Action> actionList = new ArrayList<>();
         for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
-            Action action = (Action) iter.next();
-            ActionType actionType = null;
+            com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
+            ASTOperation ASTOperation = null;
             if (action instanceof Insert) {
-                actionType = ActionType.ADD;
+                ASTOperation = ASTOperation.ADD;
             } else if (action instanceof Delete) {
-                actionType = ActionType.DEL;
+                ASTOperation = ASTOperation.DEL;
             } else if (action instanceof Move) {
-                actionType = ActionType.MOV;
+                ASTOperation = ASTOperation.MOV;
             } else if (action instanceof Update) {
-                actionType = ActionType.UPD;
+                ASTOperation = ASTOperation.UPD;
             }
-            MyAction myAction = new MyAction(actionType, action.getNode().getType().toString());
+            Action myAction = new Action(ASTOperation, action.getNode().getType().toString());
             actionList.add(myAction);
         }
         return actionList;
     }
+
     // generate Intent from Message
     private static Intent getIntentFromMsg(String commitMsg) {
         for (Intent intent : Intent.values()) {
@@ -172,65 +189,34 @@ public class CommitInfoHandler {
         return Intent.UNKNOWN;
     }
 
-
-    public static boolean DBLoader(String REPO_NAME, List<CommitInfo> commitInfo) {
-        MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
-        MongoClient mongoClient = new MongoClient(connectionString);
-        MongoDatabase commitsDB = mongoClient.getDatabase("commitsDB");
-        MongoCollection<Document> repoCol = commitsDB.getCollection(REPO_NAME);
-        repoCol.drop();
-        repoCol = commitsDB.getCollection(REPO_NAME);
-
-
-        // Actions stored in seperated collection part1
-        MongoDatabase ActionLists = mongoClient.getDatabase("ActionLists");
-        MongoCollection<Document> actionListsCollection = ActionLists.getCollection(REPO_NAME+"ActionLists");
-        actionListsCollection.drop();
-        actionListsCollection = ActionLists.getCollection(REPO_NAME+"ActionLists");
-
-        Integer size = commitInfo.size();
-        for(int i = 0 ; i < size ; i++) {
-            // key:value
-            Document tempDoc = new Document("repo_name", REPO_NAME);
-            CommitInfo tempCommitInfo = commitInfo.get(i);
-            List<MyAction> actionList = tempCommitInfo.getActionList();
-            String ActionString = generateStringFromActionList(actionList);
-            Intent intent = tempCommitInfo.getIntent();
-            String commitIntent = generateStringFromIntent(intent);
-            tempDoc
-                    .append("commitID", tempCommitInfo.getCommitID())
-                    .append("commitMsg", tempCommitInfo.getCommitMsg())
-                    .append("committer", tempCommitInfo.getCommitter())
-                    .append("committerEmail", tempCommitInfo.getCommitterEmail())
-                    .append("commitTime", tempCommitInfo.getCommitTime())
-                    .append("commitActionList", ActionString)
-                    .append("commitIntent", commitIntent)
-            ;
-            repoCol.insertOne(tempDoc);
-
-            // Actions stored in seperated collection part2
-            Document actionDocument = new Document("repo_name", REPO_NAME+"Actions");
-            Integer sizeActionList = actionList.size();
-            for(int j = 0 ; j < sizeActionList ; j++) {
-                actionDocument.append("action "+j+" in commits "+i, actionList.get(j).getActions());
+    // Load given commitTrainningSample into given DB collection
+    private static void loadTrainSampleToDB(MongoCollection<Document> collection, CommitTrainningSample commitTrainningSample) {
+        try {
+            Document doc1 = new Document();
+            doc1.put("repoID", commitTrainningSample.getRepoID());
+            doc1.put("repoPath", commitTrainningSample.getRepoPath());
+            doc1.put("repoName", commitTrainningSample.getRepoName());
+            doc1.put("commitID", commitTrainningSample.getCommitID());
+            doc1.put("commitMsg", commitTrainningSample.getCommitMsg());
+            doc1.put("committer", commitTrainningSample.getCommitter());
+            doc1.put("committerEmail", commitTrainningSample.getCommitterEmail());
+            doc1.put("commitTime", commitTrainningSample.getCommitTime());
+            doc1.put("commitIntent", String.valueOf(commitTrainningSample.getIntent()));
+            List<Action> actionList = commitTrainningSample.getActionList();
+            if (actionList != null) {
+                List<Document> actions = new ArrayList<>();
+                for (Action action : actionList) {
+                    Document addrAttr = new Document();
+                    addrAttr.put("operation", String.valueOf(action.getASTOperation()));
+                    addrAttr.put("astNodeType", action.getASTNodeType());
+                    actions.add(addrAttr);
+                }
+                doc1.put("actions", actions);
+                collection.insertOne(doc1);
             }
-            actionListsCollection.insertOne(actionDocument);
-        }
 
-        mongoClient.close();
-        return true;
-    }
-    // Convert ActionList to String
-    private static String generateStringFromActionList(List<MyAction> myActions) {
-        Integer size = myActions.size();
-        String str = " ";
-        for(int i = 0 ; i < size ; i++) {
-            str += myActions.get(i).getActions()+"、";
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return str;
-    }
-    // Convert Intent to String
-    private static String generateStringFromIntent(Intent intent) {
-        return intent.getLabel();
     }
 }
