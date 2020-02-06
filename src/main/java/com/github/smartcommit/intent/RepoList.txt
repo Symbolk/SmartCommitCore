@@ -1,0 +1,3 @@
+commitTrainningSample
+/Users/Chuncen/ZZ/GitHub/loocc.github.io
+/Users/Chuncen/IdeaProjects/guava
