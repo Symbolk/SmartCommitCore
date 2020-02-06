@@ -36,7 +36,9 @@ public class SmartCommit {
   private String repoPath;
   private String tempDir;
   // options
-  private Boolean detectRefactorings;
+  private Boolean detectRefactorings = false;
+  private Double similarityThreshold = 0.618D;
+  private Integer distanceThreshold = 0;
 
   public SmartCommit(String repoID, String repoName, String repoPath, String tempDir) {
     this.repoID = repoID;
@@ -49,6 +51,14 @@ public class SmartCommit {
 
   public void setDetectRefactorings(Boolean detectRefactorings) {
     this.detectRefactorings = detectRefactorings;
+  }
+
+  public void setSimilarityThreshold(Double similarityThreshold) {
+    this.similarityThreshold = similarityThreshold;
+  }
+
+  public void setDistanceThreshold(Integer distanceThreshold) {
+    this.distanceThreshold = distanceThreshold;
   }
 
   /**
@@ -82,7 +92,7 @@ public class SmartCommit {
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
     // comment when packaging
-//    generateIntermediateVersions(results, repoAnalyzer.getIdToDiffHunkMap());
+    generateIntermediateVersions(results, repoAnalyzer.getIdToDiffHunkMap());
 
     return results;
   }
@@ -188,11 +198,18 @@ public class SmartCommit {
     // analyze the diff hunks
     GroupGenerator groupGenerator =
         new GroupGenerator(
-            repoID, repoName, Config.THRESHOLD, diffFiles, allDiffHunks, baseGraph, currentGraph);
+            repoID,
+            repoName,
+            similarityThreshold,
+            distanceThreshold,
+            diffFiles,
+            allDiffHunks,
+            baseGraph,
+            currentGraph);
     groupGenerator.analyzeNonJavaFiles();
     groupGenerator.analyzeSoftLinks();
     groupGenerator.analyzeHardLinks();
-    if(detectRefactorings){
+    if (detectRefactorings) {
       groupGenerator.analyzeRefactorings(tempDir);
     }
     groupGenerator.exportGroupingResults(tempDir);
