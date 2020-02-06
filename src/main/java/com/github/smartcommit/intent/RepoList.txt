@@ -1,3 +1,5 @@
 commitTrainningSample
-/Users/Chuncen/ZZ/GitHub/loocc.github.io
+/Users/Chuncen//Downloads
+https://github.com/lichuncen/lichuncen.github.io.git
+https://github.com/chef-cookbooks/git.git
 /Users/Chuncen/IdeaProjects/guava
