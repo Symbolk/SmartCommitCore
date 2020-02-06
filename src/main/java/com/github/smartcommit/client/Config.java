@@ -14,7 +14,8 @@ public final class Config {
 
   public static final String COMMIT_ID = "906b054f4b7a2e38681fd03282996955406afd65";
 
-  public static final Double THRESHOLD  = 0.7;
+  public static final Double SIMI_THRESHOLD = 0.618D;
+  public static final Integer DIS_THRESHOLD = 1;
   public static final String REPO_ID = String.valueOf(REPO_NAME.hashCode());
   public static final String TEMP_DIR =
       System.getProperty("user.home")

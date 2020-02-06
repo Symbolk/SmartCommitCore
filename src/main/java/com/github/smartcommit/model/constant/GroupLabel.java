@@ -11,7 +11,7 @@ public enum GroupLabel {
   LINKED("Dependent"), // syntatically or semantically dependent
   SIMILAR("Similar"), // systematic changes
   CLEAR("Clear"), // clear unused code
-  OTHER("Others");
+  OTHER("Others"); // trivial changes
 
   public String label;
 

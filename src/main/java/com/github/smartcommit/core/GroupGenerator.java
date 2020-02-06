@@ -36,9 +36,12 @@ public class GroupGenerator {
 
   private String repoID;
   private String repoName;
-  private Double threshold;
   private List<DiffFile> diffFiles;
   private List<DiffHunk> diffHunks;
+
+  // options
+  private Double similarityThreshold;
+  private Integer distanceThreshold;
 
   private Graph<Node, Edge> baseGraph;
   private Graph<Node, Edge> currentGraph;
@@ -49,16 +52,19 @@ public class GroupGenerator {
   public GroupGenerator(
       String repoID,
       String repoName,
-      Double threshold,
+      Double similarityThreshold,
+      Integer distanceThreshold,
       List<DiffFile> diffFiles,
       List<DiffHunk> diffHunks,
       Graph<Node, Edge> baseGraph,
       Graph<Node, Edge> currentGraph) {
     this.repoID = repoID;
     this.repoName = repoName;
-    this.threshold = threshold;
     this.diffFiles = diffFiles;
     this.diffHunks = diffHunks;
+
+    this.similarityThreshold = similarityThreshold;
+    this.distanceThreshold = distanceThreshold;
 
     this.baseGraph = baseGraph;
     this.currentGraph = currentGraph;
@@ -129,8 +135,9 @@ public class GroupGenerator {
                 == diffHunk1.getBaseHunk().getCodeSnippet().size()
             && diffHunk2.getCurrentHunk().getCodeSnippet().size()
                 == diffHunk1.getCurrentHunk().getCodeSnippet().size()) {
+          // compute similarity
           Double similarity = estimateSimilarity(diffHunk2, diffHunk1);
-          if (similarity >= threshold
+          if (similarity >= similarityThreshold
               && !formatOnlyDiffHunks.contains(diffHunk1)
               && !formatOnlyDiffHunks.contains(diffHunk2)) {
             boolean success =

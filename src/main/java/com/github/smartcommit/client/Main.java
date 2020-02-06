@@ -15,8 +15,11 @@ public class Main {
     try {
       SmartCommit smartCommit =
           new SmartCommit(Config.REPO_ID, Config.REPO_NAME, Config.REPO_PATH, Config.TEMP_DIR);
-      Map<String, Group> groups = smartCommit.analyzeWorkingTree();
-//            Map<String, Group> groups = smartCommit.analyzeCommit(Config.COMMIT_ID);
+      smartCommit.setDetectRefactorings(true);
+      smartCommit.setSimilarityThreshold(Config.SIMI_THRESHOLD);
+      smartCommit.setDistanceThreshold(Config.DIS_THRESHOLD);
+            Map<String, Group> groups = smartCommit.analyzeWorkingTree();
+//      Map<String, Group> groups = smartCommit.analyzeCommit(Config.COMMIT_ID);
       if (groups != null) {
         for (Map.Entry<String, Group> entry : groups.entrySet()) {
           System.out.println(entry.getKey());
