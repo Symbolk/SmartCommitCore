@@ -35,12 +35,13 @@ import org.bson.Document;
 import com.github.smartcommit.intent.model.CommitTrainningSample;
 import com.github.smartcommit.core.*;
 import com.github.smartcommit.intent.model.*;
+import org.omg.CORBA.INTF_REPOS;
 
 
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
     public static void main(String[] args) {
-        args = new String[]{"/Users/Chuncen/IdeaProjects/guava", "commitTrainningSample"};
+        args = new String[]{"/Users/Chuncen/Downloads/lichuncen.github.io", "commitTrainningSample"};
         String repoPath = args[0];
         String collectionName = args[1];
         // CommitTrainningSample
@@ -82,7 +83,7 @@ public class CommitInfoHandler {
         return true;
     }
 
-
+    // get IntentList and ActionList
     public static boolean trainningSampleAnalyzer(String repoPath, List<CommitTrainningSample> commitTrainningSample, MongoCollection<Document> collection) {
 
         // get the final dir name as repoName, thus generate repoID using hash
@@ -98,13 +99,14 @@ public class CommitInfoHandler {
             tempCommitTrainningSample.setRepoPath(repoPath);
             tempCommitTrainningSample.setRepoName(repoName);
 
-            // get Intent from commitMsg
+            // get List<Intent> from commitMsg
             String commitMsg = tempCommitTrainningSample.getCommitMsg();
-            Intent intent = getIntentFromMsg(commitMsg);
-            tempCommitTrainningSample.setIntent(intent);
+            List<Intent> intentList = getIntentListFromMsg(commitMsg);
+            tempCommitTrainningSample.setIntentList(intentList);
 
             // get diffFiles using repoAnalyzer
             String commitID = tempCommitTrainningSample.getCommitID();
+            System.out.println(commitID);
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
             List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
 
@@ -114,7 +116,9 @@ public class CommitInfoHandler {
             for (int j = 0; j < sizeDiff; j++) {
                 String baseContent = diffFiles.get(j).getBaseContent();
                 String currentContent = diffFiles.get(j).getCurrentContent();
+                // File added or deleted, thus no content
                 if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
+                    tempCommitTrainningSample.addIntent(Intent.FIL);
                     continue;
                 }
                 try {
@@ -123,9 +127,11 @@ public class CommitInfoHandler {
                         List<Action> actionList = generateActionList(editScript);
                         tempActionList.addAll(actionList);
                         tempCommitTrainningSample.setActionList(tempActionList);
-                    }
+                    } else {
+                        // No codeChange, thus no AbstractJdtTree generated
+                        tempCommitTrainningSample.addIntent(Intent.DOC);
+                        }
                 } catch (Exception e) {
-                    System.out.println("\n Exception in the " + j + "th diffFiles of " + i + "th commit of " + repoName + "\n");
                     e.printStackTrace();
                 }
             }
@@ -135,7 +141,7 @@ public class CommitInfoHandler {
 
             //Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainningSample);
-            System.out.println("Document inserted successfully in the " + i + "th commit of " + repoName);
+            System.out.println("finished! success?");
         }
         return true;
     }
@@ -152,7 +158,8 @@ public class CommitInfoHandler {
             EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
             return editScript;
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            // Failure to generate AbstractJdtTree because of the docChange instead of codeChange
             return null;
         }
 
@@ -180,13 +187,14 @@ public class CommitInfoHandler {
     }
 
     // generate Intent from Message
-    private static Intent getIntentFromMsg(String commitMsg) {
+    private static List<Intent> getIntentListFromMsg(String commitMsg) {
+        List<Intent> intentList = new ArrayList<>();
         for (Intent intent : Intent.values()) {
-            if (commitMsg.contains(intent.label)) {
-                return intent;
+            if (commitMsg.toLowerCase().contains(intent.label)) {
+                intentList.add(intent);
             }
         }
-        return Intent.UNKNOWN;
+        return intentList;
     }
 
     // Load given commitTrainningSample into given DB collection
@@ -201,7 +209,8 @@ public class CommitInfoHandler {
             doc1.put("committer", commitTrainningSample.getCommitter());
             doc1.put("committerEmail", commitTrainningSample.getCommitterEmail());
             doc1.put("commitTime", commitTrainningSample.getCommitTime());
-            doc1.put("commitIntent", String.valueOf(commitTrainningSample.getIntent()));
+            doc1.put("commitIntentList", String.valueOf(commitTrainningSample.getIntentList()));
+
             List<Action> actionList = commitTrainningSample.getActionList();
             if (actionList != null) {
                 List<Document> actions = new ArrayList<>();

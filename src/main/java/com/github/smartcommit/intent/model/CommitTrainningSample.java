@@ -1,5 +1,7 @@
 package com.github.smartcommit.intent.model;
 
+import org.omg.PortableInterceptor.INACTIVE;
+
 import java.util.List;
 
 public class CommitTrainningSample {
@@ -8,10 +10,10 @@ public class CommitTrainningSample {
   private String repoName;
   private String commitID;
   private String commitMsg;
-  private Intent intent;
   private String committer;
   private String committerEmail;
   private String commitTime;
+  private List<Intent> intents;
   private List<Action> actions;
 
   public String getCommitID() {
@@ -66,12 +68,16 @@ public class CommitTrainningSample {
     this.actions.add(action);
   }
 
-  public Intent getIntent() {
-    return this.intent;
+  public List<Intent> getIntentList() {
+    return intents;
   }
 
-  public void setIntent(Intent intent) {
-    this.intent = intent;
+  public void setIntentList(List<Intent> intentList) {
+    this.intents = intentList;
+  }
+
+  public void addIntent(Intent intent) {
+    this.intents.add(intent);
   }
 
   public void setRepoID(String repoID) {
