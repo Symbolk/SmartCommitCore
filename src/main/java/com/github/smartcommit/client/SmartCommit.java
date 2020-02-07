@@ -38,6 +38,7 @@ public class SmartCommit {
   // options
   private Boolean detectRefactorings = false;
   private Double similarityThreshold = 0.618D;
+  // {hunk: 0 (default), member: 1, class: 2, package: 3}
   private Integer distanceThreshold = 0;
 
   public SmartCommit(String repoID, String repoName, String repoPath, String tempDir) {
@@ -45,7 +46,6 @@ public class SmartCommit {
     this.repoName = repoName;
     this.repoPath = repoPath;
     this.tempDir = tempDir;
-    this.detectRefactorings = false;
     Utils.clearDir(tempDir);
   }
 

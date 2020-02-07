@@ -130,21 +130,40 @@ public class GroupGenerator {
       // else, compare the diff hunk with other diff hunks
       for (int j = i + 1; j < diffHunks.size(); ++j) {
         DiffHunk diffHunk2 = diffHunks.get(j);
-        if (!diffHunk1.getUniqueIndex().equals(diffHunk2.getUniqueIndex())
-            && diffHunk2.getBaseHunk().getCodeSnippet().size()
-                == diffHunk1.getBaseHunk().getCodeSnippet().size()
-            && diffHunk2.getCurrentHunk().getCodeSnippet().size()
-                == diffHunk1.getCurrentHunk().getCodeSnippet().size()) {
-          // compute similarity
-          Double similarity = estimateSimilarity(diffHunk2, diffHunk1);
-          if (similarity >= similarityThreshold
-              && !formatOnlyDiffHunks.contains(diffHunk1)
-              && !formatOnlyDiffHunks.contains(diffHunk2)) {
-            boolean success =
-                diffHunkGraph.addEdge(
-                    findNodeByIndex(diffHunk2.getUniqueIndex()),
-                    findNodeByIndex(diffHunk1.getUniqueIndex()),
-                    new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, similarity));
+        if (!diffHunk1.getUniqueIndex().equals(diffHunk2.getUniqueIndex())) {
+          // 1. compute the distance
+          if (distanceThreshold > 0) {
+            Integer distance = estimateDistance(diffHunk1, diffHunk2);
+            if (distance >= 0 && distance <= distanceThreshold) {
+              boolean success =
+                  diffHunkGraph.addEdge(
+                      findNodeByIndex(diffHunk2.getUniqueIndex()),
+                      findNodeByIndex(diffHunk1.getUniqueIndex()),
+                      new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, new Double(distance)));
+              if (!success) {
+                // in case of failure
+              }
+            }
+          }
+
+          // 2. compute the similarity
+          if (diffHunk2.getBaseHunk().getCodeSnippet().size()
+                  == diffHunk1.getBaseHunk().getCodeSnippet().size()
+              && diffHunk2.getCurrentHunk().getCodeSnippet().size()
+                  == diffHunk1.getCurrentHunk().getCodeSnippet().size()) {
+            Double similarity = estimateSimilarity(diffHunk2, diffHunk1);
+            if (similarity >= similarityThreshold
+                && !formatOnlyDiffHunks.contains(diffHunk1)
+                && !formatOnlyDiffHunks.contains(diffHunk2)) {
+              boolean success =
+                  diffHunkGraph.addEdge(
+                      findNodeByIndex(diffHunk2.getUniqueIndex()),
+                      findNodeByIndex(diffHunk1.getUniqueIndex()),
+                      new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, similarity));
+              if (!success) {
+                // in case of failure
+              }
+            }
           }
         }
       }
@@ -154,6 +173,77 @@ public class GroupGenerator {
       formatOnlyDiffHunks.forEach(diffHunk -> formatOnlyDiffHunkIDs.add(diffHunk.getUUID()));
       createGroup(formatOnlyDiffHunkIDs, GroupLabel.REFORMAT);
     }
+  }
+
+  /**
+   * Estimate the location distance of two diff hunks, from both base and current
+   *
+   * @param diffHunk1
+   * @param diffHunk2
+   * @return
+   */
+  private Integer estimateDistance(DiffHunk diffHunk1, DiffHunk diffHunk2) {
+    Optional<DiffNode> diffNodeOpt1 =
+        diffHunkGraph.vertexSet().stream()
+            .filter(node -> node.getIndex().equals(diffHunk1.getUniqueIndex()))
+            .findAny();
+    Optional<DiffNode> diffNodeOpt2 =
+        diffHunkGraph.vertexSet().stream()
+            .filter(node -> node.getIndex().equals(diffHunk2.getUniqueIndex()))
+            .findAny();
+    Integer distance = -1; // far away
+    if (diffNodeOpt1.isPresent() && diffNodeOpt2.isPresent()) {
+      DiffNode diffNode1 = diffNodeOpt1.get();
+      DiffNode diffNode2 = diffNodeOpt2.get();
+      int disBase = -1;
+      int disCurrent = -1;
+      if (!diffNode1.getBaseHierarchy().isEmpty() && !diffNode2.getBaseHierarchy().isEmpty()) {
+        disBase = compareHierarchy(diffNode1.getBaseHierarchy(), diffNode2.getBaseHierarchy());
+      }
+      if (!diffNode1.getCurrentHierarchy().isEmpty()
+          && !diffNode2.getCurrentHierarchy().isEmpty()) {
+        disCurrent =
+            compareHierarchy(diffNode1.getCurrentHierarchy(), diffNode2.getCurrentHierarchy());
+      }
+      // use the min distance
+      distance = Math.min(disBase, disCurrent);
+    }
+    return distance;
+  }
+
+  /**
+   * Compare hierarchy to compute the location distance
+   *
+   * @return
+   */
+  private int compareHierarchy(Map<String, Integer> hier1, Map<String, Integer> hier2) {
+    if (hier1.isEmpty() || hier2.isEmpty()) {
+      return -1;
+    }
+    int res = 4;
+    for (Map.Entry<String, Integer> entry : hier1.entrySet()) {
+      if (hier2.containsKey(entry.getKey())) {
+        if (hier2.get(entry.getKey()).equals(entry.getValue())) {
+          int t = -1;
+          switch (entry.getKey()) {
+            case "hunk":
+              t = 0;
+              break;
+            case "member":
+              t = 1;
+              break;
+            case "class":
+              t = 2;
+              break;
+            case "package":
+              t = 3;
+              break;
+          }
+          res = Math.min(res, t);
+        }
+      }
+    }
+    return res;
   }
 
   private double estimateSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
@@ -439,20 +529,105 @@ public class GroupGenerator {
     }
   }
 
+  /**
+   * Create and build the graph vertex set to represent and visualize links of diff hunks
+   *
+   * @param diffHunks
+   * @return
+   */
   private Graph<DiffNode, DiffEdge> initDiffViewGraph(List<DiffHunk> diffHunks) {
     Graph<DiffNode, DiffEdge> diffViewGraph =
         GraphTypeBuilder.<DiffNode, DiffEdge>directed()
-            .allowingMultipleEdges(false)
+            .allowingMultipleEdges(true)
             .allowingSelfLoops(false)
             .edgeClass(DiffEdge.class)
             .weighted(true)
             .buildGraph();
     int nodeID = 0;
+
+    List<Node> baseHunkNodes =
+        baseGraph.vertexSet().stream()
+            .filter(node -> node.isInDiffHunk)
+            .collect(Collectors.toList());
+    List<Node> currentHunkNodes =
+        currentGraph.vertexSet().stream()
+            .filter(node -> node.isInDiffHunk)
+            .collect(Collectors.toList());
+
     for (DiffHunk diffHunk : diffHunks) {
       DiffNode diffNode = new DiffNode(nodeID++, diffHunk.getUniqueIndex(), diffHunk.getUUID());
+      Map<String, Integer> baseHierarchy =
+          getHierarchy(baseGraph, baseHunkNodes, diffHunk.getUniqueIndex());
+      Map<String, Integer> currentHierarchy =
+          getHierarchy(currentGraph, currentHunkNodes, diffHunk.getUniqueIndex());
+      if (!baseHierarchy.isEmpty()) {
+        diffNode.setBaseHierarchy(baseHierarchy);
+      }
+      if (!currentHierarchy.isEmpty()) {
+        diffNode.setCurrentHierarchy(currentHierarchy);
+      }
       diffViewGraph.addVertex(diffNode);
     }
     return diffViewGraph;
+  }
+
+  /**
+   * Get the hierarchy for hunk nodes
+   *
+   * @param graph
+   * @param nodes
+   * @param diffHunkIndex
+   * @return
+   */
+  private Map<String, Integer> getHierarchy(
+      Graph<Node, Edge> graph, List<Node> nodes, String diffHunkIndex) {
+    Map<String, Integer> hierarchy = new HashMap<>();
+    Optional<Node> nodeOpt =
+        nodes.stream().filter(node -> node.getDiffHunkIndex().equals(diffHunkIndex)).findAny();
+    if (nodeOpt.isPresent()) {
+      Node node = nodeOpt.get();
+      hierarchy.put("hunk", node.getId());
+      // find parents from incoming edges
+      findAncestors(graph, node, hierarchy);
+    }
+    return hierarchy;
+  }
+
+  /**
+   * Find the hierarchical definition ancestors (memeber, class, package)
+   *
+   * @param graph
+   * @param node
+   * @param hierarchy
+   */
+  private void findAncestors(Graph<Node, Edge> graph, Node node, Map<String, Integer> hierarchy) {
+    Set<Edge> incomingEdges =
+        graph.incomingEdgesOf(node).stream()
+            .filter(edge -> edge.getType().isStructural()) // contain or define
+            .collect(Collectors.toSet());
+    for (Edge edge : incomingEdges) {
+      Node srcNode = graph.getEdgeSource(edge);
+      switch (srcNode.getType()) {
+        case CLASS:
+        case INTERFACE:
+        case ENUM:
+        case ANNOTATION:
+          hierarchy.put("class", srcNode.getId());
+          findAncestors(graph, srcNode, hierarchy);
+          break;
+        case METHOD:
+        case FIELD:
+        case ENUM_CONSTANT:
+        case ANNOTATION_MEMBER:
+        case INITIALIZER_BLOCK:
+          hierarchy.put("member", srcNode.getId());
+          findAncestors(graph, srcNode, hierarchy);
+          break;
+        case PACKAGE:
+          hierarchy.put("package", srcNode.getId());
+          break;
+      }
+    }
   }
 
   private DiffNode findNodeByIndex(String index) {
