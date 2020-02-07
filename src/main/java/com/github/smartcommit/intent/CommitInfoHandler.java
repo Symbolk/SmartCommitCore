@@ -221,8 +221,8 @@ public class CommitInfoHandler {
                     actions.add(addrAttr);
                 }
                 doc1.put("actions", actions);
-                collection.insertOne(doc1);
             }
+            collection.insertOne(doc1);
 
         } catch (Exception e) {
             e.printStackTrace();
