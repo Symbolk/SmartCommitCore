@@ -204,7 +204,7 @@ public class CommitInfoHandler {
                 return intent;
             }
         }
-        return Intent.UNKNOWN;
+        return Intent.CHR;
     }
     // generate IntentDescription from Message
     private static List<IntentDescription> getIntentDescriptionFromMsg(String commitMsg) {

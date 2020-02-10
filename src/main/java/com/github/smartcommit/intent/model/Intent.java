@@ -1,17 +1,15 @@
 package com.github.smartcommit.intent.model;
 
 public enum Intent {
+    FEA("featur"),
     FIX("fix"),
-    FEA("feat"),
-    FMT("format"),
-    OPT("optimize"),
+    DOC("docs"),
+    RFM("reformat"),
+    RFT("refactor"),
+    OPT("optimiz"),
     TST("test"),
-    ADD("add"),
-    RMV("remove"),
-    UPD("update"),
-    UPG("upgrade"),
-    RFC("refactor"),
-    UNKNOWN("NA");
+    CHR("chore");
+
 
     public String label;
 
