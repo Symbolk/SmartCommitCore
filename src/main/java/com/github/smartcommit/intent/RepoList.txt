@@ -1,5 +1,3 @@
 commitTrainningSample
 /Users/Chuncen//Downloads
-https://github.com/lichuncen/lichuncen.github.io.git
-https://github.com/chef-cookbooks/git.git
-/Users/Chuncen/IdeaProjects/guava
+https://github.com/airbnb/lottie-android.git

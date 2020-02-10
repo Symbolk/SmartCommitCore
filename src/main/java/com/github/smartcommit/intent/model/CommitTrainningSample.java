@@ -13,7 +13,8 @@ public class CommitTrainningSample {
   private String committer;
   private String committerEmail;
   private String commitTime;
-  private List<Intent> intents;
+  private Intent intent;
+  private List<IntentDescription> intentDescriptions;
   private List<Action> actions;
 
   public String getCommitID() {
@@ -68,16 +69,24 @@ public class CommitTrainningSample {
     this.actions.add(action);
   }
 
-  public List<Intent> getIntentList() {
-    return intents;
+  public Intent getIntent() {
+    return this.intent;
   }
 
-  public void setIntentList(List<Intent> intentList) {
-    this.intents = intentList;
+  public void setIntent(Intent intent) {
+    this.intent = intent;
   }
 
-  public void addIntent(Intent intent) {
-    this.intents.add(intent);
+  public List<IntentDescription> getIntentDescription() {
+    return intentDescriptions;
+  }
+
+  public void setIntentDescription(List<IntentDescription> intentDescription) {
+    this.intentDescriptions = intentDescription;
+  }
+
+  public void addIntentDescription(IntentDescription intentDescription) {
+    this.intentDescriptions.add(intentDescription);
   }
 
   public void setRepoID(String repoID) {
