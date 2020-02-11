@@ -139,7 +139,7 @@ public class GroupGenerator {
                   diffHunkGraph.addEdge(
                       findNodeByIndex(diffHunk2.getUniqueIndex()),
                       findNodeByIndex(diffHunk1.getUniqueIndex()),
-                      new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, new Double(distance)));
+                      new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, new Double(0 - distance)));
               if (!success) {
                 // in case of failure
               }
@@ -206,7 +206,13 @@ public class GroupGenerator {
             compareHierarchy(diffNode1.getCurrentHierarchy(), diffNode2.getCurrentHierarchy());
       }
       // use the min distance
-      distance = Math.min(disBase, disCurrent);
+      if (disBase < 0) {
+        distance = disCurrent;
+      } else if (disCurrent < 0) {
+        distance = disBase;
+      } else {
+        distance = Math.min(disBase, disCurrent);
+      }
     }
     return distance;
   }
@@ -479,21 +485,29 @@ public class GroupGenerator {
                     Comparator.comparing(DiffNode::getFileIndex)
                         .thenComparing(DiffNode::getDiffHunkIndex))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+        String existingGroupID = "";
         for (DiffNode diffNode : diffNodesSet) {
           // if not grouped yet, create a new group
           if (!checkIfGrouped(diffNode.getUUID())) {
             diffHunkIDs.add(diffNode.getUUID());
           } else {
-            // if has been grouped, add other ids into the corresponding group and continue to the
-            // next connected set
-            Group group = generatedGroups.get(diffHunkID2GroupID.get(diffNode.getUUID()));
-            Set<String> temp = new LinkedHashSet<>();
-            diffNodesSet.forEach(node -> temp.add(node.getUUID()));
-            addToGroup(group, temp);
-            continue;
+            // if ONE of the nodes has been grouped, add others into the existing group and continue to the next connected set
+            diffHunkIDs = new LinkedHashSet<>();
+            existingGroupID = diffHunkID2GroupID.get(diffNode.getUUID());
+            break;
           }
         }
-        createGroup(diffHunkIDs, GroupLabel.FEATURE);
+        if(!existingGroupID.isEmpty()){
+          // if ONE of the nodes has been grouped, add others into the existing group
+          Group group = generatedGroups.get(existingGroupID);
+          Set<String> temp = new LinkedHashSet<>();
+          diffNodesSet.forEach(node -> temp.add(node.getUUID()));
+          addToGroup(group, temp);
+          // continue to the next connected set
+          continue;
+        }else if(!diffHunkIDs.isEmpty()){
+          createGroup(diffHunkIDs, GroupLabel.FEATURE);
+        }
       } else {
         // assert: diffNodesSet.size()==1
         diffNodesSet.forEach(
@@ -556,16 +570,19 @@ public class GroupGenerator {
 
     for (DiffHunk diffHunk : diffHunks) {
       DiffNode diffNode = new DiffNode(nodeID++, diffHunk.getUniqueIndex(), diffHunk.getUUID());
-      Map<String, Integer> baseHierarchy =
-          getHierarchy(baseGraph, baseHunkNodes, diffHunk.getUniqueIndex());
-      Map<String, Integer> currentHierarchy =
-          getHierarchy(currentGraph, currentHunkNodes, diffHunk.getUniqueIndex());
-      if (!baseHierarchy.isEmpty()) {
-        diffNode.setBaseHierarchy(baseHierarchy);
+      if (diffHunk.getFileType().equals(FileType.JAVA)) {
+        Map<String, Integer> baseHierarchy =
+            getHierarchy(baseGraph, baseHunkNodes, diffHunk.getUniqueIndex());
+        Map<String, Integer> currentHierarchy =
+            getHierarchy(currentGraph, currentHunkNodes, diffHunk.getUniqueIndex());
+        if (!baseHierarchy.isEmpty()) {
+          diffNode.setBaseHierarchy(baseHierarchy);
+        }
+        if (!currentHierarchy.isEmpty()) {
+          diffNode.setCurrentHierarchy(currentHierarchy);
+        }
       }
-      if (!currentHierarchy.isEmpty()) {
-        diffNode.setCurrentHierarchy(currentHierarchy);
-      }
+
       diffViewGraph.addVertex(diffNode);
     }
     return diffViewGraph;
