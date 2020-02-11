@@ -50,7 +50,7 @@ public class MultiCommitInfoHandler {
                     }
                 }
                 System.out.println("working in " + args0[0]);
-                CommitInfoHandler.main(args0);
+                //CommitInfoHandler.main(args0);
 
             } catch (Exception e) {
                 //e.printStackTrace();

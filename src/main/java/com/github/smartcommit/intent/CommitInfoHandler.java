@@ -99,29 +99,34 @@ public class CommitInfoHandler {
             tempCommitTrainningSample.setRepoPath(repoPath);
             tempCommitTrainningSample.setRepoName(repoName);
 
-            // get List<Intent> from commitMsg
+
             String commitMsg = tempCommitTrainningSample.getCommitMsg();
-            List<Intent> intentList = getIntentListFromMsg(commitMsg);
-            tempCommitTrainningSample.setIntentList(intentList);
+            // get Intent from commitMsg
+            Intent intent = getIntentFromMsg(commitMsg);
+            tempCommitTrainningSample.setIntent(intent);
+
+            // get List<IntentDescription> from commitMsg
+            List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
+            tempCommitTrainningSample.setIntentDescription(intentList);
 
             // get diffFiles using repoAnalyzer
             String commitID = tempCommitTrainningSample.getCommitID();
-            System.out.println(commitID);
+            //System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
-            List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
-
-            // get EditScript from diffFiles, and get ActionList from EditScript
-            List<Action> tempActionList = new ArrayList<>();
-            Integer sizeDiff = diffFiles.size();
-            for (int j = 0; j < sizeDiff; j++) {
-                String baseContent = diffFiles.get(j).getBaseContent();
-                String currentContent = diffFiles.get(j).getCurrentContent();
-                // File added or deleted, thus no content
-                if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
-                    tempCommitTrainningSample.addIntent(Intent.FIL);
-                    continue;
-                }
-                try {
+            try {  // if no FileChange
+                List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
+                // get EditScript from diffFiles, and get ActionList from EditScript
+                List<Action> tempActionList = new ArrayList<>();
+                Integer sizeDiff = diffFiles.size();
+                for (int j = 0; j < sizeDiff; j++) {
+                    String baseContent = diffFiles.get(j).getBaseContent();
+                    String currentContent = diffFiles.get(j).getCurrentContent();
+                    // File added or deleted, thus no content
+                    if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
+                        tempCommitTrainningSample.addIntentDescription(IntentDescription.FIL);
+                        System.out.println("Exception type: NCC: only FILE change");
+                        continue;
+                    }
                     EditScript editScript = generateEditScript(baseContent, currentContent);
                     if (editScript != null) {
                         List<Action> actionList = generateActionList(editScript);
@@ -129,19 +134,24 @@ public class CommitInfoHandler {
                         tempCommitTrainningSample.setActionList(tempActionList);
                     } else {
                         // No codeChange, thus no AbstractJdtTree generated
-                        tempCommitTrainningSample.addIntent(Intent.DOC);
-                        }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                        tempCommitTrainningSample.addIntentDescription(IntentDescription.DOC);
+                        System.out.println("Exception type: NCC: only DOC change");
+                    }
                 }
+            } catch (Exception e) {
+                //e.printStackTrace();
+                tempCommitTrainningSample.addIntentDescription(IntentDescription.NFC);
+                System.out.println("Exception type: NFC");
             }
+
+
+
 
             // write back
             //commitTrainningSample.set(i, tempCommitTrainningSample);
 
             //Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainningSample);
-            System.out.println("finished! success?");
         }
         return true;
     }
@@ -186,10 +196,20 @@ public class CommitInfoHandler {
         return actionList;
     }
 
+
     // generate Intent from Message
-    private static List<Intent> getIntentListFromMsg(String commitMsg) {
-        List<Intent> intentList = new ArrayList<>();
+    private static Intent getIntentFromMsg(String commitMsg) {
         for (Intent intent : Intent.values()) {
+            if (commitMsg.contains(intent.label)) {
+                return intent;
+            }
+        }
+        return Intent.CHR;
+    }
+    // generate IntentDescription from Message
+    private static List<IntentDescription> getIntentDescriptionFromMsg(String commitMsg) {
+        List<IntentDescription> intentList = new ArrayList<>();
+        for (IntentDescription intent : IntentDescription.values()) {
             if (commitMsg.toLowerCase().contains(intent.label)) {
                 intentList.add(intent);
             }
@@ -209,7 +229,8 @@ public class CommitInfoHandler {
             doc1.put("committer", commitTrainningSample.getCommitter());
             doc1.put("committerEmail", commitTrainningSample.getCommitterEmail());
             doc1.put("commitTime", commitTrainningSample.getCommitTime());
-            doc1.put("commitIntentList", String.valueOf(commitTrainningSample.getIntentList()));
+            doc1.put("commitInent", commitTrainningSample.getIntent().getLabel());
+            doc1.put("commitIntentDescription", String.valueOf(commitTrainningSample.getIntentDescription()));
 
             List<Action> actionList = commitTrainningSample.getActionList();
             if (actionList != null) {
