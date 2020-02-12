@@ -8,7 +8,8 @@ public enum Intent {
     RFT("refactor"),
     OPT("optimiz"),
     TST("test"),
-    CHR("chore");
+    CHR("chore"),
+    UNKNOWN("unknown");
 
 
     public String label;
