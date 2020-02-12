@@ -41,7 +41,7 @@ import org.omg.CORBA.INTF_REPOS;
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
     public static void main(String[] args) {
-        args = new String[]{"/Users/Chuncen/Downloads/lichuncen.github.io", "commitTrainningSample"};
+        args = new String[]{"/Users/Chuncen/ZZ/GitHub/RefactoringMiner", "commitTrainningSample"};
         String repoPath = args[0];
         String collectionName = args[1];
         // CommitTrainningSample
@@ -111,7 +111,7 @@ public class CommitInfoHandler {
 
             // get diffFiles using repoAnalyzer
             String commitID = tempCommitTrainningSample.getCommitID();
-            //System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
+            System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
             try {  // if no FileChange
                 List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
@@ -229,7 +229,7 @@ public class CommitInfoHandler {
             doc1.put("committer", commitTrainningSample.getCommitter());
             doc1.put("committerEmail", commitTrainningSample.getCommitterEmail());
             doc1.put("commitTime", commitTrainningSample.getCommitTime());
-            doc1.put("commitInent", commitTrainningSample.getIntent().getLabel());
+            doc1.put("commitIntent", commitTrainningSample.getIntent().getLabel());
             doc1.put("commitIntentDescription", String.valueOf(commitTrainningSample.getIntentDescription()));
 
             List<Action> actionList = commitTrainningSample.getActionList();
