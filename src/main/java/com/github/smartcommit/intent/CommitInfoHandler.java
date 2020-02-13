@@ -41,7 +41,7 @@ import org.omg.CORBA.INTF_REPOS;
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
     public static void main(String[] args) {
-        args = new String[]{"/Users/Chuncen/ZZ/GitHub/RefactoringMiner", "commitTrainningSample"};
+        args = new String[]{"/Users/Chuncen/Desktop/RefactoringMiner", "commitTrainningSample"};
         String repoPath = args[0];
         String collectionName = args[1];
         // CommitTrainningSample
@@ -113,44 +113,10 @@ public class CommitInfoHandler {
             String commitID = tempCommitTrainningSample.getCommitID();
             System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
-            try {  // if no FileChange
-                List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
-                // get EditScript from diffFiles, and get ActionList from EditScript
-                List<Action> tempActionList = new ArrayList<>();
-                Integer sizeDiff = diffFiles.size();
-                for (int j = 0; j < sizeDiff; j++) {
-                    String baseContent = diffFiles.get(j).getBaseContent();
-                    String currentContent = diffFiles.get(j).getCurrentContent();
-                    // File added or deleted, thus no content
-                    if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
-                        tempCommitTrainningSample.addIntentDescription(IntentDescription.FIL);
-                        System.out.println("Exception type: NCC: only FILE change");
-                        continue;
-                    }
-                    EditScript editScript = generateEditScript(baseContent, currentContent);
-                    if (editScript != null) {
-                        List<Action> actionList = generateActionList(editScript);
-                        tempActionList.addAll(actionList);
-                        tempCommitTrainningSample.setActionList(tempActionList);
-                    } else {
-                        // No codeChange, thus no AbstractJdtTree generated
-                        tempCommitTrainningSample.addIntentDescription(IntentDescription.DOC);
-                        System.out.println("Exception type: NCC: only DOC change");
-                    }
-                }
-            } catch (Exception e) {
-                //e.printStackTrace();
-                tempCommitTrainningSample.addIntentDescription(IntentDescription.NFC);
-                System.out.println("Exception type: NFC");
-            }
+            tempCommitTrainningSample = generateActionListFromCodeChange(tempCommitTrainningSample, repoAnalyzer);
 
 
-
-
-            // write back
-            //commitTrainningSample.set(i, tempCommitTrainningSample);
-
-            //Load into DB
+            // Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainningSample);
         }
         return true;
@@ -196,6 +162,41 @@ public class CommitInfoHandler {
         return actionList;
     }
 
+    // generate action list from code changes: diffFile and EditScript
+    private static CommitTrainningSample generateActionListFromCodeChange(
+            CommitTrainningSample tempCommitTrainningSample, RepoAnalyzer repoAnalyzer) {
+        try {  // if no FileChange
+            List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(tempCommitTrainningSample.getCommitID());
+            // get EditScript from diffFiles, and get ActionList from EditScript
+            List<Action> tempActionList = new ArrayList<>();
+            Integer sizeDiff = diffFiles.size();
+            for (int j = 0; j < sizeDiff; j++) {
+                String baseContent = diffFiles.get(j).getBaseContent();
+                String currentContent = diffFiles.get(j).getCurrentContent();
+                // File added or deleted, thus no content
+                if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
+                    tempCommitTrainningSample.addIntentDescription(IntentDescription.FIL);
+                    System.out.println("Exception type: NCC: only FILE change");
+                    continue;
+                }
+                EditScript editScript = generateEditScript(baseContent, currentContent);
+                if (editScript != null) {
+                    List<Action> actionList = generateActionList(editScript);
+                    tempActionList.addAll(actionList);
+                    tempCommitTrainningSample.setActionList(tempActionList);
+                } else {
+                    // No codeChange, thus no AbstractJdtTree generated
+                    tempCommitTrainningSample.addIntentDescription(IntentDescription.DOC);
+                    System.out.println("Exception type: NCC: only DOC change");
+                }
+            }
+        } catch (Exception e) {
+            //e.printStackTrace();
+            tempCommitTrainningSample.addIntentDescription(IntentDescription.NFC);
+            System.out.println("Exception type: NFC");
+        }
+        return tempCommitTrainningSample;
+    }
 
     // generate Intent from Message
     private static Intent getIntentFromMsg(String commitMsg) {
