@@ -20,7 +20,7 @@ public class DiffHunk {
   private FileType fileType;
   private ChangeType changeType;
   //  private List<ActionCluster> changeActions;
-  private String description;
+  private Description description;
 
   public DiffHunk(
       Integer index,
@@ -28,7 +28,7 @@ public class DiffHunk {
       ChangeType changeType,
       Hunk baseHunk,
       Hunk currentHunk,
-      String description) {
+      Description description) {
     this.index = index;
     this.fileType = fileType;
     this.baseHunk = baseHunk;
@@ -142,10 +142,10 @@ public class DiffHunk {
   }
 
   public String getDescription() {
-    return description;
+    return description.toString();
   }
 
-  public void setDescription(String description) {
+  public void setDescription(Description description) {
     this.description = description;
   }
 
