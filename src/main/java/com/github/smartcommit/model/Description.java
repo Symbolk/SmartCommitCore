@@ -48,9 +48,12 @@ public class Description {
       if (!targetLabelFrom.isEmpty()) {
         builder.append(": ").append(targetLabelFrom);
       }
-      builder.append(" To ").append(targetTypeTo);
-      if (!targetLabelTo.isEmpty()) {
-        builder.append(": ").append(targetLabelTo);
+      // append To if type or label changed
+      if (!targetTypeTo.equals(targetTypeFrom) || !targetLabelTo.equals(targetLabelFrom)) {
+        builder.append(" To ").append(targetTypeTo);
+        if (!targetLabelTo.isEmpty()) {
+          builder.append(": ").append(targetLabelTo);
+        }
       }
     }
     builder.append(".");

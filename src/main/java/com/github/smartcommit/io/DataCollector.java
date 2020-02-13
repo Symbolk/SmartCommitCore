@@ -17,8 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.*;
 
-import static org.eclipse.jdt.core.dom.ASTNode.FIELD_DECLARATION;
-import static org.eclipse.jdt.core.dom.ASTNode.METHOD_DECLARATION;
+import static org.eclipse.jdt.core.dom.ASTNode.*;
 
 public class DataCollector {
   private static final Logger logger = LoggerFactory.getLogger(DataCollector.class);
@@ -289,6 +288,16 @@ public class DataCollector {
         String type = Annotation.nodeClassForType(node.getNodeType()).getSimpleName();
         String label = "";
         switch (node.getNodeType()) {
+          case TYPE_DECLARATION:
+            label = ((TypeDeclaration) node).getName().getIdentifier();
+            break;
+          case VARIABLE_DECLARATION_STATEMENT:
+            label =
+                ((VariableDeclarationFragment)
+                        ((VariableDeclarationStatement) node).fragments().get(0))
+                    .getName()
+                    .getIdentifier();
+            break;
           case FIELD_DECLARATION:
             label =
                 ((VariableDeclarationFragment) ((FieldDeclaration) node).fragments().get(0))
