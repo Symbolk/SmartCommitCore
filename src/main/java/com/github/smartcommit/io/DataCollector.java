@@ -1,5 +1,6 @@
 package com.github.smartcommit.io;
 
+import com.github.smartcommit.model.Description;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.ChangeType;
@@ -9,13 +10,14 @@ import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.Annotation;
+import org.eclipse.jdt.core.dom.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
+
+import static org.eclipse.jdt.core.dom.ASTNode.*;
 
 public class DataCollector {
   private static final Logger logger = LoggerFactory.getLogger(DataCollector.class);
@@ -143,7 +145,7 @@ public class DataCollector {
    *
    * @param diffHunk
    */
-  private String generateDescForDiffHunk(DiffHunk diffHunk) {
+  private Description generateDescForDiffHunk(DiffHunk diffHunk) {
     ChangeType changeType = diffHunk.getChangeType();
     ContentType baseContentType = diffHunk.getBaseHunk().getContentType();
     ContentType currentContentType = diffHunk.getCurrentHunk().getContentType();
@@ -152,11 +154,11 @@ public class DataCollector {
         case IMPORT:
         case COMMENT:
         case BLANKLINE:
-          return changeType.label + " " + currentContentType.label;
+          return new Description(changeType.label, currentContentType.label, "");
         case CODE:
           return analyzeCoveredNodes(ChangeType.ADDED, diffHunk.getCurrentHunk().getCoveredNodes());
         default:
-          return changeType.label + " some code";
+          return new Description(changeType.label, "Code", "");
       }
 
     } else if (changeType.equals(ChangeType.DELETED)) {
@@ -164,11 +166,11 @@ public class DataCollector {
         case IMPORT:
         case COMMENT:
         case BLANKLINE:
-          return changeType.label + " " + baseContentType.label;
+          return new Description(changeType.label, baseContentType.label, "");
         case CODE:
           return analyzeCoveredNodes(ChangeType.DELETED, diffHunk.getBaseHunk().getCoveredNodes());
         default:
-          return changeType.label + " some code";
+          return new Description(changeType.label, "Code", "");
       }
     } else if (changeType.equals(ChangeType.MODIFIED)) {
       // consider blank lines as empty, thus the change type should be add or delete
@@ -181,54 +183,136 @@ public class DataCollector {
 
       if (baseContentType.equals(ContentType.COMMENT)
           && currentContentType.equals(ContentType.COMMENT)) {
-        return changeType.label + " " + ContentType.COMMENT.label;
+        return new Description(changeType.label, ContentType.COMMENT.label, "");
       }
 
       if (baseContentType.equals(ContentType.IMPORT)
           && currentContentType.equals(ContentType.IMPORT)) {
-        return changeType.label + " " + ContentType.IMPORT.label;
+        return new Description(changeType.label, ContentType.IMPORT.label, "");
       }
 
       // assert: both code in base&current
       if (baseContentType.equals(ContentType.CODE) && currentContentType.equals(ContentType.CODE)) {
-        // TODO: consider current too?
-        return analyzeCoveredNodes(changeType, diffHunk.getBaseHunk().getCoveredNodes());
+        return analyzeCoveredNodes(
+            changeType,
+            diffHunk.getBaseHunk().getCoveredNodes(),
+            diffHunk.getCurrentHunk().getCoveredNodes());
       }
     }
-    return changeType.label + " some code";
+    return new Description(changeType.label, "Code", "");
   }
 
   /**
-   * Generate description from covered AST nodes
+   * Generate description from covered AST nodes (for add/delete)
+   *
    * @param changeType
    * @param coveredNodes
    * @return
    */
-  private String analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
-    StringBuilder builder = new StringBuilder(changeType.label);
+  private Description analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
     if (coveredNodes.isEmpty()) {
-      builder.append(" ").append("some code");
-      return builder.toString();
+      return new Description(changeType.label, "Code", "");
     }
-    for (String type : getNodeTypes(coveredNodes)) {
-      builder.append(" ").append(type);
+    StringBuilder types = new StringBuilder();
+    StringBuilder labels = new StringBuilder();
+    List<Pair<String, String>> infos = getASTNodesInfo(coveredNodes);
+    for (int i = 0; i < infos.size(); i++) {
+      Pair<String, String> info = infos.get(i);
+      types.append(info.getLeft());
+      if (i != infos.size() - 1) {
+        types.append(", ");
+      }
+      labels.append(info.getRight());
+      if (i != infos.size() - 1) {
+        labels.append(", ");
+      }
     }
-    return builder.toString();
+    return new Description(changeType.label, types.toString(), labels.toString());
   }
 
   /**
-   * Get the node types changed in diff hunks
+   * Generate description from covered AST nodes (for modify)
+   *
+   * @param changeType
+   * @param baseNodes
+   * @return
+   */
+  private Description analyzeCoveredNodes(
+      ChangeType changeType, List<ASTNode> baseNodes, List<ASTNode> currentNodes) {
+    StringBuilder typesFrom = new StringBuilder();
+    StringBuilder typesTo = new StringBuilder();
+    StringBuilder labelsFrom = new StringBuilder();
+    StringBuilder labelsTo = new StringBuilder();
+    List<Pair<String, String>> infosFrom = getASTNodesInfo(baseNodes);
+    List<Pair<String, String>> infosTo = getASTNodesInfo(currentNodes);
+    for (int i = 0; i < infosFrom.size(); i++) {
+      Pair<String, String> info = infosFrom.get(i);
+      typesFrom.append(info.getLeft());
+      if (i != infosFrom.size() - 1) {
+        typesFrom.append(", ");
+      }
+      labelsFrom.append(info.getRight());
+      if (i != infosFrom.size() - 1) {
+        labelsFrom.append(", ");
+      }
+    }
+    for (int i = 0; i < infosTo.size(); i++) {
+      Pair<String, String> info = infosTo.get(i);
+      typesTo.append(info.getLeft());
+      if (i != infosFrom.size() - 1) {
+        typesTo.append(", ");
+      }
+      labelsTo.append(info.getRight());
+      if (i != infosFrom.size() - 1) {
+        labelsTo.append(", ");
+      }
+    }
+    return new Description(
+        changeType.label,
+        typesFrom.toString(),
+        labelsFrom.toString(),
+        typesTo.toString(),
+        labelsTo.toString());
+  }
+
+  /**
+   * Get the node types and labels (if exists) changed in diff hunks
    *
    * @param coveredNodes
    * @return
    */
-  private List<String> getNodeTypes(List<ASTNode> coveredNodes) {
-    Set<String> types = new LinkedHashSet<>();
+  private List<Pair<String, String>> getASTNodesInfo(List<ASTNode> coveredNodes) {
+    Set<Pair<String, String>> infos = new LinkedHashSet<>();
     for (ASTNode node : coveredNodes) {
       if (node != null) {
-        types.add(Annotation.nodeClassForType(node.getNodeType()).getSimpleName());
+        String type = Annotation.nodeClassForType(node.getNodeType()).getSimpleName();
+        String label = "";
+        switch (node.getNodeType()) {
+          case TYPE_DECLARATION:
+            label = ((TypeDeclaration) node).getName().getIdentifier();
+            break;
+          case VARIABLE_DECLARATION_STATEMENT:
+            label =
+                ((VariableDeclarationFragment)
+                        ((VariableDeclarationStatement) node).fragments().get(0))
+                    .getName()
+                    .getIdentifier();
+            break;
+          case FIELD_DECLARATION:
+            label =
+                ((VariableDeclarationFragment) ((FieldDeclaration) node).fragments().get(0))
+                    .getName()
+                    .getIdentifier();
+            break;
+          case METHOD_DECLARATION:
+            label = ((MethodDeclaration) node).getName().getIdentifier();
+            break;
+          default:
+            label = "";
+        }
+        infos.add(Pair.of(type, label));
       }
     }
-    return new ArrayList<>(types);
+    return new ArrayList<>(infos);
   }
 }
