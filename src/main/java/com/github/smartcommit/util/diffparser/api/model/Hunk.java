@@ -35,6 +35,8 @@ public class Hunk {
 
   private List<Line> lines = new ArrayList<>();
 
+  private List<String> rawLines = new ArrayList<>();
+
   /**
    * The range of line numbers that this Hunk spans in the first file of the Diff.
    *
@@ -60,6 +62,14 @@ public class Hunk {
    */
   public List<Line> getLines() {
     return lines;
+  }
+
+  public List<String> getRawLines() {
+    return rawLines;
+  }
+
+  public void setRawLines(List<String> rawLines) {
+    this.rawLines = rawLines;
   }
 
   public void setFromFileRange(Range fromFileRange) {
