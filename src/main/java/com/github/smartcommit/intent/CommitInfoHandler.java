@@ -15,21 +15,28 @@ import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 
 // GumtreeExample
-
 import com.github.gumtreediff.actions.EditScript;
 import com.github.smartcommit.model.DiffFile;
 
 // MongoExample
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
+
+// RefactoringMiner
+import org.eclipse.jgit.attributes.AttributesNodeProvider;
+import org.eclipse.jgit.lib.*;
+import org.refactoringminer.api.GitHistoryRefactoringMiner;
+import org.refactoringminer.api.Refactoring;
+import org.refactoringminer.api.RefactoringHandler;
+import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
+import org.refactoringminer.util.GitServiceImpl;
 
 // CommitTrainningSample
 import com.github.smartcommit.intent.model.CommitTrainningSample;
@@ -41,7 +48,7 @@ import org.omg.CORBA.INTF_REPOS;
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
     public static void main(String[] args) {
-        args = new String[]{"/Users/Chuncen/ZZ/GitHub/RefactoringMiner", "commitTrainningSample"};
+        args = new String[]{"/Users/Chuncen/Desktop/RefactoringMiner", "commitTrainningSample"};
         String repoPath = args[0];
         String collectionName = args[1];
         // CommitTrainningSample
@@ -84,7 +91,8 @@ public class CommitInfoHandler {
     }
 
     // get IntentList and ActionList
-    public static boolean trainningSampleAnalyzer(String repoPath, List<CommitTrainningSample> commitTrainningSample, MongoCollection<Document> collection) {
+    public static boolean trainningSampleAnalyzer(String repoPath, List<CommitTrainningSample> commitTrainningSample,
+                                                  MongoCollection<Document> collection) throws Exception {
 
         // get the final dir name as repoName, thus generate repoID using hash
         int index = repoPath.lastIndexOf(File.separator);
@@ -109,48 +117,32 @@ public class CommitInfoHandler {
             List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
             tempCommitTrainningSample.setIntentDescription(intentList);
 
-            // get diffFiles using repoAnalyzer
+            // add actionList using gumtree
             String commitID = tempCommitTrainningSample.getCommitID();
             System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
-            try {  // if no FileChange
-                List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
-                // get EditScript from diffFiles, and get ActionList from EditScript
-                List<Action> tempActionList = new ArrayList<>();
-                Integer sizeDiff = diffFiles.size();
-                for (int j = 0; j < sizeDiff; j++) {
-                    String baseContent = diffFiles.get(j).getBaseContent();
-                    String currentContent = diffFiles.get(j).getCurrentContent();
-                    // File added or deleted, thus no content
-                    if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
-                        tempCommitTrainningSample.addIntentDescription(IntentDescription.FIL);
-                        System.out.println("Exception type: NCC: only FILE change");
-                        continue;
-                    }
-                    EditScript editScript = generateEditScript(baseContent, currentContent);
-                    if (editScript != null) {
-                        List<Action> actionList = generateActionList(editScript);
-                        tempActionList.addAll(actionList);
-                        tempCommitTrainningSample.setActionList(tempActionList);
-                    } else {
-                        // No codeChange, thus no AbstractJdtTree generated
-                        tempCommitTrainningSample.addIntentDescription(IntentDescription.DOC);
-                        System.out.println("Exception type: NCC: only DOC change");
+            tempCommitTrainningSample = generateActionListFromCodeChange(tempCommitTrainningSample, repoAnalyzer);
+
+            // add refactorCodeChange using RefactoringMiner
+            GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
+            org.refactoringminer.api.GitService gitService = new GitServiceImpl();
+            List<RefactorCodeChange> refactorCodeChanges = new ArrayList<>();
+            Repository repo = gitService.cloneIfNotExists(
+                    repoPath, // "/Users/Chuncen/Downloads/"+repoName
+                    "https://github.com/danilofes/refactoring-toy-example.git");
+            miner.detectAtCommit(repo, commitID, new RefactoringHandler() {
+                @Override
+                public void handle(String commitId, List<Refactoring> refactorings) {
+                    // System.out.println("Refactorings at " + commitId);
+                    for (Refactoring ref : refactorings) {
+                        RefactorCodeChange refactorCodeChange= new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
+                        refactorCodeChanges.add(refactorCodeChange);
                     }
                 }
-            } catch (Exception e) {
-                //e.printStackTrace();
-                tempCommitTrainningSample.addIntentDescription(IntentDescription.NFC);
-                System.out.println("Exception type: NFC");
-            }
+            });
+            tempCommitTrainningSample.setRefactorCodeChanges(refactorCodeChanges);
 
-
-
-
-            // write back
-            //commitTrainningSample.set(i, tempCommitTrainningSample);
-
-            //Load into DB
+            // Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainningSample);
         }
         return true;
@@ -196,6 +188,45 @@ public class CommitInfoHandler {
         return actionList;
     }
 
+    // generate action list from code changes: diffFile and EditScript
+    private static CommitTrainningSample generateActionListFromCodeChange(
+            CommitTrainningSample tempCommitTrainningSample, RepoAnalyzer repoAnalyzer) {
+        try {  // if no FileChange
+            List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(tempCommitTrainningSample.getCommitID());
+            // get EditScript from diffFiles, and get ActionList from EditScript
+            List<Action> tempActionList = new ArrayList<>();
+            Integer sizeDiff = diffFiles.size();
+            for (int j = 0; j < sizeDiff; j++) {
+                String baseContent = diffFiles.get(j).getBaseContent();
+                String currentContent = diffFiles.get(j).getCurrentContent();
+                // File added or deleted, thus no content
+                if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
+                    //tempCommitTrainningSample.addIntentDescription(IntentDescription.FIL);
+                    tempCommitTrainningSample.setIntent(Intent.FIL);
+                    System.out.println("Exception type: NCC: only FILE change");
+                    continue;
+                }
+                EditScript editScript = generateEditScript(baseContent, currentContent);
+                if (editScript != null) {
+                    List<Action> actionList = generateActionList(editScript);
+                    tempActionList.addAll(actionList);
+                    tempCommitTrainningSample.setActionList(tempActionList);
+                } else {
+                    // Only doc change, thus no CodeChange and AbstractJdtTree generated
+                    //tempCommitTrainningSample.addIntentDescription(IntentDescription.DOC);
+                    tempCommitTrainningSample.setIntent(Intent.DOC);
+                    System.out.println("Exception type: NCC: only DOC change");
+                }
+            }
+        } catch (Exception e) {
+            //e.printStackTrace();
+            // Lack of File, thus no DiffFiles generated
+            //tempCommitTrainningSample.addIntentDescription(IntentDescription.NFL);
+            tempCommitTrainningSample.setIntent(Intent.FIL);
+            System.out.println("Exception type: NoFile");
+        }
+        return tempCommitTrainningSample;
+    }
 
     // generate Intent from Message
     private static Intent getIntentFromMsg(String commitMsg) {

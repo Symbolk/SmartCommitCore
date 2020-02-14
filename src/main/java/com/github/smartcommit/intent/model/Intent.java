@@ -9,6 +9,7 @@ public enum Intent {
     OPT("optimiz"),
     TST("test"),
     CHR("chore"),
+    FIL("file"),
     UNKNOWN("unknown");
 
 
