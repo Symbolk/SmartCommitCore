@@ -15,21 +15,28 @@ import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 
 // GumtreeExample
-
 import com.github.gumtreediff.actions.EditScript;
 import com.github.smartcommit.model.DiffFile;
 
 // MongoExample
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
+
+// RefactoringMiner
+import org.eclipse.jgit.attributes.AttributesNodeProvider;
+import org.eclipse.jgit.lib.*;
+import org.refactoringminer.api.GitHistoryRefactoringMiner;
+import org.refactoringminer.api.Refactoring;
+import org.refactoringminer.api.RefactoringHandler;
+import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
+import org.refactoringminer.util.GitServiceImpl;
 
 // CommitTrainningSample
 import com.github.smartcommit.intent.model.CommitTrainningSample;
@@ -84,7 +91,8 @@ public class CommitInfoHandler {
     }
 
     // get IntentList and ActionList
-    public static boolean trainningSampleAnalyzer(String repoPath, List<CommitTrainningSample> commitTrainningSample, MongoCollection<Document> collection) {
+    public static boolean trainningSampleAnalyzer(String repoPath, List<CommitTrainningSample> commitTrainningSample,
+                                                  MongoCollection<Document> collection) throws Exception {
 
         // get the final dir name as repoName, thus generate repoID using hash
         int index = repoPath.lastIndexOf(File.separator);
@@ -109,12 +117,30 @@ public class CommitInfoHandler {
             List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
             tempCommitTrainningSample.setIntentDescription(intentList);
 
-            // get diffFiles using repoAnalyzer
+            // add actionList using gumtree
             String commitID = tempCommitTrainningSample.getCommitID();
             System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
             tempCommitTrainningSample = generateActionListFromCodeChange(tempCommitTrainningSample, repoAnalyzer);
 
+            // add refactorCodeChange using RefactoringMiner
+            GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
+            org.refactoringminer.api.GitService gitService = new GitServiceImpl();
+            List<RefactorCodeChange> refactorCodeChanges = new ArrayList<>();
+            Repository repo = gitService.cloneIfNotExists(
+                    repoPath, // "/Users/Chuncen/Downloads/"+repoName
+                    "https://github.com/danilofes/refactoring-toy-example.git");
+            miner.detectAtCommit(repo, commitID, new RefactoringHandler() {
+                @Override
+                public void handle(String commitId, List<Refactoring> refactorings) {
+                    // System.out.println("Refactorings at " + commitId);
+                    for (Refactoring ref : refactorings) {
+                        RefactorCodeChange refactorCodeChange= new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
+                        refactorCodeChanges.add(refactorCodeChange);
+                    }
+                }
+            });
+            tempCommitTrainningSample.setRefactorCodeChanges(refactorCodeChanges);
 
             // Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainningSample);

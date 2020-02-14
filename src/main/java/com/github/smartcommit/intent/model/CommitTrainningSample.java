@@ -16,6 +16,7 @@ public class CommitTrainningSample {
   private Intent intent;
   private List<IntentDescription> intentDescriptions;
   private List<Action> actions;
+  private List<RefactorCodeChange> refactorCodeChanges;
 
   public String getCommitID() {
     return commitID;
@@ -87,6 +88,18 @@ public class CommitTrainningSample {
 
   public void addIntentDescription(IntentDescription intentDescription) {
     this.intentDescriptions.add(intentDescription);
+  }
+
+  public List<RefactorCodeChange> getRefactorCodeChanges() {
+    return refactorCodeChanges;
+  }
+
+  public void setRefactorCodeChanges(List<RefactorCodeChange> refactorCodeChanges) {
+    this.refactorCodeChanges = refactorCodeChanges;
+  }
+
+  public void addRefactorCodeChange(RefactorCodeChange refactorCodeChange) {
+    this.refactorCodeChanges.add(refactorCodeChange);
   }
 
   public void setRepoID(String repoID) {
