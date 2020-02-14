@@ -10,7 +10,7 @@ public enum IntentDescription {
   USE("use"),
   MOV("move"), CHG("change"),
   PRP("prepare"),
-  IPV("improve"),
+  IPV("improve"), OPT("optimize"),
   IGN("ignore"),
   HDL("handle"),
   RNM("rename"),
@@ -18,8 +18,12 @@ public enum IntentDescription {
   SET("set"),
   RVT("revert"),
   RPL("replace"),
-  NFC("NoFileChange"),
-  FIL("file"), DOC("doc");
+  RFC("refactor"),
+  RFM("reformat"), FMT("format"),
+  TST("test"),
+  CLR("clear"),
+  UKN("unknown");
+  // NFL("NoFile"), FIL("FileAdd"), DOC("docChange");
 
   public String label;
   IntentDescription(String label) {
