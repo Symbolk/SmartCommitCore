@@ -6,6 +6,9 @@ import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.Version;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class DiffHunk {
   private String repoID;
   private String repoName;
@@ -21,6 +24,8 @@ public class DiffHunk {
   private ChangeType changeType;
   //  private List<ActionCluster> changeActions;
   private Description description;
+  // lines from the raw output of git-diff (for patch generation)
+  private transient List<String> rawDiffs = new ArrayList<>();
 
   public DiffHunk(
       Integer index,
@@ -143,6 +148,14 @@ public class DiffHunk {
 
   public String getDescription() {
     return description.toString();
+  }
+
+  public List<String> getRawDiffs() {
+    return rawDiffs;
+  }
+
+  public void setRawDiffs(List<String> rawDiffs) {
+    this.rawDiffs = rawDiffs;
   }
 
   public void setDescription(Description description) {

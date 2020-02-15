@@ -24,6 +24,8 @@ public class DiffFile {
   private String description;
   private Map<String, DiffHunk> diffHunksMap;
   private transient List<DiffHunk> diffHunks;
+  // lines from the raw output of git-diff (for patch generation)
+  private transient List<String> rawHeaders = new ArrayList<>();
 
   public DiffFile(
       Integer index,
@@ -94,6 +96,14 @@ public class DiffFile {
 
   public void setFileID(String fileID) {
     this.fileID = fileID;
+  }
+
+  public List<String> getRawHeaders() {
+    return rawHeaders;
+  }
+
+  public void setRawHeaders(List<String> rawHeaders) {
+    this.rawHeaders = rawHeaders;
   }
 
   public FileStatus getStatus() {

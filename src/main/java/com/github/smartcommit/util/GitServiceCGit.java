@@ -186,7 +186,7 @@ public class GitServiceCGit implements GitService {
   public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath, List<DiffFile> diffFiles) {
     // unstage the staged files first
     //    Utils.runSystemCommand(repoPath, "git", "reset", "--mixed");
-    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
+    Utils.runSystemCommand(repoPath, "git", "restorre", "--staged", ".");
     // git diff + git diff --cached/staged == git diff HEAD (show all the changes since last commit
     //    String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
     String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U1");
@@ -241,6 +241,11 @@ public class GitServiceCGit implements GitService {
 
       String baseFilePath = diff.getFromFileName();
       String currentFilePath = diff.getToFileName();
+
+      List<String> headers = diff.getHeaderLines();
+      headers.add("--- " + baseFilePath);
+      headers.add("+++ " + currentFilePath);
+
       // currently we only process Java files
       FileType fileType =
           baseFilePath.contains("/dev/null")
@@ -291,6 +296,7 @@ public class GitServiceCGit implements GitService {
         }
         DiffHunk diffHunk =
             new DiffHunk(hunkIndex, fileType, changeType, baseHunk, currentHunk, new Description());
+        diffHunk.setRawDiffs(hunk.getRawLines());
         diffHunksInFile.add(diffHunk);
         allDiffHunks.add(diffHunk);
         hunkIndex++;
@@ -302,6 +308,7 @@ public class GitServiceCGit implements GitService {
             && currentFilePath.contains(diffFile.getCurrentRelativePath())) {
           diffHunksInFile.forEach(diffHunk -> diffHunk.setFileIndex(diffFile.getIndex()));
           diffFile.setDiffHunks(diffHunksInFile);
+          diffFile.setRawHeaders(headers);
         }
       }
     }
