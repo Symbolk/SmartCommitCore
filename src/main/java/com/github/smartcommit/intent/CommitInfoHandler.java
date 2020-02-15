@@ -124,22 +124,7 @@ public class CommitInfoHandler {
             tempCommitTrainningSample = generateActionListFromCodeChange(tempCommitTrainningSample, repoAnalyzer);
 
             // add refactorCodeChange using RefactoringMiner
-            GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
-            org.refactoringminer.api.GitService gitService = new GitServiceImpl();
-            List<RefactorCodeChange> refactorCodeChanges = new ArrayList<>();
-            Repository repo = gitService.cloneIfNotExists(
-                    repoPath, // "/Users/Chuncen/Downloads/"+repoName
-                    "https://github.com/danilofes/refactoring-toy-example.git");
-            miner.detectAtCommit(repo, commitID, new RefactoringHandler() {
-                @Override
-                public void handle(String commitId, List<Refactoring> refactorings) {
-                    System.out.println("Refactorings at " + commitId);
-                    for (Refactoring ref : refactorings) {
-                        RefactorCodeChange refactorCodeChange = new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
-                        refactorCodeChanges.add(refactorCodeChange);
-                    }
-                }
-            });
+            List<RefactorCodeChange> refactorCodeChanges = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
             tempCommitTrainningSample.setRefactorCodeChanges(refactorCodeChanges);
 
             // Load into DB
@@ -237,6 +222,7 @@ public class CommitInfoHandler {
         }
         return Intent.CHR;
     }
+
     // generate IntentDescription from Message
     private static List<IntentDescription> getIntentDescriptionFromMsg(String commitMsg) {
         List<IntentDescription> intentList = new ArrayList<>();
@@ -246,6 +232,36 @@ public class CommitInfoHandler {
             }
         }
         return intentList;
+    }
+
+    // generate RefactorCodeChangeFromCodeChagne
+    private static List<RefactorCodeChange> getRefactorCodeChangesFromCodeChange(String repoPath, String commitID) {
+        GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
+        org.refactoringminer.api.GitService gitService = new GitServiceImpl();
+        List<RefactorCodeChange> refactorCodeChanges = new ArrayList<>();
+        try {
+            Repository repo = gitService.cloneIfNotExists(
+                    repoPath, // "/Users/Chuncen/Downloads/"+repoName
+                    "https://github.com/danilofes/refactoring-toy-example.git");
+            miner.detectAtCommit(repo, commitID, new RefactoringHandler() {
+                @Override
+                public void handle(String commitId, List<Refactoring> refactorings) {
+                    // System.out.println("Refactorings at " + commitId);
+                    if(refactorings.isEmpty()) {
+                        System.out.println("No refactoring generated");
+                    } else {
+                        for (Refactoring ref : refactorings) {
+                            RefactorCodeChange refactorCodeChange = new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
+                            refactorCodeChanges.add(refactorCodeChange);
+                        }
+                    }
+                }
+            });
+        } catch (Exception e) {
+            System.out.println("Repo Not Exist");
+            e.printStackTrace();
+        }
+        return refactorCodeChanges;
     }
 
     // Load given commitTrainingSample into given DB collection
