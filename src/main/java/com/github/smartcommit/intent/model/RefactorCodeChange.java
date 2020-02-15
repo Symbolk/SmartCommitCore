@@ -4,15 +4,15 @@ import org.refactoringminer.api.RefactoringType;
 
 public class RefactorCodeChange {
     private RefactoringType refactoringType;
-    private String name;
+    private String operation;
 
-    public RefactorCodeChange(RefactoringType refactoringType, String name) {
+    public RefactorCodeChange(RefactoringType refactoringType, String operation) {
         this.refactoringType = refactoringType;
-        this.name = name;
+        this.operation = operation;
     }
 
-    public String getName() {
-        return name;
+    public String getOperation() {
+        return operation;
     }
 
     public RefactoringType getRefactoringType(){

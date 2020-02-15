@@ -48,7 +48,7 @@ import org.omg.CORBA.INTF_REPOS;
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
     public static void main(String[] args) {
-        args = new String[]{"/Users/Chuncen/Desktop/RefactoringMiner", "commitTrainningSample"};
+        args = new String[]{"/Users/Chuncen/Desktop/RefactoringMiner", "commitTrainingSample"};
         String repoPath = args[0];
         String collectionName = args[1];
         // CommitTrainningSample
@@ -103,6 +103,8 @@ public class CommitInfoHandler {
         Integer size = commitTrainningSample.size();
         for (int i = 0; i < size; i++) {
             CommitTrainningSample tempCommitTrainningSample = commitTrainningSample.get(i);
+            String commitID = tempCommitTrainningSample.getCommitID();
+            System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
             tempCommitTrainningSample.setRepoID(repoID);
             tempCommitTrainningSample.setRepoPath(repoPath);
             tempCommitTrainningSample.setRepoName(repoName);
@@ -118,8 +120,6 @@ public class CommitInfoHandler {
             tempCommitTrainningSample.setIntentDescription(intentList);
 
             // add actionList using gumtree
-            String commitID = tempCommitTrainningSample.getCommitID();
-            System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
             tempCommitTrainningSample = generateActionListFromCodeChange(tempCommitTrainningSample, repoAnalyzer);
 
@@ -133,9 +133,9 @@ public class CommitInfoHandler {
             miner.detectAtCommit(repo, commitID, new RefactoringHandler() {
                 @Override
                 public void handle(String commitId, List<Refactoring> refactorings) {
-                    // System.out.println("Refactorings at " + commitId);
+                    System.out.println("Refactorings at " + commitId);
                     for (Refactoring ref : refactorings) {
-                        RefactorCodeChange refactorCodeChange= new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
+                        RefactorCodeChange refactorCodeChange = new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
                         refactorCodeChanges.add(refactorCodeChange);
                     }
                 }
@@ -248,7 +248,7 @@ public class CommitInfoHandler {
         return intentList;
     }
 
-    // Load given commitTrainningSample into given DB collection
+    // Load given commitTrainingSample into given DB collection
     private static void loadTrainSampleToDB(MongoCollection<Document> collection, CommitTrainningSample commitTrainningSample) {
         try {
             Document doc1 = new Document();
@@ -262,7 +262,7 @@ public class CommitInfoHandler {
             doc1.put("commitTime", commitTrainningSample.getCommitTime());
             doc1.put("commitIntent", commitTrainningSample.getIntent().getLabel());
             doc1.put("commitIntentDescription", String.valueOf(commitTrainningSample.getIntentDescription()));
-
+            // add ActionList to DB
             List<Action> actionList = commitTrainningSample.getActionList();
             if (actionList != null) {
                 List<Document> actions = new ArrayList<>();
@@ -273,6 +273,18 @@ public class CommitInfoHandler {
                     actions.add(addrAttr);
                 }
                 doc1.put("actions", actions);
+            }
+            // add refactorCodeChange to DB
+            List<RefactorCodeChange> refactorCodeChangeList = commitTrainningSample.getRefactorCodeChanges();
+            if (refactorCodeChangeList != null) {
+                List<Document> refactorCodeChanges = new ArrayList<>();
+                for (RefactorCodeChange refactorCodeChange : refactorCodeChangeList) {
+                    Document addrAttr = new Document();
+                    addrAttr.put("operation", refactorCodeChange.getOperation());
+                    addrAttr.put("refactoringType", String.valueOf(refactorCodeChange.getRefactoringType()));
+                    refactorCodeChanges.add(addrAttr);
+                }
+                doc1.put("refactorCodeChanges", refactorCodeChanges);
             }
             collection.insertOne(doc1);
 
