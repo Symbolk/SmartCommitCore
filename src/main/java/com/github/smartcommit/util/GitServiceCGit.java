@@ -187,9 +187,10 @@ public class GitServiceCGit implements GitService {
     // unstage the staged files first
     //    Utils.runSystemCommand(repoPath, "git", "reset", "--mixed");
     Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
-    // git diff + git diff --cached/staged == git diff HEAD (show all the changes since the last
-    // commit)
-    String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
+    // git diff + git diff --cached/staged == git diff HEAD (show all the changes since last commit
+    //    String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
+    String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U1");
+    // with -U0 (no context lines), the generated patch cannot be applied successfully
     DiffParser parser = new UnifiedDiffParser();
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
     return generateDiffHunks(diffs, diffFiles);
@@ -215,7 +216,7 @@ public class GitServiceCGit implements GitService {
                 Utils.checkFileType(diffFile.getCurrentRelativePath()),
                 ChangeType.ADDED,
                 new com.github.smartcommit.model.Hunk(
-                    Version.BASE, "", 0, 0, ContentType.EMPTY, new ArrayList<>()),
+                    Version.BASE, "", 0, -1, ContentType.EMPTY, new ArrayList<>()),
                 new com.github.smartcommit.model.Hunk(
                     Version.CURRENT,
                     diffFile.getCurrentRelativePath(),
@@ -243,28 +244,42 @@ public class GitServiceCGit implements GitService {
       // currently we only process Java files
       FileType fileType =
           baseFilePath.contains("/dev/null")
-              ? Utils.checkFileType(currentFilePath)
+              ? Utils.checkFileType(currentFilePath) // ADDED/UNTRACKED
               : Utils.checkFileType(baseFilePath);
 
       // collect and save diff hunks into diff files
       List<DiffHunk> diffHunksInFile = new ArrayList<>();
       for (Hunk hunk : diff.getHunks()) {
-        List<String> baseCodeLines = getCodeSnippetInHunk(hunk.getLines(), Version.BASE);
-        List<String> currentCodeLines = getCodeSnippetInHunk(hunk.getLines(), Version.CURRENT);
+        List<List<String>> hunkLines = splitHunkLines(hunk.getLines());
+        List<String> baseCodeLines = hunkLines.get(1);
+        List<String> currentCodeLines = hunkLines.get(2);
+        int leadingNeutral = hunkLines.get(0).size();
+        int trailingNeutral = hunkLines.get(3).size();
         com.github.smartcommit.model.Hunk baseHunk =
             new com.github.smartcommit.model.Hunk(
                 Version.BASE,
                 removeVersionLabel(baseFilePath),
-                hunk.getFromFileRange().getLineStart(),
-                hunk.getFromFileRange().getLineStart() + hunk.getFromFileRange().getLineCount() - 1,
+                // with -U0, leadingNeutral = 0 = trailingNeutral
+                hunk.getFromFileRange().getLineStart() + leadingNeutral,
+                hunk.getFromFileRange().getLineStart()
+                    + leadingNeutral
+                    + hunk.getFromFileRange().getLineCount()
+                    - leadingNeutral
+                    - trailingNeutral
+                    - 1,
                 Utils.checkContentType(baseCodeLines),
                 baseCodeLines);
         com.github.smartcommit.model.Hunk currentHunk =
             new com.github.smartcommit.model.Hunk(
                 Version.CURRENT,
                 removeVersionLabel(currentFilePath),
-                hunk.getToFileRange().getLineStart(),
-                hunk.getToFileRange().getLineStart() + hunk.getToFileRange().getLineCount() - 1,
+                hunk.getToFileRange().getLineStart() + leadingNeutral,
+                hunk.getToFileRange().getLineStart()
+                    + leadingNeutral
+                    + hunk.getToFileRange().getLineCount()
+                    - leadingNeutral
+                    - trailingNeutral
+                    - 1,
                 Utils.checkContentType(currentCodeLines),
                 currentCodeLines);
         ChangeType changeType = ChangeType.MODIFIED;
@@ -294,24 +309,58 @@ public class GitServiceCGit implements GitService {
   }
 
   /**
-   * Get code snippet from lines in Hunk
+   * Split the raw hunk lines into 0 (leading neutral), 1 (from), 2 (to), 3 (trailing neural)
    *
    * @param lines
-   * @param version
    * @return
    */
-  private List<String> getCodeSnippetInHunk(List<Line> lines, Version version) {
-    List<String> linesContent = new ArrayList<>();
-    if (version.equals(Version.BASE)) {
-      lines.stream()
-          .filter(line -> line.getLineType().equals(Line.LineType.FROM))
-          .forEach(line -> linesContent.add(line.getContent()));
-    } else if (version.equals(Version.CURRENT)) {
-      lines.stream()
-          .filter(line -> line.getLineType().equals(Line.LineType.TO))
-          .forEach(line -> linesContent.add(line.getContent()));
+  private List<List<String>> splitHunkLines(List<Line> lines) {
+    List<List<String>> result = new ArrayList<>();
+    for (int i = 0; i < 4; ++i) {
+      result.add(new ArrayList<>());
     }
-    return linesContent;
+
+    boolean trailing = false;
+    // to handle case where two neighboring diff hunks are merged if the lines between them are less
+    // than the -Ux
+    boolean isLastLineNeutral = true;
+    for (int i = 0; i < lines.size(); ++i) {
+      Line line = lines.get(i);
+      switch (line.getLineType()) {
+        case NEUTRAL:
+          boolean isNextLineNeutral = true;
+          if (!isLastLineNeutral) {
+            // check if the neutral lies between two non-netural lines
+            if (i + 1 < lines.size()) {
+              Line nextLine = lines.get(i + 1);
+              isNextLineNeutral = nextLine.getLineType().equals(Line.LineType.NEUTRAL);
+            }
+          }
+          if (!isLastLineNeutral && !isNextLineNeutral) {
+            isLastLineNeutral = true;
+            continue;
+          } else {
+            if (trailing) {
+              result.get(3).add(line.getContent());
+            } else {
+              result.get(0).add(line.getContent());
+            }
+            isLastLineNeutral = true;
+          }
+          break;
+        case FROM:
+          result.get(1).add(line.getContent());
+          trailing = true;
+          isLastLineNeutral = false;
+          break;
+        case TO:
+          result.get(2).add(line.getContent());
+          trailing = true;
+          isLastLineNeutral = false;
+          break;
+      }
+    }
+    return result;
   }
 
   /**
