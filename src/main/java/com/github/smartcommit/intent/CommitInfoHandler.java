@@ -75,7 +75,7 @@ public class CommitInfoHandler {
             CommitTrainningSample tempCommitTrainningSample = new CommitTrainningSample();
             body = part.split("\\nAuthor: | <|>\\nDate:   |\\n\\n  ");
             // String commitID
-            tempCommitTrainningSample.setCommitID(body[0]);
+            tempCommitTrainningSample.setCommitID(body[0].substring(0, 40));
             // String committer
             tempCommitTrainningSample.setCommitter(body[1]);
             // String committerEmail
