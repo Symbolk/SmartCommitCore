@@ -22,8 +22,9 @@ public enum IntentDescription {
   RFM("reformat"), FMT("format"),
   TST("test"),
   CLR("clear"),
-  UKN("unknown");
-  // NFL("NoFile"), FIL("FileAdd"), DOC("docChange");
+  UKN("unknown"),
+
+  NFL("NoFile"), FIL("FileAdd"), DOC("docChange");
 
   public String label;
   IntentDescription(String label) {

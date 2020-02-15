@@ -186,8 +186,8 @@ public class CommitInfoHandler {
                 String currentContent = diffFiles.get(j).getCurrentContent();
                 // File added or deleted, thus no content
                 if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
-                    //tempCommitTrainningSample.addIntentDescription(IntentDescription.FIL);
-                    tempCommitTrainningSample.setIntent(Intent.FIL);
+                    tempCommitTrainningSample.addIntentDescription(IntentDescription.FIL);
+                    // tempCommitTrainningSample.setIntent(Intent.FIL);
                     System.out.println("Exception type: NCC: only FILE change");
                     continue;
                 }
@@ -198,16 +198,16 @@ public class CommitInfoHandler {
                     tempCommitTrainningSample.setActionList(tempActionList);
                 } else {
                     // Only doc change, thus no CodeChange and AbstractJdtTree generated
-                    //tempCommitTrainningSample.addIntentDescription(IntentDescription.DOC);
-                    tempCommitTrainningSample.setIntent(Intent.DOC);
+                    tempCommitTrainningSample.addIntentDescription(IntentDescription.DOC);
+                    //tempCommitTrainningSample.setIntent(Intent.DOC);
                     System.out.println("Exception type: NCC: only DOC change");
                 }
             }
         } catch (Exception e) {
             //e.printStackTrace();
             // Lack of File, thus no DiffFiles generated
-            //tempCommitTrainningSample.addIntentDescription(IntentDescription.NFL);
-            tempCommitTrainningSample.setIntent(Intent.FIL);
+            tempCommitTrainningSample.addIntentDescription(IntentDescription.NFL);
+            //tempCommitTrainningSample.setIntent(Intent.FIL);
             System.out.println("Exception type: NoFile");
         }
         return tempCommitTrainningSample;
