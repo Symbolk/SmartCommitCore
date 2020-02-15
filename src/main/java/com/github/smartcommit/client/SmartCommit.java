@@ -92,7 +92,7 @@ public class SmartCommit {
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
     // comment when packaging
-    generateIntermediateVersions(results, repoAnalyzer.getIdToDiffHunkMap());
+    generateGroupDetails(results, repoAnalyzer.getIdToDiffHunkMap());
 
     return results;
   }
@@ -122,24 +122,24 @@ public class SmartCommit {
 
       Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
       // comment when packaging
-      generateIntermediateVersions(results, repoAnalyzer.getIdToDiffHunkMap());
+      generateGroupDetails(results, repoAnalyzer.getIdToDiffHunkMap());
       return results;
     }
   }
 
   /**
-   * Generate and save the intermediate versions to manually validate
+   * Generate and save the details of the grouping results
    *
    * @param results
    * @param id2DiffHunkMap
    */
-  private void generateIntermediateVersions(
+  private void generateGroupDetails(
       Map<String, Group> results, Map<String, DiffHunk> id2DiffHunkMap) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     List<String> groupedDiffHunks = new ArrayList<>();
     for (Map.Entry<String, Group> entry : results.entrySet()) {
       String path =
-          tempDir + File.separator + "versions" + File.separator + entry.getKey() + ".json";
+          tempDir + File.separator + "details" + File.separator + entry.getKey() + ".json";
       StringBuilder builder = new StringBuilder();
       builder.append(entry.getValue().getIntentLabel()).append("\n");
       for (String id : entry.getValue().getDiffHunks()) {
