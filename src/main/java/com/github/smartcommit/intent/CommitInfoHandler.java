@@ -48,7 +48,7 @@ import org.omg.CORBA.INTF_REPOS;
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
     public static void main(String[] args) {
-        args = new String[]{"/Users/Chuncen/Desktop/RefactoringMiner", "commitTrainingSample"};
+        args = new String[]{"/Users/Chuncen/Downloads/refactoring-toy-example", "commitTrainingSample"};
         String repoPath = args[0];
         String collectionName = args[1];
         // CommitTrainningSample
@@ -297,7 +297,7 @@ public class CommitInfoHandler {
                 for (RefactorCodeChange refactorCodeChange : refactorCodeChangeList) {
                     Document addrAttr = new Document();
                     addrAttr.put("operation", refactorCodeChange.getOperation());
-                    addrAttr.put("refactoringType", String.valueOf(refactorCodeChange.getRefactoringType()));
+                    addrAttr.put("refactoringType", refactorCodeChange.getRefactoringType());
                     refactorCodeChanges.add(addrAttr);
                 }
                 doc1.put("refactorCodeChanges", refactorCodeChanges);
