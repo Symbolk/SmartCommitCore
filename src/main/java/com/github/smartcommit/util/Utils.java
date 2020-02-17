@@ -170,18 +170,40 @@ public class Utils {
 
   /**
    * List all java files under a folder/directory
+   *
    * @param dir
-   * @return
+   * @return relative paths
    */
   public static List<String> listAllJavaFilePaths(String dir) {
     List<String> result = new ArrayList<>();
     try (Stream<Path> walk = Files.walk(Paths.get(dir))) {
       result =
-              walk.filter(Files::isRegularFile)
-                      .map(x -> x.toString())
-                      .filter(f -> f.endsWith(".java"))
-                      .map(s -> s.substring(dir.length()))
-                      .collect(Collectors.toList());
+          walk.filter(Files::isRegularFile)
+              .map(x -> x.toString())
+              .filter(f -> f.endsWith(".java"))
+              .map(s -> s.substring(dir.length()))
+              .collect(Collectors.toList());
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return result;
+  }
+
+  /**
+   * List all json files under a folder/directory
+   *
+   * @param dir
+   * @return absolute paths
+   */
+  public static List<String> listAllJsonFilePaths(String dir) {
+    List<String> result = new ArrayList<>();
+    try (Stream<Path> walk = Files.walk(Paths.get(dir))) {
+      result =
+          walk.filter(Files::isRegularFile)
+              .map(x -> x.toString())
+              .filter(f -> f.endsWith(".json"))
+              //              .map(s -> s.substring(dir.length()))
+              .collect(Collectors.toList());
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -321,17 +343,31 @@ public class Utils {
   }
 
   /**
-   * Parse fileIndex and diffHunkIndex from fileIndex:diffHunkIndex
+   * Split fileIndex:diffHunkIndex to get separate fields
    *
    * @param s
    * @return
    */
-  public static Pair<Integer, Integer> parseIndicesFromString(String s) {
+  public static Pair<Integer, Integer> parseIndices(String s) {
     String[] pair = s.split(":");
     if (pair.length == 2) {
       return Pair.of(Integer.valueOf(pair[0]), Integer.valueOf(pair[1]));
     }
     return Pair.of(-1, -1);
+  }
+
+  /**
+   * Split fileIndex:diffHunkIndex to get separate fields
+   *
+   * @param s
+   * @return
+   */
+  public static Pair<String, String> parseUUIDs(String s) {
+    String[] pair = s.split(":");
+    if (pair.length == 2) {
+      return Pair.of(pair[0], pair[1]);
+    }
+    return null;
   }
 
   /**

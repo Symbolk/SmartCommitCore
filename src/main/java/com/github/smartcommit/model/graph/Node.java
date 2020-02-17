@@ -8,7 +8,7 @@ public class Node {
 
   public Boolean isInDiffHunk;
   // following fields are only valid is isInDiffHunk is true
-  // fileIndex:diffHunkIndex
+  // diffHunkIndex = fileIndex:hunkIndex
   public String diffHunkIndex;
 
   public Node(Integer id, NodeType type, String identifier, String qualifiedName) {

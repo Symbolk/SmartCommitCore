@@ -23,7 +23,7 @@ public class DiffNode {
     this.id = id;
     this.index = index;
     this.uuid = uuid;
-    Pair<Integer, Integer> indices = Utils.parseIndicesFromString(index);
+    Pair<Integer, Integer> indices = Utils.parseIndices(index);
     this.fileIndex = indices.getLeft();
     this.diffHunkIndex = indices.getRight();
     this.baseHierarchy = new HashMap<>();

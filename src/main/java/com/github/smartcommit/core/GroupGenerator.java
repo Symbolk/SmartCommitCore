@@ -1,5 +1,6 @@
 package com.github.smartcommit.core;
 
+import com.github.smartcommit.model.Description;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
@@ -387,7 +388,7 @@ public class GroupGenerator {
   }
 
   private String getDiffHunkIDFromIndex(List<DiffFile> diffFiles, String index) {
-    Pair<Integer, Integer> indices = Utils.parseIndicesFromString(index);
+    Pair<Integer, Integer> indices = Utils.parseIndices(index);
     if (indices.getLeft() >= 0 && indices.getRight() >= 0) {
       DiffFile diffFile = diffFiles.get(indices.getLeft());
       return diffFile.getFileID()
@@ -427,13 +428,16 @@ public class GroupGenerator {
           Optional<DiffHunk> diffHunkOpt = getOverlappingDiffHunk(Version.BASE, range);
           if (diffHunkOpt.isPresent()) {
             refDiffHunks.add(diffHunkOpt.get());
+            // TODO: no effect
+            diffHunkOpt.get().setDescription(new Description(refactoring.getName(), "", ""));
           }
         }
         for (CodeRange range : refactoring.rightSide()) {
           Optional<DiffHunk> diffHunkOpt = getOverlappingDiffHunk(Version.CURRENT, range);
           if (diffHunkOpt.isPresent()) {
             refDiffHunks.add(diffHunkOpt.get());
-            diffHunkOpt.get().setDescription(refactoring.getName());
+            // TODO: no effect
+            diffHunkOpt.get().setDescription(new Description(refactoring.getName(), "", ""));
           }
         }
       }
@@ -491,13 +495,14 @@ public class GroupGenerator {
           if (!checkIfGrouped(diffNode.getUUID())) {
             diffHunkIDs.add(diffNode.getUUID());
           } else {
-            // if ONE of the nodes has been grouped, add others into the existing group and continue to the next connected set
+            // if ONE of the nodes has been grouped, add others into the existing group and continue
+            // to the next connected set
             diffHunkIDs = new LinkedHashSet<>();
             existingGroupID = diffHunkID2GroupID.get(diffNode.getUUID());
             break;
           }
         }
-        if(!existingGroupID.isEmpty()){
+        if (!existingGroupID.isEmpty()) {
           // if ONE of the nodes has been grouped, add others into the existing group
           Group group = generatedGroups.get(existingGroupID);
           Set<String> temp = new LinkedHashSet<>();
@@ -505,7 +510,7 @@ public class GroupGenerator {
           addToGroup(group, temp);
           // continue to the next connected set
           continue;
-        }else if(!diffHunkIDs.isEmpty()){
+        } else if (!diffHunkIDs.isEmpty()) {
           createGroup(diffHunkIDs, GroupLabel.FEATURE);
         }
       } else {
