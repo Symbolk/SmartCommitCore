@@ -25,7 +25,7 @@ public class DiffHunk {
   //  private List<ActionCluster> changeActions;
   private Description description;
   // lines from the raw output of git-diff (for patch generation)
-  private transient List<String> rawDiffs = new ArrayList<>();
+  private List<String> rawDiffs = new ArrayList<>();
 
   public DiffHunk(
       Integer index,

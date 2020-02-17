@@ -23,9 +23,9 @@ public class DiffFile {
   private String currentContent;
   private String description;
   private Map<String, DiffHunk> diffHunksMap;
-  private transient List<DiffHunk> diffHunks;
+   private transient List<DiffHunk> diffHunks;
   // lines from the raw output of git-diff (for patch generation)
-  private transient List<String> rawHeaders = new ArrayList<>();
+  private List<String> rawHeaders = new ArrayList<>();
 
   public DiffFile(
       Integer index,
@@ -165,7 +165,7 @@ public class DiffFile {
    * @return
    */
   public DiffFile shallowClone() {
-    return new DiffFile(
+    DiffFile diffFile =  new DiffFile(
         repoID,
         repoName,
         fileID,
@@ -177,5 +177,7 @@ public class DiffFile {
         "",
         "",
         diffHunksMap);
+    diffFile.setRawHeaders(this.rawHeaders);
+    return diffFile;
   }
 }
