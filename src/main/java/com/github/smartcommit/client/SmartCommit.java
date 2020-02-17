@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -35,6 +36,7 @@ public class SmartCommit {
   private String repoName;
   private String repoPath;
   private String tempDir;
+  private Map<String, DiffHunk> id2DiffHunkMap;
   // options
   private Boolean detectRefactorings = false;
   private Double similarityThreshold = 0.618D;
@@ -46,6 +48,7 @@ public class SmartCommit {
     this.repoName = repoName;
     this.repoPath = repoPath;
     this.tempDir = tempDir;
+    this.id2DiffHunkMap = new HashMap<>();
     Utils.clearDir(tempDir);
   }
 
@@ -82,6 +85,8 @@ public class SmartCommit {
       return null;
     }
 
+    this.id2DiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();
+
     // 2. collect the data into temp dir
     // (1) diff files (2) file id mapping (3) diff hunks
     DataCollector dataCollector = new DataCollector(repoName, tempDir);
@@ -90,9 +95,6 @@ public class SmartCommit {
     Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
 
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
-
-    // comment when packaging
-    generateGroupDetails(results, repoAnalyzer.getIdToDiffHunkMap());
 
     return results;
   }
@@ -116,13 +118,13 @@ public class SmartCommit {
         return null;
       }
 
+      this.id2DiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();
+
       // 2. collect the data into temp dir
       DataCollector dataCollector = new DataCollector(repoName, tempDir);
       Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(commitID, diffFiles);
 
       Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
-      // comment when packaging
-      generateGroupDetails(results, repoAnalyzer.getIdToDiffHunkMap());
       return results;
     }
   }
@@ -131,10 +133,8 @@ public class SmartCommit {
    * Generate and save the details of the grouping results
    *
    * @param results
-   * @param id2DiffHunkMap
    */
-  private void generateGroupDetails(
-      Map<String, Group> results, Map<String, DiffHunk> id2DiffHunkMap) {
+  public void generateGroupDetails(Map<String, Group> results) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     List<String> groupedDiffHunks = new ArrayList<>();
     for (Map.Entry<String, Group> entry : results.entrySet()) {

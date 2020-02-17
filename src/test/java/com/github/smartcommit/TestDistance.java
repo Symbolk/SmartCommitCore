@@ -23,7 +23,7 @@ public class TestDistance {
     hier1.put("class", 7);
     hier1.put("package", 8);
     Map<String, Integer> hier2 = new HashMap<>();
-    hier2.put("hunk", 5);
+    hier2.put("hunk", 4);
     hier2.put("member", 6);
     hier2.put("class", 9);
     hier2.put("package", 10);
