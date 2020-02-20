@@ -228,9 +228,8 @@ public class SmartCommit {
   /**
    * Generate patch files according to the manual group results
    *
-   * @param tempDir
    */
-  public void generatePatches(String tempDir) throws FileNotFoundException {
+  public void generatePatches() throws FileNotFoundException {
     String manualGroupsDir = tempDir + File.separator + "manual_groups";
     String fileDiffsDir = tempDir + File.separator + "diffs";
     String patchesDir = tempDir + File.separator + "patches";
