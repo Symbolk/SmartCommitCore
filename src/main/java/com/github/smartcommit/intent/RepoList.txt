@@ -1,3 +1,11 @@
 commitTrainningSample
 /Users/Chuncen//Downloads
 https://github.com/airbnb/lottie-android.git
+https://github.com/airbnb/lottie-android.git
+https://github.com/airbnb/lottie-android.git
+https://github.com/airbnb/lottie-android.git
+https://github.com/airbnb/lottie-android.git
+https://github.com/airbnb/lottie-android.git
+https://github.com/airbnb/lottie-android.git
+https://github.com/airbnb/lottie-android.git
+https://github.com/airbnb/lottie-android.git
