@@ -22,10 +22,21 @@ public class DiffHunk {
   private Hunk currentHunk;
   private FileType fileType;
   private ChangeType changeType;
-  private List<Action> actions = new ArrayList<>();
+  private List<Action> astActions = new ArrayList<>();
+  private List<Action> refActions = new ArrayList<>();
   private String description = "";
+
   // lines from the raw output of git-diff (for patch generation)
   private List<String> rawDiffs = new ArrayList<>();
+
+  public DiffHunk(
+      Integer index, FileType fileType, ChangeType changeType, Hunk baseHunk, Hunk currentHunk) {
+    this.index = index;
+    this.fileType = fileType;
+    this.baseHunk = baseHunk;
+    this.currentHunk = currentHunk;
+    this.changeType = changeType;
+  }
 
   public DiffHunk(
       Integer index,
@@ -33,13 +44,13 @@ public class DiffHunk {
       ChangeType changeType,
       Hunk baseHunk,
       Hunk currentHunk,
-      List<Action> actions) {
+      String description) {
     this.index = index;
     this.fileType = fileType;
     this.baseHunk = baseHunk;
     this.currentHunk = currentHunk;
     this.changeType = changeType;
-    this.actions = actions;
+    this.description = description;
   }
 
   public Integer getIndex() {
@@ -154,13 +165,24 @@ public class DiffHunk {
     this.rawDiffs = rawDiffs;
   }
 
-  public void setActions(List<Action> actions) {
-    this.actions = actions;
+  public List<Action> getAstActions() {
+    return astActions;
   }
 
-  public String getDescription() {
-    // TODO: format actions into one string
-    return description;
+  public List<Action> getRefActions() {
+    return refActions;
+  }
+
+  public void addASTAction(Action action) {
+    astActions.add(action);
+  }
+
+  public void setAstActions(List<Action> astActions) {
+    this.astActions = astActions;
+  }
+
+  public void setRefActions(List<Action> refActions) {
+    this.refActions = refActions;
   }
 
   public String getUUID() {
@@ -172,5 +194,10 @@ public class DiffHunk {
         || baseHunk.getContentType().equals(ContentType.IMPORT)
         || currentHunk.getContentType().equals(ContentType.CODE)
         || currentHunk.getContentType().equals(ContentType.IMPORT);
+  }
+
+  public String getDescription() {
+    // TODO: format all actions into one string as the description
+    return description;
   }
 }

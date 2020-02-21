@@ -1,6 +1,5 @@
 package com.github.smartcommit.core;
 
-import com.github.smartcommit.model.Description;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
@@ -429,7 +428,7 @@ public class GroupGenerator {
           if (diffHunkOpt.isPresent()) {
             refDiffHunks.add(diffHunkOpt.get());
             // TODO: no effect
-            diffHunkOpt.get().setDescription(new Description(refactoring.getName(), "", ""));
+//            diffHunkOpt.get().setAstActions(new Action(refactoring.getName(), "", ""));
           }
         }
         for (CodeRange range : refactoring.rightSide()) {
@@ -437,7 +436,7 @@ public class GroupGenerator {
           if (diffHunkOpt.isPresent()) {
             refDiffHunks.add(diffHunkOpt.get());
             // TODO: no effect
-            diffHunkOpt.get().setDescription(new Description(refactoring.getName(), "", ""));
+//            diffHunkOpt.get().setAstActions(new Action(refactoring.getName(), "", ""));
           }
         }
       }
@@ -669,7 +668,7 @@ public class GroupGenerator {
     if (!diffHunkIDs.isEmpty()) {
       String groupID = "group" + generatedGroups.size();
       Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs), label);
-      group.setCommitMsg(label.getLabel());
+      group.setCommitMsg(label.toString());
       // bidirectional mapping
       diffHunkIDs.forEach(id -> diffHunkID2GroupID.put(id, groupID));
       generatedGroups.put(groupID, group);

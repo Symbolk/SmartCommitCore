@@ -1,6 +1,6 @@
 package com.github.smartcommit.util;
 
-import com.github.smartcommit.model.Description;
+import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.*;
@@ -224,7 +224,8 @@ public class GitServiceCGit implements GitService {
                     lines.size(),
                     Utils.checkContentType(lines),
                     lines),
-                new Description("Add", "File", diffFile.getCurrentRelativePath()));
+                "Add File :" + diffFile.getCurrentRelativePath());
+        diffHunk.addASTAction(new Action(Operation.ADD, "File", diffFile.getCurrentRelativePath()));
 
         // bidirectional binding
         diffHunk.setFileIndex(diffFile.getIndex());
@@ -294,8 +295,7 @@ public class GitServiceCGit implements GitService {
         if (currentCodeLines.isEmpty()) {
           changeType = ChangeType.DELETED;
         }
-        DiffHunk diffHunk =
-            new DiffHunk(hunkIndex, fileType, changeType, baseHunk, currentHunk, new Description());
+        DiffHunk diffHunk = new DiffHunk(hunkIndex, fileType, changeType, baseHunk, currentHunk);
         diffHunk.setRawDiffs(hunk.getRawLines());
         diffHunksInFile.add(diffHunk);
         allDiffHunks.add(diffHunk);

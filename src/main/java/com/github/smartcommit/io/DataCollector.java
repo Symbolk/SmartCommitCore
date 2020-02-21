@@ -1,10 +1,11 @@
 package com.github.smartcommit.io;
 
-import com.github.smartcommit.model.Description;
+import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.ChangeType;
 import com.github.smartcommit.model.constant.ContentType;
+import com.github.smartcommit.model.constant.Operation;
 import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
@@ -119,7 +120,7 @@ public class DataCollector {
     for (DiffFile diffFile : diffFiles) {
       // generate description for each diff hunk
       for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
-        diffHunk.setDescription(generateDescForDiffHunk(diffHunk));
+        diffHunk.setAstActions(analyzeASTActions(diffHunk));
       }
 
       String filePath =
@@ -145,7 +146,9 @@ public class DataCollector {
    *
    * @param diffHunk
    */
-  private Description generateDescForDiffHunk(DiffHunk diffHunk) {
+  private List<Action> analyzeASTActions(DiffHunk diffHunk) {
+    List<Action> actions = new ArrayList<>();
+
     ChangeType changeType = diffHunk.getChangeType();
     ContentType baseContentType = diffHunk.getBaseHunk().getContentType();
     ContentType currentContentType = diffHunk.getCurrentHunk().getContentType();
@@ -154,11 +157,13 @@ public class DataCollector {
         case IMPORT:
         case COMMENT:
         case BLANKLINE:
-          return new Description(changeType.label, currentContentType.label, "");
+          actions.add(new Action(Operation.ADD, currentContentType.label, ""));
+          return actions;
         case CODE:
           return analyzeCoveredNodes(ChangeType.ADDED, diffHunk.getCurrentHunk().getCoveredNodes());
         default:
-          return new Description(changeType.label, "Code", "");
+          actions.add(new Action(Operation.ADD, "Code", ""));
+          return actions;
       }
 
     } else if (changeType.equals(ChangeType.DELETED)) {
@@ -166,11 +171,13 @@ public class DataCollector {
         case IMPORT:
         case COMMENT:
         case BLANKLINE:
-          return new Description(changeType.label, baseContentType.label, "");
+          actions.add(new Action(Operation.DEL, baseContentType.label, ""));
+          return actions;
         case CODE:
           return analyzeCoveredNodes(ChangeType.DELETED, diffHunk.getBaseHunk().getCoveredNodes());
         default:
-          return new Description(changeType.label, "Code", "");
+          actions.add(new Action(Operation.DEL, "Code", ""));
+          return actions;
       }
     } else if (changeType.equals(ChangeType.MODIFIED)) {
       // consider blank lines as empty, thus the change type should be add or delete
@@ -183,12 +190,14 @@ public class DataCollector {
 
       if (baseContentType.equals(ContentType.COMMENT)
           && currentContentType.equals(ContentType.COMMENT)) {
-        return new Description(changeType.label, ContentType.COMMENT.label, "");
+        actions.add(new Action(Operation.UPD, ContentType.COMMENT.label, ""));
+        return actions;
       }
 
       if (baseContentType.equals(ContentType.IMPORT)
           && currentContentType.equals(ContentType.IMPORT)) {
-        return new Description(changeType.label, ContentType.IMPORT.label, "");
+        actions.add(new Action(Operation.UPD, ContentType.IMPORT.label, ""));
+        return actions;
       }
 
       // assert: both code in base&current
@@ -199,80 +208,79 @@ public class DataCollector {
             diffHunk.getCurrentHunk().getCoveredNodes());
       }
     }
-    return new Description(changeType.label, "Code", "");
+    actions.add(new Action(convertChangeTypeToOperation(changeType), "Code", ""));
+    return actions;
   }
 
+  private Operation convertChangeTypeToOperation(ChangeType changeType) {
+    switch (changeType) {
+      case ADDED:
+        return Operation.ADD;
+      case DELETED:
+        return Operation.DEL;
+      case MODIFIED:
+        return Operation.UPD;
+      default:
+        return Operation.UPD;
+    }
+  }
   /**
-   * Generate description from covered AST nodes (for add/delete)
+   * Generate description from covered AST nodes (for added/deleted)
    *
    * @param changeType
    * @param coveredNodes
    * @return
    */
-  private Description analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
+  private List<Action> analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
+    List<Action> actions = new ArrayList<>();
+    Operation operation = convertChangeTypeToOperation(changeType);
+
     if (coveredNodes.isEmpty()) {
-      return new Description(changeType.label, "Code", "");
+      actions.add(new Action(operation, "Code", ""));
+      return actions;
     }
-    StringBuilder types = new StringBuilder();
-    StringBuilder labels = new StringBuilder();
+
     List<Pair<String, String>> infos = getASTNodesInfo(coveredNodes);
-    for (int i = 0; i < infos.size(); i++) {
-      Pair<String, String> info = infos.get(i);
-      types.append(info.getLeft());
-      if (i != infos.size() - 1) {
-        types.append(", ");
+    if (changeType.equals(ChangeType.ADDED)) {
+      for (Pair<String, String> info : infos) {
+        Action action = new Action(operation, "", "", info.getLeft(), info.getRight());
+        actions.add(action);
       }
-      labels.append(info.getRight());
-      if (i != infos.size() - 1) {
-        labels.append(", ");
+    } else if (changeType.equals(ChangeType.DELETED)) {
+      for (Pair<String, String> info : infos) {
+        Action action = new Action(operation, info.getLeft(), info.getRight(), "", "");
+        actions.add(action);
       }
     }
-    return new Description(changeType.label, types.toString(), labels.toString());
+    return actions;
   }
 
   /**
-   * Generate description from covered AST nodes (for modify)
+   * Generate description from covered AST nodes (for modified)
    *
    * @param changeType
    * @param baseNodes
    * @return
    */
-  private Description analyzeCoveredNodes(
+  private List<Action> analyzeCoveredNodes(
       ChangeType changeType, List<ASTNode> baseNodes, List<ASTNode> currentNodes) {
-    StringBuilder typesFrom = new StringBuilder();
-    StringBuilder typesTo = new StringBuilder();
-    StringBuilder labelsFrom = new StringBuilder();
-    StringBuilder labelsTo = new StringBuilder();
+    List<Action> actions = new ArrayList<>();
+    Operation operation = convertChangeTypeToOperation(changeType);
+
     List<Pair<String, String>> infosFrom = getASTNodesInfo(baseNodes);
     List<Pair<String, String>> infosTo = getASTNodesInfo(currentNodes);
-    for (int i = 0; i < infosFrom.size(); i++) {
-      Pair<String, String> info = infosFrom.get(i);
-      typesFrom.append(info.getLeft());
-      if (i != infosFrom.size() - 1) {
-        typesFrom.append(", ");
-      }
-      labelsFrom.append(info.getRight());
-      if (i != infosFrom.size() - 1) {
-        labelsFrom.append(", ");
-      }
+    for (int i = 0; i < Math.min(infosFrom.size(), infosTo.size()); i++) {
+      Action action =
+          new Action(
+              operation,
+              infosFrom.get(i).getLeft(),
+              infosFrom.get(i).getRight(),
+              infosTo.get(i).getLeft(),
+              infosTo.get(i).getRight());
+      actions.add(action);
     }
-    for (int i = 0; i < infosTo.size(); i++) {
-      Pair<String, String> info = infosTo.get(i);
-      typesTo.append(info.getLeft());
-      if (i != infosFrom.size() - 1) {
-        typesTo.append(", ");
-      }
-      labelsTo.append(info.getRight());
-      if (i != infosFrom.size() - 1) {
-        labelsTo.append(", ");
-      }
-    }
-    return new Description(
-        changeType.label,
-        typesFrom.toString(),
-        labelsFrom.toString(),
-        typesTo.toString(),
-        labelsTo.toString());
+
+    return actions;
   }
 
   /**
