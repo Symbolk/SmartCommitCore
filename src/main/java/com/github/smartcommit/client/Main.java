@@ -4,6 +4,8 @@ import com.github.smartcommit.model.Group;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class Main {
@@ -22,9 +24,14 @@ public class Main {
 //      Map<String, Group> groups = smartCommit.analyzeCommit(Config.COMMIT_ID);
       if (groups != null) {
         for (Map.Entry<String, Group> entry : groups.entrySet()) {
+          Group group = entry.getValue();
+          // regenerate commit message according to manual results
+          group.setCommitMsg(smartCommit.generateCommitMsg(group));
           System.out.println(entry.getKey());
           System.out.println(entry.getValue().toString());
         }
+        smartCommit.generateGroupDetails(groups);
+
       } else {
         System.out.println("No Changes.");
       }

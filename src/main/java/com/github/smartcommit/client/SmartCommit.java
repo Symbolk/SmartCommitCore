@@ -1,10 +1,10 @@
 package com.github.smartcommit.client;
 
+import com.github.smartcommit.commitmsg.CommitMsgGenerator;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
-import com.github.smartcommit.io.DiffGraphExporter;
 import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
@@ -99,6 +99,15 @@ public class SmartCommit {
     Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
 
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
+
+    // generate commit message
+    if (results != null) {
+      for (Map.Entry<String, Group> entry : results.entrySet()) {
+        Group group = entry.getValue();
+        // generate commit message according to manual results
+        group.setCommitMsg(generateCommitMsg(group));
+      }
+    }
 
     return results;
   }
@@ -282,5 +291,19 @@ public class SmartCommit {
       String resultPath = patchesDir + File.separator + group.getGroupID() + ".patch";
       Utils.writeStringToFile(builder.toString(), resultPath);
     }
+  }
+
+  /**
+   * Generate commit message for a given group
+   *
+   * @param group
+   * @return
+   */
+  public String generateCommitMsg(Group group) {
+    CommitMsgGenerator generator =
+        new CommitMsgGenerator(group.getASTActions(), group.getRefactoringActions());
+    List<Integer> vectors = generator.generateGroupVector();
+    String templateMsg = generator.invokeAIModel(vectors, group.getIntentLabel());
+    return generator.generateDetailedMsg(templateMsg);
   }
 }
