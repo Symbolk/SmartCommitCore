@@ -28,6 +28,13 @@ public class Main {
       } else {
         System.out.println("No Changes.");
       }
+
+      // read selected group json file, generate patches that can be applied incrementally
+      List<String> selectedGroupIDs = new ArrayList<>();
+      selectedGroupIDs.add("group0");
+      selectedGroupIDs.add("group1");
+      selectedGroupIDs.add("group4");
+      smartCommit.generatePatches(selectedGroupIDs);
     } catch (Exception e) {
       e.printStackTrace();
     }

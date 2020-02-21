@@ -176,8 +176,8 @@ public class SmartCommit {
     groupGenerator.exportGroupingResults(tempDir);
 
     // visualize the diff hunk graph
-    String diffGraphString =
-        DiffGraphExporter.exportAsDotWithType(groupGenerator.getDiffHunkGraph());
+    //    String diffGraphString =
+    //        DiffGraphExporter.exportAsDotWithType(groupGenerator.getDiffHunkGraph());
 
     return groupGenerator.getGeneratedGroups();
   }
@@ -225,11 +225,8 @@ public class SmartCommit {
     }
   }
 
-  /**
-   * Generate patch files according to the manual group results
-   *
-   */
-  public void generatePatches() throws FileNotFoundException {
+  /** Generate patch files according to the manual group results */
+  public void generatePatches(List<String> selectedGroupIDs) throws FileNotFoundException {
     String manualGroupsDir = tempDir + File.separator + "manual_groups";
     String fileDiffsDir = tempDir + File.separator + "diffs";
     String patchesDir = tempDir + File.separator + "patches";
