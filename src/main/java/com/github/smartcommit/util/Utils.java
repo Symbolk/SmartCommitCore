@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 /** Helper functions to operate the file and the system. */
 public class Utils {
   /**
-   * Run system command and return the output
+   * Run system command under the given dir
    *
    * @param dir
    * @param commands

@@ -5,6 +5,7 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,8 +21,8 @@ public class Main {
       smartCommit.setDetectRefactorings(true);
       smartCommit.setSimilarityThreshold(Config.SIMI_THRESHOLD);
       smartCommit.setDistanceThreshold(Config.DIS_THRESHOLD);
-            Map<String, Group> groups = smartCommit.analyzeWorkingTree();
-//      Map<String, Group> groups = smartCommit.analyzeCommit(Config.COMMIT_ID);
+      Map<String, Group> groups = smartCommit.analyzeWorkingTree();
+      //      Map<String, Group> groups = smartCommit.analyzeCommit(Config.COMMIT_ID);
       if (groups != null) {
         for (Map.Entry<String, Group> entry : groups.entrySet()) {
           Group group = entry.getValue();
@@ -36,12 +37,18 @@ public class Main {
         System.out.println("No Changes.");
       }
 
-      // read selected group json file, generate patches that can be applied incrementally
       List<String> selectedGroupIDs = new ArrayList<>();
       selectedGroupIDs.add("group0");
       selectedGroupIDs.add("group1");
       selectedGroupIDs.add("group4");
       smartCommit.generatePatches(selectedGroupIDs);
+
+      Map<String, String> commitMsgs = new HashMap<>();
+      commitMsgs.put("group0", "New Feature");
+      commitMsgs.put("group1", "Fix a Bug");
+      commitMsgs.put("group4", "Refactoring");
+      boolean success = smartCommit.commit(selectedGroupIDs, commitMsgs);
+
     } catch (Exception e) {
       e.printStackTrace();
     }

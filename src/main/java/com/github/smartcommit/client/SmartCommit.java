@@ -5,12 +5,12 @@ import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
-import com.github.smartcommit.io.GraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
+import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -161,8 +161,8 @@ public class SmartCommit {
         executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
     Graph<Node, Edge> baseGraph = baseBuilder.get();
     Graph<Node, Edge> currentGraph = currentBuilder.get();
-    String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
-    String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
+//    String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
+//    String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
     executorService.shutdown();
 
     // analyze the diff hunks
@@ -234,7 +234,13 @@ public class SmartCommit {
     }
   }
 
-  /** Generate patch files according to the manual group results */
+  /**
+   * Read selected group json file, generate patches that can be applied incrementally for
+   * inter-versions
+   *
+   * @param selectedGroupIDs
+   * @throws FileNotFoundException
+   */
   public void generatePatches(List<String> selectedGroupIDs) throws FileNotFoundException {
     String manualGroupsDir = tempDir + File.separator + "manual_groups";
     String fileDiffsDir = tempDir + File.separator + "diffs";
@@ -301,9 +307,41 @@ public class SmartCommit {
    */
   public String generateCommitMsg(Group group) {
     CommitMsgGenerator generator =
-        new CommitMsgGenerator(group.getASTActions(), group.getRefactoringActions());
+        new CommitMsgGenerator(group.getASTActions(), group.getRefActions());
     List<Integer> vectors = generator.generateGroupVector();
     String templateMsg = generator.invokeAIModel(vectors, group.getIntentLabel());
     return generator.generateDetailedMsg(templateMsg);
+  }
+
+  /**
+   * Commit all the selected groups with the given commit messages
+   *
+   * @param selectedGroupIDs
+   * @param commitMsgs "group1":"Feature ...."
+   * @return
+   */
+  public boolean commit(List<String> selectedGroupIDs, Map<String, String> commitMsgs) {
+    GitServiceCGit gitService = new GitServiceCGit();
+    if (gitService.clearWorkingTree(repoPath)) {
+
+      for (String id : selectedGroupIDs) {
+        String msg = commitMsgs.getOrDefault(id, "<Empty Commit Message>");
+        // git apply patchX.patch
+        // git add .
+        // git commit -m "XXX"
+      }
+
+      // after all selected groups committed, stash the remaining changes
+      // combine all uncommitted patches
+
+      // apply the patches (TODO: base has changed)
+
+      // stash the working tree
+
+      return true;
+    } else {
+      logger.error("Failed to clear the working tree.");
+      return false;
+    }
   }
 }

@@ -224,8 +224,9 @@ public class GitServiceCGit implements GitService {
                     lines.size(),
                     Utils.checkContentType(lines),
                     lines),
-                "Add File :" + diffFile.getCurrentRelativePath());
-        diffHunk.addASTAction(new Action(Operation.ADD, "File", diffFile.getCurrentRelativePath()));
+                "Add File:" + diffFile.getCurrentRelativePath());
+        diffHunk.addASTAction(
+            new Action(Operation.ADD, "", "", "File", diffFile.getCurrentRelativePath()));
 
         // bidirectional binding
         diffHunk.setFileIndex(diffFile.getIndex());
@@ -428,5 +429,21 @@ public class GitServiceCGit implements GitService {
    */
   private String removeVersionLabel(String gitFilePath) {
     return gitFilePath.replaceFirst("a/", "").replaceFirst("b/", "");
+  }
+
+  /**
+   * Make the working dir clean by dropping all the changes (which are backed up in tempDir/current)
+   *
+   * @param repoPath
+   */
+  public boolean clearWorkingTree(String repoPath) {
+    Utils.runSystemCommand(repoPath, "git", "reset", "--hard");
+    String status = Utils.runSystemCommand(repoPath, "git", "status", "--porcelain", "-uall");
+    if (status.isEmpty()) {
+      // working tree clean
+      return true;
+    } else {
+      return false;
+    }
   }
 }
