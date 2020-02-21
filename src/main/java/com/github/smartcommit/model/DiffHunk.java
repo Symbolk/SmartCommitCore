@@ -22,8 +22,8 @@ public class DiffHunk {
   private Hunk currentHunk;
   private FileType fileType;
   private ChangeType changeType;
-  //  private List<ActionCluster> changeActions;
-  private Description description;
+  private List<Action> actions = new ArrayList<>();
+  private String description = "";
   // lines from the raw output of git-diff (for patch generation)
   private List<String> rawDiffs = new ArrayList<>();
 
@@ -33,13 +33,13 @@ public class DiffHunk {
       ChangeType changeType,
       Hunk baseHunk,
       Hunk currentHunk,
-      Description description) {
+      List<Action> actions) {
     this.index = index;
     this.fileType = fileType;
     this.baseHunk = baseHunk;
     this.currentHunk = currentHunk;
     this.changeType = changeType;
-    this.description = description;
+    this.actions = actions;
   }
 
   public Integer getIndex() {
@@ -146,10 +146,6 @@ public class DiffHunk {
     return changeType;
   }
 
-  public String getDescription() {
-    return description.toString();
-  }
-
   public List<String> getRawDiffs() {
     return rawDiffs;
   }
@@ -158,19 +154,18 @@ public class DiffHunk {
     this.rawDiffs = rawDiffs;
   }
 
-  public void setDescription(Description description) {
-    this.description = description;
+  public void setActions(List<Action> actions) {
+    this.actions = actions;
+  }
+
+  public String getDescription() {
+    // TODO: format actions into one string
+    return description;
   }
 
   public String getUUID() {
     return fileID + ":" + diffHunkID;
   }
-  //  public void addCodeAction(ActionCluster actionCluster) {
-  //    if (this.changeActions == null) {
-  //      this.changeActions = new ArrayList<>();
-  //    }
-  //    this.changeActions.add(actionCluster);
-  //  }
 
   public boolean containsCode() {
     return baseHunk.getContentType().equals(ContentType.CODE)
