@@ -205,7 +205,7 @@ public class SmartCommit {
           tempDir + File.separator + "details" + File.separator + entry.getKey() + ".json";
       StringBuilder builder = new StringBuilder();
       builder.append(entry.getValue().getIntentLabel()).append("\n");
-      for (String id : entry.getValue().getDiffHunks()) {
+      for (String id : entry.getValue().getDiffHunkIDs()) {
         if (groupedDiffHunks.contains(id)) {
           DiffHunk diffHunk = id2DiffHunkMap.get(id.split(":")[1]);
           logger.error("Duplicate DiffHunk: " + diffHunk.getUniqueIndex());
@@ -257,7 +257,7 @@ public class SmartCommit {
       Group group = gson.fromJson(reader, Group.class);
       // put diff hunks within the same file together
       Map<String, List<String>> fileID2hunkIDsMap = new HashMap<>();
-      for (String id : group.getDiffHunks()) {
+      for (String id : group.getDiffHunkIDs()) {
         Pair<String, String> idPair = Utils.parseUUIDs(id);
         if (idPair != null) {
           String fileID = idPair.getLeft();
@@ -308,7 +308,7 @@ public class SmartCommit {
    */
   public String generateCommitMsg(Group group) {
     // get the ast actions and refactoring actions
-    List<String> diffHunkIDs = group.getDiffHunks();
+    List<String> diffHunkIDs = group.getDiffHunkIDs();
     List<Action> astActions = new ArrayList<>();
     List<Action> refActions = new ArrayList<>();
     for (String id : diffHunkIDs) {

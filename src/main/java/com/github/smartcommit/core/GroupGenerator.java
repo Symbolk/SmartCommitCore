@@ -689,8 +689,8 @@ public class GroupGenerator {
    */
   private void addToGroup(Group group, Set<String> diffHunkIDs) {
     for (String id : diffHunkIDs) {
-      if (!group.getDiffHunks().contains(id)) {
-        group.getDiffHunks().add(id);
+      if (!group.getDiffHunkIDs().contains(id)) {
+        group.getDiffHunkIDs().add(id);
         diffHunkID2GroupID.put(id, group.getGroupID());
       }
     }

@@ -13,18 +13,18 @@ public class Group {
 
   // fileID:diffHunkID
   // if fileID==diffHunkID, status is UNTRACKED, the whole file is a diff hunk
-  private List<String> diffHunks;
+  private List<String> diffHunkIDs;
   private String commitMsg;
   private String templateCommitMsg;
   private GroupLabel intentLabel;
 
   public Group(
-      String repoID, String repoName, String groupID, List<String> diffHunks, GroupLabel label) {
+      String repoID, String repoName, String groupID, List<String> diffHunkIDs, GroupLabel label) {
     this.repoID = repoID;
     this.repoName = repoName;
     this.groupID = groupID;
     this.commitID = "";
-    this.diffHunks = diffHunks;
+    this.diffHunkIDs = diffHunkIDs;
     this.commitMsg = "";
     this.templateCommitMsg = "";
     this.intentLabel = label;
@@ -34,8 +34,8 @@ public class Group {
     return groupID;
   }
 
-  public List<String> getDiffHunks() {
-    return diffHunks;
+  public List<String> getDiffHunkIDs() {
+    return diffHunkIDs;
   }
 
   public GroupLabel getIntentLabel() {
@@ -55,10 +55,10 @@ public class Group {
   }
 
   public void addDiffHunk(String diffID) {
-    if (diffHunks.contains(diffID)) {
+    if (diffHunkIDs.contains(diffID)) {
       return;
     } else {
-      diffHunks.add(diffID);
+      diffHunkIDs.add(diffID);
     }
   }
 
@@ -67,7 +67,7 @@ public class Group {
     StringBuilder builder = new StringBuilder();
     builder.append(intentLabel).append("\n");
     //    builder.append(commitMsg).append("\n");
-    diffHunks.forEach(diffHunk -> builder.append(diffHunk).append("\n"));
+    diffHunkIDs.forEach(diffHunk -> builder.append(diffHunk).append("\n"));
     return builder.toString();
   }
 }
