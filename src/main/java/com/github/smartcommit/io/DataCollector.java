@@ -121,6 +121,8 @@ public class DataCollector {
       // generate description for each diff hunk
       for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
         diffHunk.setAstActions(analyzeASTActions(diffHunk));
+        // TODO: move refactoring detection earlier?
+        diffHunk.generateDescription();
       }
 
       String filePath =

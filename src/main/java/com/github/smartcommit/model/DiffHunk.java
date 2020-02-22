@@ -65,13 +65,6 @@ public class DiffHunk {
   public Hunk getCurrentHunk() {
     return currentHunk;
   }
-  //  public List<ActionCluster> getChangeActions() {
-  //    return changeActions;
-  //  }
-  //
-  //  public void setChangeActions(List<ActionCluster> changeActions) {
-  //    this.changeActions = changeActions;
-  //  }
 
   public String getRepoID() {
     return repoID;
@@ -208,7 +201,7 @@ public class DiffHunk {
    *
    * @return
    */
-  public String generateDescription() {
+  public void generateDescription() {
     StringBuilder builder = new StringBuilder();
     for (Action action : astActions) {
       builder.append(action.toString()).append(System.lineSeparator());
@@ -216,12 +209,12 @@ public class DiffHunk {
     for (Refactoring action : refActions) {
       builder.append(action.toString()).append(System.lineSeparator());
     }
-    return builder.toString();
+    description = builder.toString();
   }
 
   public String getDescription() {
     if (description.isEmpty()) {
-      description = generateDescription();
+      generateDescription();
     }
     return description;
   }
