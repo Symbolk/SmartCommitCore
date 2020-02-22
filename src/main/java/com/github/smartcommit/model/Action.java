@@ -35,10 +35,10 @@ public class Action {
     builder.append(operation);
     builder
         .append(typeFrom.isEmpty() ? "" : " " + typeFrom)
-        .append(labelFrom.isEmpty() ? "" : ": " + labelFrom);
+        .append(labelFrom.isEmpty() ? "" : ":" + labelFrom);
     builder
-        .append(typeTo.isEmpty() ? "" : " To: " + typeTo)
-        .append(labelTo.isEmpty() ? "" : ": " + labelTo);
+        .append(typeTo.isEmpty() ? "" : " To:" + typeTo)
+        .append(labelTo.isEmpty() ? "" : ":" + labelTo);
     builder.append(".");
 
     return builder.toString();
