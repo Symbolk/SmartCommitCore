@@ -120,7 +120,8 @@ public class DataCollector {
     for (DiffFile diffFile : diffFiles) {
       // generate description for each diff hunk
       for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
-        diffHunk.setAstActions(analyzeASTActions(diffHunk));
+        List<Action> actions = analyzeASTActions(diffHunk);
+        diffHunk.setAstActions(actions);
       }
 
       String filePath =
@@ -243,12 +244,13 @@ public class DataCollector {
     List<Pair<String, String>> infos = getASTNodesInfo(coveredNodes);
     if (changeType.equals(ChangeType.ADDED)) {
       for (Pair<String, String> info : infos) {
-        Action action = new Action(operation, "", "", info.getLeft(), info.getRight());
+        //        Action action = new Action(operation, "", "", info.getLeft(), info.getRight());
+        Action action = new Action(operation, info.getLeft(), info.getRight());
         actions.add(action);
       }
     } else if (changeType.equals(ChangeType.DELETED)) {
       for (Pair<String, String> info : infos) {
-        Action action = new Action(operation, info.getLeft(), info.getRight(), "", "");
+        Action action = new Action(operation, info.getLeft(), info.getRight());
         actions.add(action);
       }
     }
@@ -299,6 +301,9 @@ public class DataCollector {
           case TYPE_DECLARATION:
             label = ((TypeDeclaration) node).getName().getIdentifier();
             break;
+          case ENUM_DECLARATION:
+            label = ((EnumDeclaration) node).getName().getIdentifier();
+            break;
           case VARIABLE_DECLARATION_STATEMENT:
             label =
                 ((VariableDeclarationFragment)
@@ -314,6 +319,9 @@ public class DataCollector {
             break;
           case METHOD_DECLARATION:
             label = ((MethodDeclaration) node).getName().getIdentifier();
+            break;
+          case EXPRESSION_STATEMENT:
+            label = ((ExpressionStatement) node).toString();
             break;
           default:
             label = "";
