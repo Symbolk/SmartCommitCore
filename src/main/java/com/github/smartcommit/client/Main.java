@@ -41,13 +41,13 @@ public class Main {
       selectedGroupIDs.add("group0");
       selectedGroupIDs.add("group1");
       selectedGroupIDs.add("group4");
-      smartCommit.generatePatches(selectedGroupIDs);
+//      smartCommit.generatePatches(selectedGroupIDs);
 
       Map<String, String> commitMsgs = new HashMap<>();
       commitMsgs.put("group0", "New Feature");
       commitMsgs.put("group1", "Fix a Bug");
       commitMsgs.put("group4", "Refactoring");
-      boolean success = smartCommit.commit(selectedGroupIDs, commitMsgs);
+//      boolean success = smartCommit.commit(selectedGroupIDs, commitMsgs);
 
     } catch (Exception e) {
       e.printStackTrace();

@@ -322,8 +322,8 @@ public class SmartCommit {
    */
   public boolean commit(List<String> selectedGroupIDs, Map<String, String> commitMsgs) {
     GitServiceCGit gitService = new GitServiceCGit();
+    // clear the working dir firstly to prepare for applying patches
     if (gitService.clearWorkingTree(repoPath)) {
-
       for (String id : selectedGroupIDs) {
         String msg = commitMsgs.getOrDefault(id, "<Empty Commit Message>");
         // git apply patchX.patch

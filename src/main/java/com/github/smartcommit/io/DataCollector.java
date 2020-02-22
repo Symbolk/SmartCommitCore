@@ -120,8 +120,7 @@ public class DataCollector {
     for (DiffFile diffFile : diffFiles) {
       // generate description for each diff hunk
       for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
-        List<Action> actions = analyzeASTActions(diffHunk);
-        diffHunk.setAstActions(actions);
+        diffHunk.setAstActions(analyzeASTActions(diffHunk));
       }
 
       String filePath =
