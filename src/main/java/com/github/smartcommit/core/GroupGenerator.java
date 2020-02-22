@@ -397,6 +397,11 @@ public class GroupGenerator {
     return ":";
   }
 
+  /**
+   * Analyze refactorings with RMiner
+   *
+   * @param tempDir
+   */
   public void analyzeRefactorings(String tempDir) {
     try {
       String baseDir = tempDir + File.separator + Version.BASE.asString() + File.separator;
@@ -424,19 +429,20 @@ public class GroupGenerator {
       for (Refactoring refactoring : refactorings) {
         // greedy style: put all refactorings into one group
         for (CodeRange range : refactoring.leftSide()) {
+          Set<Refactoring> refActions = new HashSet<>();
           Optional<DiffHunk> diffHunkOpt = getOverlappingDiffHunk(Version.BASE, range);
           if (diffHunkOpt.isPresent()) {
-            refDiffHunks.add(diffHunkOpt.get());
-            // TODO: no effect
-//            diffHunkOpt.get().setAstActions(new Action(refactoring.getName(), "", ""));
+            DiffHunk diffHunk = diffHunkOpt.get();
+            diffHunk.addRefAction(refactoring);
+            refDiffHunks.add(diffHunk);
           }
         }
         for (CodeRange range : refactoring.rightSide()) {
           Optional<DiffHunk> diffHunkOpt = getOverlappingDiffHunk(Version.CURRENT, range);
           if (diffHunkOpt.isPresent()) {
-            refDiffHunks.add(diffHunkOpt.get());
-            // TODO: no effect
-//            diffHunkOpt.get().setAstActions(new Action(refactoring.getName(), "", ""));
+            DiffHunk diffHunk = diffHunkOpt.get();
+            diffHunk.addRefAction(refactoring);
+            refDiffHunks.add(diffHunk);
           }
         }
       }

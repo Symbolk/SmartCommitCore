@@ -5,6 +5,7 @@ import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.Version;
 import org.apache.commons.lang3.tuple.Pair;
+import org.refactoringminer.api.Refactoring;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +23,8 @@ public class DiffHunk {
   private Hunk currentHunk;
   private FileType fileType;
   private ChangeType changeType;
-  private List<Action> astActions = new ArrayList<>();
-  private List<Action> refActions = new ArrayList<>();
+  private transient List<Action> astActions = new ArrayList<>();
+  private transient List<Refactoring> refActions = new ArrayList<>();
   private String description = "";
 
   // lines from the raw output of git-diff (for patch generation)
@@ -169,7 +170,7 @@ public class DiffHunk {
     return astActions;
   }
 
-  public List<Action> getRefActions() {
+  public List<Refactoring> getRefActions() {
     return refActions;
   }
 
@@ -181,7 +182,13 @@ public class DiffHunk {
     this.astActions = astActions;
   }
 
-  public void setRefActions(List<Action> refActions) {
+  public void addRefAction(Refactoring action) {
+    if (!refActions.contains(action)) {
+      refActions.add(action);
+    }
+  }
+
+  public void setRefActions(List<Refactoring> refActions) {
     this.refActions = refActions;
   }
 
@@ -196,8 +203,26 @@ public class DiffHunk {
         || currentHunk.getContentType().equals(ContentType.IMPORT);
   }
 
+  /**
+   * Generate a string description from the actions
+   *
+   * @return
+   */
+  public String generateDescription() {
+    StringBuilder builder = new StringBuilder();
+    for (Action action : astActions) {
+      builder.append(action.toString()).append(System.lineSeparator());
+    }
+    for (Refactoring action : refActions) {
+      builder.append(action.toString()).append(System.lineSeparator());
+    }
+    return builder.toString();
+  }
+
   public String getDescription() {
-    // TODO: format all actions into one string as the description
+    if (description.isEmpty()) {
+      description = generateDescription();
+    }
     return description;
   }
 }
