@@ -1,14 +1,5 @@
 package com.github.smartcommit.intent;
 
-import com.github.smartcommit.intent.model.CommitTrainningSample;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientURI;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import org.bson.Document;
-
-import java.util.ArrayList;
-import java.util.List;
 /*
 public class MongoExample {
   public static void main(String[] args) {
@@ -19,7 +10,7 @@ public class MongoExample {
       MongoDatabase sampleDB = mongoClient.getDatabase("samples");
       MongoCollection<Document> repoCol = sampleDB.getCollection(REPO_NAME);
       Document commitDoc = new Document("repo_name", REPO_NAME);
-      CommitTrainningSample commitTrainningSample = new CommitTrainningSample();
+      CommitTrainingSample commitTrainningSample = new CommitTrainingSample();
       // key:value
       commitDoc
           .append("intent", commitTrainningSample.getIntent())

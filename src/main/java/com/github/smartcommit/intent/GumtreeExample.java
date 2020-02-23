@@ -15,7 +15,7 @@ import com.github.gumtreediff.matchers.SimilarityMetrics;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.github.smartcommit.intent.model.ASTOperation;
-import com.github.smartcommit.intent.model.CommitTrainningSample;
+import com.github.smartcommit.intent.model.CommitTrainingSample;
 import com.github.smartcommit.intent.model.Intent;
 import com.github.smartcommit.intent.model.Action;
 import org.apache.commons.io.FileUtils;
@@ -29,143 +29,143 @@ import java.util.List;
 import java.util.Set;
 
 public class GumtreeExample {
-  public static void main(String[] args) throws IOException {
-    String body1 = " double similarity = 0D; if(similarity == 0) return similarity;";
-    String body2 = " double similarity = 0D; if(similarity != 0) return similarity;";
-    System.out.println("the score is ");
-    System.out.println(bodyAST(body1, body2));
+    public static void main(String[] args) throws IOException {
+        String body1 = " double similarity = 0D; if(similarity == 0) return similarity;";
+        String body2 = " double similarity = 0D; if(similarity != 0) return similarity;";
+        System.out.println("the score is ");
+        System.out.println(bodyAST(body1, body2));
 
-    GumtreeExample example = new GumtreeExample();
-    System.out.println(example.getCurrentFilePath());
+        GumtreeExample example = new GumtreeExample();
+        System.out.println(example.getCurrentFilePath());
 
-    String projectPath = System.getProperty("user.dir");
-    String fileRelativePath1 = "src/main/java/com/github/smartcommit/intent/GumtreeExample.java";
-    String fileRelativePath2 = "src/main/java/com/github/smartcommit/intent/CommitLog_GetLabelStore.java";
-    EditScript editScript =
-        generateEditScript(
-            FileUtils.readFileToString(new File(fileRelativePath1)),
-            FileUtils.readFileToString(new File(fileRelativePath2)));
+        String projectPath = System.getProperty("user.dir");
+        String fileRelativePath1 = "src/main/java/com/github/smartcommit/intent/GumtreeExample.java";
+        String fileRelativePath2 = "src/main/java/com/github/smartcommit/intent/CommitLog_GetLabelStore.java";
+        EditScript editScript =
+                generateEditScript(
+                        FileUtils.readFileToString(new File(fileRelativePath1)),
+                        FileUtils.readFileToString(new File(fileRelativePath2)));
 
-    // generate commit info from edit script
-    CommitTrainningSample commitTrainningSample = new CommitTrainningSample();
-    for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
-      com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
-      ASTOperation ASTOperation = null;
-      if (action instanceof Insert) {
-        ASTOperation = ASTOperation.ADD;
-      } else if (action instanceof Delete) {
-        ASTOperation = ASTOperation.DEL;
-      } else if (action instanceof Move) {
-          ASTOperation = ASTOperation.MOV;
-      } else if (action instanceof Update) {
-          ASTOperation = ASTOperation.UPD;
-      }
-      Action myAction = new Action(ASTOperation, action.getNode().getType().toString());
-      commitTrainningSample.addAction(myAction);
+        // generate commit info from edit script
+        CommitTrainingSample commitTrainingSample = new CommitTrainingSample();
+        for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
+            com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
+            ASTOperation ASTOperation = null;
+            if (action instanceof Insert) {
+                ASTOperation = ASTOperation.ADD;
+            } else if (action instanceof Delete) {
+                ASTOperation = ASTOperation.DEL;
+            } else if (action instanceof Move) {
+                ASTOperation = ASTOperation.MOV;
+            } else if (action instanceof Update) {
+                ASTOperation = ASTOperation.UPD;
+            }
+            Action myAction = new Action(ASTOperation, action.getNode().getType().toString());
+            commitTrainingSample.addAction(myAction);
+        }
+
     }
 
-  }
-
-  /**
-   * Classify commit message into intent
-   * @param commitMsg
-   * @return
-   */
-  public Intent getIntentFromMsg(String commitMsg) {
-    for (Intent intent : Intent.values()) {
-      if (commitMsg.contains(intent.label)) {
-        return intent;
-      }
+    /**
+     * Classify commit message into intent
+     * @param commitMsg
+     * @return
+     */
+    public Intent getIntentFromMsg(String commitMsg) {
+        for (Intent intent : Intent.values()) {
+            if (commitMsg.contains(intent.label)) {
+                return intent;
+            }
+        }
+        return Intent.CHR;
     }
-    return Intent.UNKNOWN;
-  }
 
-  /**
-   * Compute the similarity of two method bodies
-   *
-   * @param body1
-   * @param body2
-   * @return
-   */
-  public static double bodyAST(String body1, String body2) {
-    double similarity = 0D;
-    try {
-      JdtTreeGenerator generator = new JdtTreeGenerator();
-      generator.setKind(ASTParser.K_STATEMENTS);
-      TreeContext baseContext = generator.generateFrom().string(body1);
-      TreeContext othersContext = generator.generateFrom().string(body2);
-      ITree baseRoot = baseContext.getRoot();
-      ITree othersRoot = othersContext.getRoot();
-      Matcher matcher = Matchers.getInstance().getMatcher();
-      MappingStore mappings = matcher.match(baseRoot, othersRoot);
-      similarity = SimilarityMetrics.diceSimilarity(baseRoot, othersRoot, mappings);
-      if (Double.isNaN(similarity)) {
-        similarity = 0D;
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
+    /**
+     * Compute the similarity of two method bodies
+     *
+     * @param body1
+     * @param body2
+     * @return
+     */
+    public static double bodyAST(String body1, String body2) {
+        double similarity = 0D;
+        try {
+            JdtTreeGenerator generator = new JdtTreeGenerator();
+            generator.setKind(ASTParser.K_STATEMENTS);
+            TreeContext baseContext = generator.generateFrom().string(body1);
+            TreeContext othersContext = generator.generateFrom().string(body2);
+            ITree baseRoot = baseContext.getRoot();
+            ITree othersRoot = othersContext.getRoot();
+            Matcher matcher = Matchers.getInstance().getMatcher();
+            MappingStore mappings = matcher.match(baseRoot, othersRoot);
+            similarity = SimilarityMetrics.diceSimilarity(baseRoot, othersRoot, mappings);
+            if (Double.isNaN(similarity)) {
+                similarity = 0D;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return similarity;
     }
-    return similarity;
-  }
 
-  /**
-   * Compute edit script between two compilation units
-   *
-   * @param oldContent
-   * @param newContent
-   * @return
-   */
-  private static EditScript generateEditScript(String oldContent, String newContent) {
-    JdtTreeGenerator generator = new JdtTreeGenerator();
-    //        Generators generator = Generators.getInstance();
-    try {
-      TreeContext oldContext = generator.generateFrom().string(oldContent);
-      TreeContext newContext = generator.generateFrom().string(newContent);
-      Matcher matcher = Matchers.getInstance().getMatcher();
+    /**
+     * Compute edit script between two compilation units
+     *
+     * @param oldContent
+     * @param newContent
+     * @return
+     */
+    private static EditScript generateEditScript(String oldContent, String newContent) {
+        JdtTreeGenerator generator = new JdtTreeGenerator();
+        //        Generators generator = Generators.getInstance();
+        try {
+            TreeContext oldContext = generator.generateFrom().string(oldContent);
+            TreeContext newContext = generator.generateFrom().string(newContent);
+            Matcher matcher = Matchers.getInstance().getMatcher();
 
-      MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
-      EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
-      return editScript;
-    } catch (Exception e) {
-      e.printStackTrace();
+            MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
+            EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
+            return editScript;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
-    return null;
-  }
 
-  /**
-   * Compute clustered actions between two compilation units
-   *
-   * @param oldContent
-   * @param newContent
-   * @return
-   */
-  public static List<Set<com.github.gumtreediff.actions.model.Action>> generateActionClusters(String oldContent, String newContent) {
-    List<Set<com.github.gumtreediff.actions.model.Action>> actionClusters = new ArrayList<>();
-    JdtTreeGenerator generator = new JdtTreeGenerator();
-    //        Generators generator = Generators.getInstance();
-    try {
-      TreeContext oldContext = generator.generateFrom().string(oldContent);
-      TreeContext newContext = generator.generateFrom().string(newContent);
-      Matcher matcher = Matchers.getInstance().getMatcher();
+    /**
+     * Compute clustered actions between two compilation units
+     *
+     * @param oldContent
+     * @param newContent
+     * @return
+     */
+    public static List<Set<com.github.gumtreediff.actions.model.Action>> generateActionClusters(String oldContent, String newContent) {
+        List<Set<com.github.gumtreediff.actions.model.Action>> actionClusters = new ArrayList<>();
+        JdtTreeGenerator generator = new JdtTreeGenerator();
+        //        Generators generator = Generators.getInstance();
+        try {
+            TreeContext oldContext = generator.generateFrom().string(oldContent);
+            TreeContext newContext = generator.generateFrom().string(newContent);
+            Matcher matcher = Matchers.getInstance().getMatcher();
 
-      MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
-      EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
+            MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
+            EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
 
-      ActionClusterFinder finder = new ActionClusterFinder(oldContext, newContext, editScript);
-      actionClusters = finder.getClusters();
+            ActionClusterFinder finder = new ActionClusterFinder(oldContext, newContext, editScript);
+            actionClusters = finder.getClusters();
 
-    } catch (Exception e) {
-      e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return actionClusters;
     }
-    return actionClusters;
-  }
 
-  /**
-   * Get the absolute path of the current java file
-   *
-   * @return
-   */
-  private String getCurrentFilePath() {
-    return this.getClass().getResource("").getPath();
-  }
+    /**
+     * Get the absolute path of the current java file
+     *
+     * @return
+     */
+    private String getCurrentFilePath() {
+        return this.getClass().getResource("").getPath();
+    }
 }

@@ -42,8 +42,94 @@ import com.github.smartcommit.core.*;
 import com.github.smartcommit.intent.model.*;
 
 
+class RunnableDemoDiffFileLevel implements Runnable {
+    private Thread t;
+    private String threadName;
+    private String baseContent;
+    private String currentContent;
+    private CommitTrainingSample tempCommitTrainingSample;
+    private Boolean writeLock;
+
+    RunnableDemoDiffFileLevel( String name) {
+        threadName = name;
+        System.out.println("Creating " +  threadName );
+    }
+
+    public void run() {
+        System.out.println("Running " +  threadName );
+
+        List<Action> tempActionList = new ArrayList<>();
+        EditScript editScript = generateEditScript(baseContent, currentContent);
+        if (editScript != null) {
+            List<Action> actionList = generateActionList(editScript);
+            tempActionList.addAll(actionList);
+            tempCommitTrainingSample.setActionList(tempActionList);
+        } else {
+            // Only doc change, thus no CodeChange and AbstractJdtTree generated
+            tempCommitTrainingSample.addIntentDescription(IntentDescription.DOC);
+            //tempCommitTrainingSample.setIntent(Intent.DOC);
+            System.out.println("Exception type: NCC: only DOC change");
+        }
+
+        System.out.println("Thread " +  threadName + " exiting.");
+    }
+
+    // generate Edit Script from file contents
+    private static EditScript generateEditScript(String baseContent, String currentContent) {
+        JdtTreeGenerator generator = new JdtTreeGenerator();
+        try {
+            TreeContext oldContext = generator.generateFrom().string(baseContent);
+            TreeContext newContext = generator.generateFrom().string(currentContent);
+
+            Matcher matcher = Matchers.getInstance().getMatcher();
+            MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
+            EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
+            return editScript;
+        } catch (Exception e) {
+            //e.printStackTrace();
+            // Failure to generate AbstractJdtTree because of the docChange instead of codeChange
+            return null;
+        }
+
+    }
+
+    // generate commit info from different file pathway
+    private static List<Action> generateActionList(EditScript editScript) {
+        List<Action> actionList = new ArrayList<>();
+        for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
+            com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
+            ASTOperation ASTOperation = null;
+            if (action instanceof Insert) {
+                ASTOperation = ASTOperation.ADD;
+            } else if (action instanceof Delete) {
+                ASTOperation = ASTOperation.DEL;
+            } else if (action instanceof Move) {
+                ASTOperation = ASTOperation.MOV;
+            } else if (action instanceof Update) {
+                ASTOperation = ASTOperation.UPD;
+            }
+            Action myAction = new Action(ASTOperation, action.getNode().getType().toString());
+            actionList.add(myAction);
+        }
+        return actionList;
+    }
+
+    public void start (String baseContent, String currentContent, CommitTrainingSample tempCommitTrainingSample, Boolean writeLock) {
+        this.baseContent = baseContent;
+        this.currentContent = currentContent;
+        this.tempCommitTrainingSample =  tempCommitTrainingSample;
+        System.out.println("Starting " +  threadName );
+        if (t == null) {
+            t = new Thread (this, threadName);
+            t.start ();
+        }
+    }
+}
+
+
+
 // Main Class: Commit message:  Get, Label and Store
-public class CommitInfoHandler {
+public class CommitInfoHandlerParallel {
     public static void main(String[] args) {
         args = new String[]{"/Users/Chuncen/Desktop/refactoring-toy-example", "commitTrainingSample"};
         String repoPath = args[0];
@@ -130,54 +216,14 @@ public class CommitInfoHandler {
         return true;
     }
 
-    // generate Edit Script from file contents
-    private static EditScript generateEditScript(String baseContent, String currentContent) {
-        JdtTreeGenerator generator = new JdtTreeGenerator();
-        try {
-            TreeContext oldContext = generator.generateFrom().string(baseContent);
-            TreeContext newContext = generator.generateFrom().string(currentContent);
-
-            Matcher matcher = Matchers.getInstance().getMatcher();
-            MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
-            EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
-            return editScript;
-        } catch (Exception e) {
-            //e.printStackTrace();
-            // Failure to generate AbstractJdtTree because of the docChange instead of codeChange
-            return null;
-        }
-
-    }
-
-    // generate commit info from different file pathway
-    private static List<Action> generateActionList(EditScript editScript) {
-        List<Action> actionList = new ArrayList<>();
-        for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
-            com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
-            ASTOperation ASTOperation = null;
-            if (action instanceof Insert) {
-                ASTOperation = ASTOperation.ADD;
-            } else if (action instanceof Delete) {
-                ASTOperation = ASTOperation.DEL;
-            } else if (action instanceof Move) {
-                ASTOperation = ASTOperation.MOV;
-            } else if (action instanceof Update) {
-                ASTOperation = ASTOperation.UPD;
-            }
-            Action myAction = new Action(ASTOperation, action.getNode().getType().toString());
-            actionList.add(myAction);
-        }
-        return actionList;
-    }
-
     // generate action list from code changes: diffFile and EditScript
     private static CommitTrainingSample generateActionListFromCodeChange(
             CommitTrainingSample tempCommitTrainingSample, RepoAnalyzer repoAnalyzer) {
         try {  // if no FileChange
             List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(tempCommitTrainingSample.getCommitID());
             // get EditScript from diffFiles, and get ActionList from EditScript
-            List<Action> tempActionList = new ArrayList<>();
             Integer sizeDiff = diffFiles.size();
+            Boolean writeLock = true;
             for (int j = 0; j < sizeDiff; j++) {
                 String baseContent = diffFiles.get(j).getBaseContent();
                 String currentContent = diffFiles.get(j).getCurrentContent();
@@ -188,17 +234,9 @@ public class CommitInfoHandler {
                     System.out.println("Exception type: NCC: only FILE change");
                     continue;
                 }
-                EditScript editScript = generateEditScript(baseContent, currentContent);
-                if (editScript != null) {
-                    List<Action> actionList = generateActionList(editScript);
-                    tempActionList.addAll(actionList);
-                    tempCommitTrainingSample.setActionList(tempActionList);
-                } else {
-                    // Only doc change, thus no CodeChange and AbstractJdtTree generated
-                    tempCommitTrainingSample.addIntentDescription(IntentDescription.DOC);
-                    //tempCommitTrainingSample.setIntent(Intent.DOC);
-                    System.out.println("Exception type: NCC: only DOC change");
-                }
+                RunnableDemoDiffFileLevel runnableDemoDiffFileLevel = new RunnableDemoDiffFileLevel( "Thread-"+(j++));
+                runnableDemoDiffFileLevel.start(baseContent, currentContent, tempCommitTrainingSample, writeLock);
+
             }
         } catch (Exception e) {
             //e.printStackTrace();

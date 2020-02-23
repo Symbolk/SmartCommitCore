@@ -4,7 +4,7 @@ import org.omg.PortableInterceptor.INACTIVE;
 
 import java.util.List;
 
-public class CommitTrainningSample {
+public class CommitTrainingSample {
   private String repoID;
   private String repoPath;
   private String repoName;
