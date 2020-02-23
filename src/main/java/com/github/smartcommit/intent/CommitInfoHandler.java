@@ -48,7 +48,7 @@ import org.omg.CORBA.INTF_REPOS;
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
     public static void main(String[] args) {
-        args = new String[]{"/Users/Chuncen/Downloads/refactoring-toy-example", "commitTrainingSample"};
+        args = new String[]{"/Users/Chuncen/Desktop/refactoring-toy-example", "commitTrainingSample"};
         String repoPath = args[0];
         String collectionName = args[1];
         // CommitTrainningSample

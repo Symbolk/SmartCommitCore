@@ -9,13 +9,61 @@ public enum Operation {
   MOV("Move"),
 
   // Refactoring operations
-  EXTRACT("Extract");
+  EXTRACT_OPERATION("Extract Method"),
+  RENAME_CLASS("Rename Class"),
+  MOVE_ATTRIBUTE("Move Attribute"),
+  MOVE_RENAME_ATTRIBUTE("Move And Rename Attribute"),
+  REPLACE_ATTRIBUTE("Replace Attribute"),
+  RENAME_METHOD("Rename Method"),
+  INLINE_OPERATION("Inline Method"),
+  MOVE_OPERATION("Move Method"),
+  MOVE_AND_RENAME_OPERATION("Move And Rename Method"),
+  PULL_UP_OPERATION("Pull Up Method"),
+  MOVE_CLASS("Move Class"),
+  MOVE_RENAME_CLASS("Move And Rename Class"),
+  MOVE_SOURCE_FOLDER("Move Source Folder"),
+  PULL_UP_ATTRIBUTE("Pull Up Attribute"),
+  PUSH_DOWN_ATTRIBUTE("Push Down Attribute"),
+  PUSH_DOWN_OPERATION("Push Down Method"),
+  EXTRACT_INTERFACE("Extract Interface"),
+  EXTRACT_SUPERCLASS("Extract Superclass"),
+  EXTRACT_SUBCLASS("Extract Subclass"),
+  EXTRACT_CLASS("Extract Class"),
+  MERGE_OPERATION("Merge Method"),
+  EXTRACT_AND_MOVE_OPERATION("Extract And Move Method"),
+  MOVE_AND_INLINE_OPERATION("Move And Inline Method"),
+  CONVERT_ANONYMOUS_CLASS_TO_TYPE("Convert Anonymous Class to Type"),
+  INTRODUCE_POLYMORPHISM("Introduce Polymorphism"),
+  RENAME_PACKAGE("Change Package"),
+  CHANGE_METHOD_SIGNATURE("Change Method Signature"),
+  EXTRACT_VARIABLE("Extract Variable"),
+  EXTRACT_ATTRIBUTE("Extract Attribute"),
+  INLINE_VARIABLE("Inline Variable"),
+  RENAME_VARIABLE("Rename Variable"),
+  RENAME_PARAMETER("Rename Parameter"),
+  RENAME_ATTRIBUTE("Rename Attribute"),
+  MERGE_VARIABLE("Merge Variable"),
+  MERGE_PARAMETER("Merge Parameter"),
+  MERGE_ATTRIBUTE("Merge Attribute"),
+  SPLIT_VARIABLE("Split Variable"),
+  SPLIT_PARAMETER("Split Parameter"),
+  SPLIT_ATTRIBUTE("Split Attribute"),
+  REPLACE_VARIABLE_WITH_ATTRIBUTE("Replace Variable With Attribute"),
+  PARAMETERIZE_VARIABLE("Parameterize Variable"),
+  CHANGE_RETURN_TYPE("Change Return Type"),
+  CHANGE_VARIABLE_TYPE("Change Variable Type"),
+  CHANGE_PARAMETER_TYPE("Change Parameter Type"),
+  CHANGE_ATTRIBUTE_TYPE("Change Attribute Type"),
+  UKN("unknown");
+
+
 
   public String label;
 
   Operation(String label) {
     this.label = label;
   }
+
 
   @Override
   public String toString() {

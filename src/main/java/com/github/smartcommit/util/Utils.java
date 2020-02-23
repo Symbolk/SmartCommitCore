@@ -1,11 +1,17 @@
 package com.github.smartcommit.util;
 
+import com.github.smartcommit.intent.model.Intent;
+import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
+import com.github.smartcommit.model.constant.Operation;
+import gr.uom.java.xmi.diff.CodeRange;
 import info.debatty.java.stringsimilarity.Cosine;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.refactoringminer.api.Refactoring;
+import org.refactoringminer.api.RefactoringType;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -381,4 +387,34 @@ public class Utils {
     Cosine cosine = new Cosine();
     return cosine.similarity(s1, s2);
   }
+
+
+  /**
+   * Convert Refactoring To Action, we suppose it one to one
+   *
+   * @param ref
+   * @return
+   */
+  public static Action convertRefactoringToAction(Refactoring ref) {
+    String name = ref.getRefactoringType().getDisplayName();
+    List<CodeRange> codeChangesFrom = ref.leftSide();
+    List<CodeRange> codeChangesTo = ref.rightSide();
+    CodeRange codeChangeFrom = codeChangesFrom.get(0);
+    Operation operation = Operation.UKN;
+    for (Operation op : Operation.values()) {
+      if (name.equals(op.label)) {
+        operation = op;
+        break;
+      }
+    }
+    if(codeChangesTo.isEmpty()) {
+      return new Action(operation, codeChangeFrom.getCodeElementType().toString(),
+              codeChangeFrom.getCodeElement());
+    } else {
+      CodeRange codeChangeTo = codeChangesTo.get(0);
+      return new Action(operation, codeChangeFrom.getCodeElementType().toString(), codeChangeFrom.getCodeElement(),
+              codeChangeTo.getCodeElementType().toString(), codeChangeTo.getCodeElement());
+    }
+  }
 }
+
