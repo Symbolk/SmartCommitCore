@@ -15,7 +15,7 @@ public class CommitTrainingSample {
   private String commitTime;
   private Intent intent;
   private List<IntentDescription> intentDescriptions;
-  private List<Action> actions;
+  private List<AstAction> actions;
   private List<RefactorCodeChange> refactorCodeChanges;
 
   public String getCommitID() {
@@ -58,15 +58,15 @@ public class CommitTrainingSample {
     this.commitTime = commitTime;
   }
 
-  public List<Action> getActionList() {
+  public List<AstAction> getActionList() {
     return actions;
   }
 
-  public void setActionList(List<Action> actionList) {
+  public void setActionList(List<AstAction> actionList) {
     this.actions = actionList;
   }
 
-  public void addAction(Action action) {
+  public void addAction(AstAction action) {
     this.actions.add(action);
   }
 

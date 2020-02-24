@@ -9,7 +9,7 @@ import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.TreeContext;
-import com.github.smartcommit.intent.model.Action;
+import com.github.smartcommit.intent.model.AstAction;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
@@ -150,8 +150,8 @@ public class CommitInfoHandler {
     }
 
     // generate commit info from different file pathway
-    private static List<Action> generateActionList(EditScript editScript) {
-        List<Action> actionList = new ArrayList<>();
+    private static List<AstAction> generateAstActionList(EditScript editScript) {
+        List<AstAction> actionList = new ArrayList<>();
         for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
             com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
             ASTOperation ASTOperation = null;
@@ -164,7 +164,7 @@ public class CommitInfoHandler {
             } else if (action instanceof Update) {
                 ASTOperation = ASTOperation.UPD;
             }
-            Action myAction = new Action(ASTOperation, action.getNode().getType().toString());
+            AstAction myAction = new AstAction(ASTOperation, action.getNode().getType().toString());
             actionList.add(myAction);
         }
         return actionList;
@@ -176,7 +176,7 @@ public class CommitInfoHandler {
         try {  // if no FileChange
             List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(tempCommitTrainingSample.getCommitID());
             // get EditScript from diffFiles, and get ActionList from EditScript
-            List<Action> tempActionList = new ArrayList<>();
+            List<AstAction> tempActionList = new ArrayList<>();
             Integer sizeDiff = diffFiles.size();
             for (int j = 0; j < sizeDiff; j++) {
                 String baseContent = diffFiles.get(j).getBaseContent();
@@ -190,7 +190,7 @@ public class CommitInfoHandler {
                 }
                 EditScript editScript = generateEditScript(baseContent, currentContent);
                 if (editScript != null) {
-                    List<Action> actionList = generateActionList(editScript);
+                    List<AstAction> actionList = generateAstActionList(editScript);
                     tempActionList.addAll(actionList);
                     tempCommitTrainingSample.setActionList(tempActionList);
                 } else {
@@ -276,16 +276,16 @@ public class CommitInfoHandler {
             doc1.put("commitIntent", commitTrainingSample.getIntent().getLabel());
             doc1.put("commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
             // add ActionList to DB
-            List<Action> actionList = commitTrainingSample.getActionList();
+            List<AstAction> actionList = commitTrainingSample.getActionList();
             if (actionList != null) {
                 List<Document> actions = new ArrayList<>();
-                for (Action action : actionList) {
+                for (AstAction astAction : actionList) {
                     Document addrAttr = new Document();
-                    addrAttr.put("operation", String.valueOf(action.getASTOperation()));
-                    addrAttr.put("astNodeType", action.getASTNodeType());
+                    addrAttr.put("operation", String.valueOf(astAction.getASTOperation()));
+                    addrAttr.put("astNodeType", astAction.getASTNodeType());
                     actions.add(addrAttr);
                 }
-                doc1.put("actions", actions);
+                doc1.put("astActions", actions);
             }
             // add refactorCodeChange to DB
             List<RefactorCodeChange> refactorCodeChangeList = commitTrainingSample.getRefactorCodeChanges();
