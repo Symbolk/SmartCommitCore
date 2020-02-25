@@ -256,7 +256,7 @@ public class CommitInfoHandler {
             });
         } catch (Exception e) {
             System.out.println("Repo Not Exist");
-            e.printStackTrace();
+            //e.printStackTrace();
         }
         return refactorCodeChanges;
     }

@@ -417,13 +417,13 @@ public class Utils {
       CodeRange codeChangeFrom = codeChangesFrom.get(i);
       CodeRange codeChangeTo = codeChangesTo.get(i);
       if(typeFrom.isEmpty()) typeFrom += codeChangeFrom.getCodeElementType().toString();
-        else typeFrom += "," + codeChangeFrom.getCodeElementType().toString();
+        else typeFrom += ", " + codeChangeFrom.getCodeElementType().toString();
       if(labelFrom.isEmpty()) labelFrom += codeChangeFrom.getCodeElement();
-        else labelFrom += "," + codeChangeFrom.getCodeElement();
+        else labelFrom += ", " + codeChangeFrom.getCodeElement();
       if(typeTo.isEmpty()) typeTo += codeChangeFrom.getCodeElementType().toString();
-        else typeTo += "," + codeChangeFrom.getCodeElementType().toString();
+        else typeTo += ", " + codeChangeFrom.getCodeElementType().toString();
       if(labelTo.isEmpty()) labelTo += codeChangeFrom.getCodeElement();
-        else labelTo += "," + codeChangeFrom.getCodeElement();
+        else labelTo += ", " + codeChangeFrom.getCodeElement();
     }
     if(codeChangesTo.isEmpty()) {
       return new Action(operation, typeFrom, labelTo);
