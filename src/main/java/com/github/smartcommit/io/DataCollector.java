@@ -148,7 +148,7 @@ public class DataCollector {
    *
    * @param diffHunk
    */
-  private List<Action> analyzeASTActions(DiffHunk diffHunk) {
+  public List<Action> analyzeASTActions(DiffHunk diffHunk) {
     List<Action> actions = new ArrayList<>();
 
     ChangeType changeType = diffHunk.getChangeType();
