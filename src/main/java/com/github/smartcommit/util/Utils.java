@@ -390,7 +390,7 @@ public class Utils {
 
 
   /**
-   * Convert Refactoring To Action, we suppose it one to one
+   * Convert Refactoring To Action
    *
    * @param ref
    * @return
@@ -399,7 +399,6 @@ public class Utils {
     String name = ref.getRefactoringType().getDisplayName();
     List<CodeRange> codeChangesFrom = ref.leftSide();
     List<CodeRange> codeChangesTo = ref.rightSide();
-    CodeRange codeChangeFrom = codeChangesFrom.get(0);
     Operation operation = Operation.UKN;
     for (Operation op : Operation.values()) {
       if (name.equals(op.label)) {
@@ -407,13 +406,29 @@ public class Utils {
         break;
       }
     }
+
+    String typeFrom = "";
+    String typeTo = "";
+    String labelFrom = "";
+    String labelTo = "";
+
+    Integer size = codeChangesFrom.size();
+    for(Integer i = 0; i < size; i++) {
+      CodeRange codeChangeFrom = codeChangesFrom.get(i);
+      CodeRange codeChangeTo = codeChangesTo.get(i);
+      if(typeFrom.isEmpty()) typeFrom += codeChangeFrom.getCodeElementType().toString();
+        else typeFrom += "," + codeChangeFrom.getCodeElementType().toString();
+      if(labelFrom.isEmpty()) labelFrom += codeChangeFrom.getCodeElement();
+        else labelFrom += "," + codeChangeFrom.getCodeElement();
+      if(typeTo.isEmpty()) typeTo += codeChangeFrom.getCodeElementType().toString();
+        else typeTo += "," + codeChangeFrom.getCodeElementType().toString();
+      if(labelTo.isEmpty()) labelTo += codeChangeFrom.getCodeElement();
+        else labelTo += "," + codeChangeFrom.getCodeElement();
+    }
     if(codeChangesTo.isEmpty()) {
-      return new Action(operation, codeChangeFrom.getCodeElementType().toString(),
-              codeChangeFrom.getCodeElement());
+      return new Action(operation, typeFrom, labelTo);
     } else {
-      CodeRange codeChangeTo = codeChangesTo.get(0);
-      return new Action(operation, codeChangeFrom.getCodeElementType().toString(), codeChangeFrom.getCodeElement(),
-              codeChangeTo.getCodeElementType().toString(), codeChangeTo.getCodeElement());
+      return new Action(operation, typeFrom, labelTo, typeTo, labelTo);
     }
   }
 }
