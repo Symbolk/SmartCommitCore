@@ -54,6 +54,14 @@ public class Group {
     this.intentLabel = intentLabel;
   }
 
+  public String getCommitID() {
+    return commitID;
+  }
+
+  public void setCommitID(String commitID) {
+    this.commitID = commitID;
+  }
+
   public String getCommitMsg() {
     return commitMsg;
   }
