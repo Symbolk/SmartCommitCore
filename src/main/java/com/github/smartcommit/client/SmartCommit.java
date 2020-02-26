@@ -4,6 +4,7 @@ import com.github.smartcommit.commitmsg.CommitMsgGenerator;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
+import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
@@ -105,8 +106,8 @@ public class SmartCommit {
     if (results != null) {
       for (Map.Entry<String, Group> entry : results.entrySet()) {
         Group group = entry.getValue();
-        // generate commit message according to manual results
-        group.setCommitMsg(generateCommitMsg(group));
+        // generate recommended commit messages
+        group.setRecommendedCommitMsgs(generateCommitMsg(group));
       }
     }
 
@@ -306,7 +307,7 @@ public class SmartCommit {
    * @param group
    * @return
    */
-  public String generateCommitMsg(Group group) {
+  public List<String> generateCommitMsg(Group group) {
     // get the ast actions and refactoring actions
     List<String> diffHunkIDs = group.getDiffHunkIDs();
     List<Action> astActions = new ArrayList<>();
@@ -321,8 +322,8 @@ public class SmartCommit {
 
     CommitMsgGenerator generator = new CommitMsgGenerator(astActions, refActions);
     List<Integer> vectors = generator.generateGroupVector();
-    String templateMsg = generator.invokeAIModel(vectors, group.getIntentLabel());
-    return generator.generateDetailedMsg(templateMsg);
+    MsgClass msgClass = generator.invokeAIModel(vectors);
+    return generator.generateDetailedMsgs(msgClass, group.getIntentLabel());
   }
 
   /**
