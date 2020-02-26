@@ -14,8 +14,6 @@ import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.model.graph.NodeType;
 import com.github.smartcommit.util.Utils;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import gr.uom.java.xmi.UMLModel;
 import gr.uom.java.xmi.UMLModelASTReader;
 import gr.uom.java.xmi.diff.CodeRange;
@@ -429,7 +427,6 @@ public class GroupGenerator {
       for (Refactoring refactoring : refactorings) {
         // greedy style: put all refactorings into one group
         for (CodeRange range : refactoring.leftSide()) {
-          Set<Refactoring> refActions = new HashSet<>();
           Optional<DiffHunk> diffHunkOpt = getOverlappingDiffHunk(Version.BASE, range);
           if (diffHunkOpt.isPresent()) {
             DiffHunk diffHunk = diffHunkOpt.get();
@@ -480,7 +477,12 @@ public class GroupGenerator {
     return Optional.empty();
   }
 
-  public void exportGroupingResults(String outputDir) {
+  /**
+   * Generate groups from the diff hunk graph
+   *
+   * @return
+   */
+  public Map<String, Group> generateGroups() {
     ConnectivityInspector inspector = new ConnectivityInspector(diffHunkGraph);
     List<Set<DiffNode>> connectedSets = inspector.connectedSets();
     Set<String> individuals = new LinkedHashSet<>();
@@ -535,22 +537,7 @@ public class GroupGenerator {
     //    BiconnectivityInspector inspector1 =
     //            new BiconnectivityInspector(diffHunkGraph);
     //    inspector1.getConnectedComponents();
-
-    Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-    for (Map.Entry<String, Group> entry : generatedGroups.entrySet()) {
-      Utils.writeStringToFile(
-          gson.toJson(entry.getValue()),
-          outputDir
-              + File.separator
-              + "generated_groups"
-              + File.separator
-              + entry.getKey()
-              + ".json");
-      // the copy to accept the user feedback
-      Utils.writeStringToFile(
-          gson.toJson(entry.getValue()),
-          outputDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
-    }
+    return generatedGroups;
   }
 
   /**
@@ -670,11 +657,11 @@ public class GroupGenerator {
    *
    * @param diffHunkIDs
    */
-  private void createGroup(Set<String> diffHunkIDs, GroupLabel label) {
+  private void createGroup(Set<String> diffHunkIDs, GroupLabel intent) {
     if (!diffHunkIDs.isEmpty()) {
       String groupID = "group" + generatedGroups.size();
-      Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs), label);
-      group.setCommitMsg(label.toString());
+      Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs), intent);
+      group.setCommitMsg(intent.label);
       // bidirectional mapping
       diffHunkIDs.forEach(id -> diffHunkID2GroupID.put(id, groupID));
       generatedGroups.put(groupID, group);

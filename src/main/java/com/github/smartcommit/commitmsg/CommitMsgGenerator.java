@@ -4,6 +4,7 @@ import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.GroupLabel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CommitMsgGenerator {
@@ -42,6 +43,8 @@ public class CommitMsgGenerator {
    * @return
    */
   public List<String> generateDetailedMsgs(MsgClass msgClass, GroupLabel intentLabel) {
-    return null;
+    List<String> recommendedCommitMsgs = new ArrayList<>();
+    recommendedCommitMsgs.add(intentLabel.label);
+    return recommendedCommitMsgs;
   }
 }

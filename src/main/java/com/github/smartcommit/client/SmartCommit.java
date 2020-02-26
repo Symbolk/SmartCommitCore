@@ -111,6 +111,9 @@ public class SmartCommit {
       }
     }
 
+    // save the results on disk
+    exportGroupResults(results);
+
     return results;
   }
 
@@ -184,13 +187,35 @@ public class SmartCommit {
     if (detectRefactorings) {
       groupGenerator.analyzeRefactorings(tempDir);
     }
-    groupGenerator.exportGroupingResults(tempDir);
 
     // visualize the diff hunk graph
     //    String diffGraphString =
     //        DiffGraphExporter.exportAsDotWithType(groupGenerator.getDiffHunkGraph());
 
-    return groupGenerator.getGeneratedGroups();
+    return groupGenerator.generateGroups();
+  }
+
+  /**
+   * Save generated group results on disk
+   *
+   * @param generatedGroups
+   */
+  public void exportGroupResults(Map<String, Group> generatedGroups) {
+    Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+    for (Map.Entry<String, Group> entry : generatedGroups.entrySet()) {
+      Utils.writeStringToFile(
+          gson.toJson(entry.getValue()),
+          tempDir
+              + File.separator
+              + "generated_groups"
+              + File.separator
+              + entry.getKey()
+              + ".json");
+      // the copy to accept the user feedback
+      Utils.writeStringToFile(
+          gson.toJson(entry.getValue()),
+          tempDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
+    }
   }
 
   /**
@@ -198,7 +223,7 @@ public class SmartCommit {
    *
    * @param results
    */
-  public void generateGroupDetails(Map<String, Group> results) {
+  public void exportGroupDetails(Map<String, Group> results) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     List<String> groupedDiffHunks = new ArrayList<>();
     for (Map.Entry<String, Group> entry : results.entrySet()) {
@@ -243,7 +268,7 @@ public class SmartCommit {
    * @param selectedGroupIDs
    * @throws FileNotFoundException
    */
-  public void generatePatches(List<String> selectedGroupIDs) throws FileNotFoundException {
+  public void exportPatches(List<String> selectedGroupIDs) throws FileNotFoundException {
     String manualGroupsDir = tempDir + File.separator + "manual_groups";
     String fileDiffsDir = tempDir + File.separator + "diffs";
     String patchesDir = tempDir + File.separator + "patches";
