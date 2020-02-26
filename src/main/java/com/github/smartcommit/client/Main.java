@@ -27,11 +27,11 @@ public class Main {
         for (Map.Entry<String, Group> entry : groups.entrySet()) {
           Group group = entry.getValue();
           // regenerate commit message according to manual results
-          group.setCommitMsg(smartCommit.generateCommitMsg(group));
+          group.setRecommendedCommitMsgs(smartCommit.generateCommitMsg(group));
           System.out.println(entry.getKey());
           System.out.println(entry.getValue().toString());
         }
-        smartCommit.generateGroupDetails(groups);
+        smartCommit.exportGroupDetails(groups);
 
       } else {
         System.out.println("No Changes.");
@@ -41,13 +41,13 @@ public class Main {
       selectedGroupIDs.add("group0");
       selectedGroupIDs.add("group1");
       selectedGroupIDs.add("group4");
-//      smartCommit.generatePatches(selectedGroupIDs);
+      //      smartCommit.generatePatches(selectedGroupIDs);
 
       Map<String, String> commitMsgs = new HashMap<>();
       commitMsgs.put("group0", "New Feature");
       commitMsgs.put("group1", "Fix a Bug");
       commitMsgs.put("group4", "Refactoring");
-//      boolean success = smartCommit.commit(selectedGroupIDs, commitMsgs);
+      //      boolean success = smartCommit.commit(selectedGroupIDs, commitMsgs);
 
     } catch (Exception e) {
       e.printStackTrace();

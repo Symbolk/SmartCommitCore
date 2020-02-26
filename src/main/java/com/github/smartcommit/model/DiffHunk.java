@@ -5,7 +5,6 @@ import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.Version;
 import org.apache.commons.lang3.tuple.Pair;
-import org.refactoringminer.api.Refactoring;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +23,7 @@ public class DiffHunk {
   private FileType fileType;
   private ChangeType changeType;
   private transient List<Action> astActions = new ArrayList<>();
-  private transient List<Refactoring> refActions = new ArrayList<>();
+  private transient List<Action> refActions = new ArrayList<>();
   private String description = "";
 
   // lines from the raw output of git-diff (for patch generation)
@@ -163,25 +162,27 @@ public class DiffHunk {
     return astActions;
   }
 
-  public List<Refactoring> getRefActions() {
+  public List<Action> getRefActions() {
     return refActions;
   }
 
   public void addASTAction(Action action) {
-    astActions.add(action);
+    if (!astActions.contains(action)) {
+      astActions.add(action);
+    }
   }
 
   public void setAstActions(List<Action> astActions) {
     this.astActions = astActions;
   }
 
-  public void addRefAction(Refactoring action) {
+  public void addRefAction(Action action) {
     if (!refActions.contains(action)) {
       refActions.add(action);
     }
   }
 
-  public void setRefActions(List<Refactoring> refActions) {
+  public void setRefActions(List<Action> refActions) {
     this.refActions = refActions;
   }
 
@@ -206,7 +207,7 @@ public class DiffHunk {
     for (Action action : astActions) {
       builder.append(action.toString()).append(System.lineSeparator());
     }
-    for (Refactoring action : refActions) {
+    for (Action action : refActions) {
       builder.append(action.toString()).append(System.lineSeparator());
     }
     description = builder.toString();

@@ -2,6 +2,7 @@ package com.github.smartcommit.model;
 
 import com.github.smartcommit.model.constant.GroupLabel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** The output result, one group for one commit */
@@ -9,24 +10,23 @@ public class Group {
   private String repoID;
   private String repoName;
   private String groupID;
-  private String commitID;
-
   // fileID:diffHunkID
   // if fileID==diffHunkID, status is UNTRACKED, the whole file is a diff hunk
   private List<String> diffHunkIDs;
-  private String commitMsg;
-  private String templateCommitMsg;
+
+  // system recommendation
   private GroupLabel intentLabel;
+  private List<String> recommendedCommitMsgs = new ArrayList<>();
+  // user choice
+  private String commitID = "";
+  private String commitMsg = "";
 
   public Group(
       String repoID, String repoName, String groupID, List<String> diffHunkIDs, GroupLabel label) {
     this.repoID = repoID;
     this.repoName = repoName;
     this.groupID = groupID;
-    this.commitID = "";
     this.diffHunkIDs = diffHunkIDs;
-    this.commitMsg = "";
-    this.templateCommitMsg = "";
     this.intentLabel = label;
   }
 
@@ -42,8 +42,24 @@ public class Group {
     return intentLabel;
   }
 
+  public List<String> getRecommendedCommitMsgs() {
+    return recommendedCommitMsgs;
+  }
+
+  public void setRecommendedCommitMsgs(List<String> recommendedCommitMsgs) {
+    this.recommendedCommitMsgs = recommendedCommitMsgs;
+  }
+
   public void setIntentLabel(GroupLabel intentLabel) {
     this.intentLabel = intentLabel;
+  }
+
+  public String getCommitID() {
+    return commitID;
+  }
+
+  public void setCommitID(String commitID) {
+    this.commitID = commitID;
   }
 
   public String getCommitMsg() {

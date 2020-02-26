@@ -1,6 +1,5 @@
 package com.github.smartcommit.util;
 
-import com.github.smartcommit.intent.model.Intent;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileStatus;
@@ -388,48 +387,37 @@ public class Utils {
     return cosine.similarity(s1, s2);
   }
 
-
   /**
-   * Convert Refactoring To Action
+   * Convert Refactoring To Action (suppose one to one currently)
    *
    * @param ref
    * @return
    */
   public static Action convertRefactoringToAction(Refactoring ref) {
-    String name = ref.getRefactoringType().getDisplayName();
+    RefactoringType type = ref.getRefactoringType();
     List<CodeRange> codeChangesFrom = ref.leftSide();
     List<CodeRange> codeChangesTo = ref.rightSide();
+    CodeRange codeChangeFrom = codeChangesFrom.get(0);
     Operation operation = Operation.UKN;
     for (Operation op : Operation.values()) {
-      if (name.equals(op.label)) {
+      if (type.name().equals(op.name())) {
         operation = op;
         break;
       }
     }
-
-    String typeFrom = "";
-    String typeTo = "";
-    String labelFrom = "";
-    String labelTo = "";
-
-    Integer size = codeChangesFrom.size();
-    for(Integer i = 0; i < size; i++) {
-      CodeRange codeChangeFrom = codeChangesFrom.get(i);
-      CodeRange codeChangeTo = codeChangesTo.get(i);
-      if(typeFrom.isEmpty()) typeFrom += codeChangeFrom.getCodeElementType().toString();
-        else typeFrom += ", " + codeChangeFrom.getCodeElementType().toString();
-      if(labelFrom.isEmpty()) labelFrom += codeChangeFrom.getCodeElement();
-        else labelFrom += ", " + codeChangeFrom.getCodeElement();
-      if(typeTo.isEmpty()) typeTo += codeChangeFrom.getCodeElementType().toString();
-        else typeTo += ", " + codeChangeFrom.getCodeElementType().toString();
-      if(labelTo.isEmpty()) labelTo += codeChangeFrom.getCodeElement();
-        else labelTo += ", " + codeChangeFrom.getCodeElement();
-    }
-    if(codeChangesTo.isEmpty()) {
-      return new Action(operation, typeFrom, labelTo);
+    if (codeChangesTo.isEmpty()) {
+      return new Action(
+          operation,
+          codeChangeFrom.getCodeElementType().toString(),
+          codeChangeFrom.getCodeElement());
     } else {
-      return new Action(operation, typeFrom, labelTo, typeTo, labelTo);
+      CodeRange codeChangeTo = codeChangesTo.get(0);
+      return new Action(
+          operation,
+          codeChangeFrom.getCodeElementType().toString(),
+          codeChangeFrom.getCodeElement(),
+          codeChangeTo.getCodeElementType().toString(),
+          codeChangeTo.getCodeElement());
     }
   }
 }
-
