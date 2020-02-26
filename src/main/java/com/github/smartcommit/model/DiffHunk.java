@@ -167,7 +167,9 @@ public class DiffHunk {
   }
 
   public void addASTAction(Action action) {
-    astActions.add(action);
+    if (!astActions.contains(action)) {
+      astActions.add(action);
+    }
   }
 
   public void setAstActions(List<Action> astActions) {

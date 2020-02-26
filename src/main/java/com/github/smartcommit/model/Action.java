@@ -43,4 +43,22 @@ public class Action {
 
     return builder.toString();
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) {
+      return true;
+    }
+
+    if (!(obj instanceof Action)) {
+      return false;
+    }
+
+    Action a = (Action) obj;
+    return a.operation.equals(this.operation)
+        && a.typeFrom.equals(this.typeFrom)
+        && a.typeTo.equals(this.typeTo)
+        && a.labelFrom.equals(this.labelFrom)
+        && a.labelTo.equals(this.labelTo);
+  }
 }
