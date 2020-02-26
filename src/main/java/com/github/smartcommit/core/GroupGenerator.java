@@ -430,7 +430,7 @@ public class GroupGenerator {
           Optional<DiffHunk> diffHunkOpt = getOverlappingDiffHunk(Version.BASE, range);
           if (diffHunkOpt.isPresent()) {
             DiffHunk diffHunk = diffHunkOpt.get();
-            diffHunk.addRefAction(refactoring);
+            diffHunk.addRefAction(Utils.convertRefactoringToAction(refactoring));
             refDiffHunks.add(diffHunk);
           }
         }
@@ -438,7 +438,7 @@ public class GroupGenerator {
           Optional<DiffHunk> diffHunkOpt = getOverlappingDiffHunk(Version.CURRENT, range);
           if (diffHunkOpt.isPresent()) {
             DiffHunk diffHunk = diffHunkOpt.get();
-            diffHunk.addRefAction(refactoring);
+            diffHunk.addRefAction(Utils.convertRefactoringToAction(refactoring));
             refDiffHunks.add(diffHunk);
           }
         }

@@ -341,7 +341,7 @@ public class SmartCommit {
       DiffHunk diffHunk = id2DiffHunkMap.getOrDefault(id.split(":")[1], null);
       if (diffHunk != null) {
         astActions.addAll(diffHunk.getAstActions());
-        // TODO: get ref actions
+        refActions.addAll(diffHunk.getRefActions());
       }
     }
 
