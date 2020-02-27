@@ -96,9 +96,10 @@ public class SmartCommit {
     // 2. collect the data into temp dir
     // (1) diff files (2) file id mapping (3) diff hunks
     DataCollector dataCollector = new DataCollector(repoName, tempDir);
-    Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
+    // dirs that keeps the source code of diff files
+    Pair<String, String> srcDirs = dataCollector.collectDiffFilesWorking(diffFiles);
 
-    Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
+    Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
 
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
@@ -141,9 +142,10 @@ public class SmartCommit {
 
     // 2. collect the data into temp dir
     DataCollector dataCollector = new DataCollector(repoName, tempDir);
-    Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(commitID, diffFiles);
+    // dirs that keeps the source code of diff files
+    Pair<String, String> srcDirs = dataCollector.collectDiffFilesAtCommit(commitID, diffFiles);
 
-    Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
+    Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
     return results;
   }
 
@@ -152,18 +154,18 @@ public class SmartCommit {
    *
    * @param diffFiles
    * @param allDiffHunks
-   * @param dataPaths
+   * @param srcDirs
    * @return
    */
   private Map<String, Group> analyze(
-      List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> dataPaths)
+      List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs)
       throws ExecutionException, InterruptedException {
     // build the change semantic graph
     ExecutorService executorService = Executors.newFixedThreadPool(2);
     Future<Graph<Node, Edge>> baseBuilder =
-        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
+        executorService.submit(new GraphBuilder(srcDirs.getLeft(), diffFiles));
     Future<Graph<Node, Edge>> currentBuilder =
-        executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
+        executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
     Graph<Node, Edge> baseGraph = baseBuilder.get();
     Graph<Node, Edge> currentGraph = currentBuilder.get();
     //    String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
