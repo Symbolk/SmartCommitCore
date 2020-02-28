@@ -2,6 +2,7 @@ package com.github.smartcommit.intent.model;
 
 import com.github.smartcommit.model.Action;
 import org.omg.PortableInterceptor.INACTIVE;
+import com.github.smartcommit.model.constant.Operation;
 
 import java.util.List;
 
@@ -60,12 +61,12 @@ public class CommitTrainingSample {
     this.commitTime = commitTime;
   }
 
-  public List<AstAction> getActionList() {
+  public List<AstAction> getGumtreeActionList() {
     return gumtreeActions;
   }
 
-  public void setActionList(List<AstAction> actionList) {
-    this.gumtreeActions = actionList;
+  public void setGumtreeActionList(List<AstAction> gumtreeActionList) {
+    this.gumtreeActions = gumtreeActionList;
   }
 
   public List<Action> getDiffHunksActions() {

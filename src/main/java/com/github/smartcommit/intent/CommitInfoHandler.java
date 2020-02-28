@@ -43,7 +43,7 @@ import com.github.smartcommit.intent.model.CommitTrainingSample;
 import com.github.smartcommit.core.*;
 import com.github.smartcommit.io.*;
 import com.github.smartcommit.intent.model.*;
-
+import com.github.smartcommit.model.Action;
 
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
@@ -127,7 +127,7 @@ public class CommitInfoHandler {
             tempCommitTrainingSample = generateActionListFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
 
             // add DiffHunkActions using DiffHunks
-            List<com.github.smartcommit.model.Action> DiffHunkActions=
+            List<Action> DiffHunkActions=
                     generateActionListFromDiffHunks(tempCommitTrainingSample, repoAnalyzer, dataCollector);
             tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
 
@@ -140,6 +140,27 @@ public class CommitInfoHandler {
         }
 
         return true;
+    }
+
+    // generate Intent from Message
+    private static Intent getIntentFromMsg(String commitMsg) {
+        for (Intent intent : Intent.values()) {
+            if (commitMsg.contains(intent.label)) {
+                return intent;
+            }
+        }
+        return Intent.CHR;
+    }
+
+    // generate IntentDescription from Message
+    private static List<IntentDescription> getIntentDescriptionFromMsg(String commitMsg) {
+        List<IntentDescription> intentList = new ArrayList<>();
+        for (IntentDescription intent : IntentDescription.values()) {
+            if (commitMsg.toLowerCase().contains(intent.label)) {
+                intentList.add(intent);
+            }
+        }
+        return intentList;
     }
 
     // generate Edit Script from file contents
@@ -204,7 +225,7 @@ public class CommitInfoHandler {
                 if (editScript != null) {
                     List<AstAction> actionList = generateAstActionList(editScript);
                     tempActionList.addAll(actionList);
-                    tempCommitTrainingSample.setActionList(tempActionList);
+                    tempCommitTrainingSample.setGumtreeActionList(tempActionList);
                 } else {
                     // Only doc change, thus no CodeChange and AbstractJdtTree generated
                     tempCommitTrainingSample.addIntentDescription(IntentDescription.DOC);
@@ -222,41 +243,31 @@ public class CommitInfoHandler {
         return tempCommitTrainingSample;
     }
 
+    public static Action convertAstActionToAction(AstAction astAction) {
+        Operation op = Operation.UKN;
+        for (Operation operation : Operation.values()) {
+            if (astAction.getASTOperation().label.equals(operation.label)) {
+                op = operation;
+                break;
+            }
+        }
+        return new Action(op, astAction.getASTNodeType(), "");
+    }
+
     // generate DiffHunkActions from diffHunks
-    private static List<com.github.smartcommit.model.Action> generateActionListFromDiffHunks(
+    private static List<Action> generateActionListFromDiffHunks(
             CommitTrainingSample tempCommitTrainingSample, RepoAnalyzer repoAnalyzer, DataCollector dataCollector) {
         String commitID = tempCommitTrainingSample.getCommitID();
         List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
         List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
         Integer sizeDiffFiles = diffFiles.size(), sizeDiffHunk = allDiffHunks.size();
-        System.out.println("Files: "+sizeDiffFiles+" Hunks: "+sizeDiffHunk);
-        List<com.github.smartcommit.model.Action> AstActions = new ArrayList<>();
+        System.out.println("DiffFiles: "+sizeDiffFiles+" DiffHunks: "+sizeDiffHunk);
+        List<Action> AstActions = new ArrayList<>();
         for(Integer i = 0; i < sizeDiffHunk; i++) {
-            List<com.github.smartcommit.model.Action> actions = dataCollector.analyzeASTActions(allDiffHunks.get(i));
+            List<Action> actions = dataCollector.analyzeASTActions(allDiffHunks.get(i));
             AstActions.addAll(actions);
         }
         return AstActions;
-    }
-
-    // generate Intent from Message
-    private static Intent getIntentFromMsg(String commitMsg) {
-        for (Intent intent : Intent.values()) {
-            if (commitMsg.contains(intent.label)) {
-                return intent;
-            }
-        }
-        return Intent.CHR;
-    }
-
-    // generate IntentDescription from Message
-    private static List<IntentDescription> getIntentDescriptionFromMsg(String commitMsg) {
-        List<IntentDescription> intentList = new ArrayList<>();
-        for (IntentDescription intent : IntentDescription.values()) {
-            if (commitMsg.toLowerCase().contains(intent.label)) {
-                intentList.add(intent);
-            }
-        }
-        return intentList;
     }
 
     // generate RefactorCodeChangeFromCodeChagne
@@ -278,8 +289,6 @@ public class CommitInfoHandler {
                         for (Refactoring ref : refactorings) {
                             RefactorCodeChange refactorCodeChange = new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
                             refactorCodeChanges.add(refactorCodeChange);
-                            //com.github.smartcommit.model.Action action = Utils.convertRefactoringToAction(ref);
-                            //System.out.println(action.toString());
                         }
                     }
                 }
@@ -290,6 +299,18 @@ public class CommitInfoHandler {
         }
         return refactorCodeChanges;
     }
+
+    public static Action convertRefactorCodeChangeToAction(RefactorCodeChange refactorCodeChange) {
+        Operation op = Operation.UKN;
+        for (Operation operation : Operation.values()) {
+            if (refactorCodeChange.getName().equals(operation.label)) {
+                op = operation;
+                break;
+            }
+        }
+        return new Action(op, refactorCodeChange.getRefactoringType(), "");
+    }
+
 
     // Load given commitTrainingSample into given DB collection
     private static void loadTrainSampleToDB(MongoCollection<Document> collection, CommitTrainingSample commitTrainingSample) {
@@ -305,41 +326,74 @@ public class CommitInfoHandler {
             doc1.put("commitTime", commitTrainingSample.getCommitTime());
             doc1.put("commitIntent", commitTrainingSample.getIntent().getLabel());
             doc1.put("commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
+
+            List<Action> Actions1 = new ArrayList<>();
             // add ActionList to DB
-            List<AstAction> actionList = commitTrainingSample.getActionList();
-            if (actionList != null) {
+            List<AstAction> GumtreeActions = commitTrainingSample.getGumtreeActionList();
+            if (GumtreeActions != null) {
                 List<Document> actions = new ArrayList<>();
-                for (AstAction astAction : actionList) {
+                for (AstAction astAction : GumtreeActions) {
                     Document addrAttr = new Document();
+                    Actions1.add(convertAstActionToAction(astAction));
                     addrAttr.put("operation", String.valueOf(astAction.getASTOperation()));
                     addrAttr.put("astNodeType", astAction.getASTNodeType());
                     actions.add(addrAttr);
                 }
                 doc1.put("GumtreeActions", actions);
             }
+
+            List<Action> Actions2 = new ArrayList<>();
             // add DiffHunkActions to DB
-            List<com.github.smartcommit.model.Action> DiffHunkActions = commitTrainingSample.getDiffHunksActions();
+            List<Action> DiffHunkActions = commitTrainingSample.getDiffHunksActions();
             if (DiffHunkActions != null) {
                 List<Document> actions = new ArrayList<>();
-                for (com.github.smartcommit.model.Action DiffHunkAction : DiffHunkActions) {
+                for (Action DiffHunkAction : DiffHunkActions) {
                     Document addrAttr = new Document();
                     addrAttr.put("diffHunkAction", DiffHunkAction.toString());
                     actions.add(addrAttr);
+                    Actions2.add(DiffHunkAction);
                 }
-                doc1.put("astActions", actions);
+                doc1.put("DiffHunkActions", actions);
             }
+
+            List<Action> Actions3 = new ArrayList<>();
             // add refactorCodeChange to DB
-            List<RefactorCodeChange> refactorCodeChangeList = commitTrainingSample.getRefactorCodeChanges();
-            if (refactorCodeChangeList != null) {
-                List<Document> refactorCodeChanges = new ArrayList<>();
-                for (RefactorCodeChange refactorCodeChange : refactorCodeChangeList) {
+            List<RefactorCodeChange> refactorCodeChanges = commitTrainingSample.getRefactorCodeChanges();
+            if (refactorCodeChanges != null) {
+                List<Document> actions = new ArrayList<>();
+                for (RefactorCodeChange refactorCodeChange : refactorCodeChanges) {
                     Document addrAttr = new Document();
                     addrAttr.put("operation", refactorCodeChange.getOperation());
                     addrAttr.put("refactoringType", refactorCodeChange.getRefactoringType());
-                    refactorCodeChanges.add(addrAttr);
+                    actions.add(addrAttr);
+                    Actions3.add(convertRefactorCodeChangeToAction(refactorCodeChange));
                 }
-                doc1.put("refactorCodeChanges", refactorCodeChanges);
+                doc1.put("refactorCodeChanges", actions);
             }
+
+            // add 3in1 to DB
+            List<Document> actions = new ArrayList<>();
+            Integer sizeActions1 = Actions1.size();
+            Integer sizeActions2 = Actions2.size();
+            Integer sizeActions3 = Actions3.size();
+            for (int i = 0; i < sizeActions1; i ++) {
+                Document addrAttr = new Document();
+                addrAttr.put("Gumtree", Actions1.get(i).toString());
+                actions.add(addrAttr);
+            }
+            for (int i = 0; i < sizeActions2; i ++) {
+                Document addrAttr = new Document();
+                addrAttr.put("DiffHunk", Actions2.get(i).toString());
+                actions.add(addrAttr);
+            }
+            for (int i = 0; i < sizeActions3; i ++) {
+                Document addrAttr = new Document();
+                addrAttr.put("RefactorMiner", Actions3.get(i).toString());
+                actions.add(addrAttr);
+            }
+            doc1.put("AllActions", actions);
+
+
             collection.insertOne(doc1);
 
         } catch (Exception e) {

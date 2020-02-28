@@ -148,7 +148,7 @@ public class DataCollector {
    *
    * @param diffHunk
    */
-  public List<Action> analyzeASTActions(DiffHunk diffHunk) {
+  public static List<Action> analyzeASTActions(DiffHunk diffHunk) {
     List<Action> actions = new ArrayList<>();
 
     ChangeType changeType = diffHunk.getChangeType();
@@ -214,7 +214,7 @@ public class DataCollector {
     return actions;
   }
 
-  private Operation convertChangeTypeToOperation(ChangeType changeType) {
+  private static Operation convertChangeTypeToOperation(ChangeType changeType) {
     switch (changeType) {
       case ADDED:
         return Operation.ADD;
@@ -233,7 +233,7 @@ public class DataCollector {
    * @param coveredNodes
    * @return
    */
-  private List<Action> analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
+  private static List<Action> analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
     List<Action> actions = new ArrayList<>();
     Operation operation = convertChangeTypeToOperation(changeType);
 
@@ -265,7 +265,7 @@ public class DataCollector {
    * @param baseNodes
    * @return
    */
-  private List<Action> analyzeCoveredNodes(
+  private static List<Action> analyzeCoveredNodes(
       ChangeType changeType, List<ASTNode> baseNodes, List<ASTNode> currentNodes) {
     List<Action> actions = new ArrayList<>();
     Operation operation = convertChangeTypeToOperation(changeType);
@@ -292,7 +292,7 @@ public class DataCollector {
    * @param coveredNodes
    * @return
    */
-  private List<Pair<String, String>> getASTNodesInfo(List<ASTNode> coveredNodes) {
+  private static List<Pair<String, String>> getASTNodesInfo(List<ASTNode> coveredNodes) {
     Set<Pair<String, String>> infos = new LinkedHashSet<>();
     for (ASTNode node : coveredNodes) {
       if (node != null) {

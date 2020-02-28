@@ -63,7 +63,7 @@ class RunnableDemoDiffFileLevel implements Runnable {
         if (editScript != null) {
             List<AstAction> actionList = generateAstActionList(editScript);
             tempActionList.addAll(actionList);
-            tempCommitTrainingSample.setActionList(tempActionList);
+            tempCommitTrainingSample.setGumtreeActionList(tempActionList);
         } else {
             // Only doc change, thus no CodeChange and AbstractJdtTree generated
             tempCommitTrainingSample.addIntentDescription(IntentDescription.DOC);
@@ -313,8 +313,8 @@ public class CommitInfoHandlerParallel {
             doc1.put("commitTime", commitTrainingSample.getCommitTime());
             doc1.put("commitIntent", commitTrainingSample.getIntent().getLabel());
             doc1.put("commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
-            // add ActionList to DB
-            List<AstAction> actionList = commitTrainingSample.getActionList();
+            // add GumtreeAction to DB
+            List<AstAction> actionList = commitTrainingSample.getGumtreeActionList();
             if (actionList != null) {
                 List<Document> actions = new ArrayList<>();
                 for (AstAction astAction : actionList) {

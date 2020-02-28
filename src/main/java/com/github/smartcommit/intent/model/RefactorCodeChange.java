@@ -185,4 +185,7 @@ public class RefactorCodeChange {
         }
     }
 
+    public String getName() {
+        return name;
+    }
 }
