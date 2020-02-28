@@ -126,7 +126,7 @@ public class SmartCommit {
    * @throws Exception
    */
   public Map<String, Group> analyzeCommit(String commitID) throws Exception {
-    Utils.clearDir(tempDir);
+    Utils.clearDir(tempDir + File.separator + commitID);
 
     // 1. analyze the repo
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);

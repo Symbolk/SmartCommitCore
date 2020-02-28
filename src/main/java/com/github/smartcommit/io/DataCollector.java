@@ -38,8 +38,20 @@ public class DataCollector {
    * @return
    */
   public Pair<String, String> collectDiffFilesAtCommit(String commitID, List<DiffFile> diffFiles) {
-    String baseDir = tempDir + File.separator + Version.BASE.asString() + File.separator;
-    String currentDir = tempDir + File.separator + Version.CURRENT.asString() + File.separator;
+    String baseDir =
+        tempDir
+            + File.separator
+            + commitID
+            + File.separator
+            + Version.BASE.asString()
+            + File.separator;
+    String currentDir =
+        tempDir
+            + File.separator
+            + commitID
+            + File.separator
+            + Version.CURRENT.asString()
+            + File.separator;
 
     collect(baseDir, currentDir, diffFiles);
     return Pair.of(baseDir, currentDir);
