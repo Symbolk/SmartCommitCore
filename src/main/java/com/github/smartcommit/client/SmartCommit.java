@@ -113,7 +113,7 @@ public class SmartCommit {
     }
 
     // save the results on disk
-    exportGroupResults(results);
+    exportGroupResults(results, tempDir);
 
     return results;
   }
@@ -126,7 +126,8 @@ public class SmartCommit {
    * @throws Exception
    */
   public Map<String, Group> analyzeCommit(String commitID) throws Exception {
-    Utils.clearDir(tempDir + File.separator + commitID);
+    String resultsDir = tempDir + File.separator + commitID;
+    Utils.clearDir(resultsDir);
 
     // 1. analyze the repo
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
@@ -146,6 +147,9 @@ public class SmartCommit {
     Pair<String, String> srcDirs = dataCollector.collectDiffFilesAtCommit(commitID, diffFiles);
 
     Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
+
+    exportGroupResults(results, resultsDir);
+
     return results;
   }
 
@@ -198,16 +202,16 @@ public class SmartCommit {
   }
 
   /**
-   * Save generated group results on disk
+   * Save generated group results into the target dir
    *
    * @param generatedGroups
    */
-  public void exportGroupResults(Map<String, Group> generatedGroups) {
+  public void exportGroupResults(Map<String, Group> generatedGroups, String targetDir) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     for (Map.Entry<String, Group> entry : generatedGroups.entrySet()) {
       Utils.writeStringToFile(
           gson.toJson(entry.getValue()),
-          tempDir
+          targetDir
               + File.separator
               + "generated_groups"
               + File.separator
@@ -216,7 +220,7 @@ public class SmartCommit {
       // the copy to accept the user feedback
       Utils.writeStringToFile(
           gson.toJson(entry.getValue()),
-          tempDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
+          targetDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
     }
   }
 
