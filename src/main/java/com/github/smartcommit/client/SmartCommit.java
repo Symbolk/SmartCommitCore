@@ -96,9 +96,10 @@ public class SmartCommit {
     // 2. collect the data into temp dir
     // (1) diff files (2) file id mapping (3) diff hunks
     DataCollector dataCollector = new DataCollector(repoName, tempDir);
-    Pair<String, String> dataPaths = dataCollector.collectDiffFilesWorking(diffFiles);
+    // dirs that keeps the source code of diff files
+    Pair<String, String> srcDirs = dataCollector.collectDiffFilesWorking(diffFiles);
 
-    Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
+    Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
 
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
 
@@ -112,7 +113,7 @@ public class SmartCommit {
     }
 
     // save the results on disk
-    exportGroupResults(results);
+    exportGroupResults(results, tempDir);
 
     return results;
   }
@@ -125,7 +126,8 @@ public class SmartCommit {
    * @throws Exception
    */
   public Map<String, Group> analyzeCommit(String commitID) throws Exception {
-    Utils.clearDir(tempDir);
+    String resultsDir = tempDir + File.separator + commitID;
+    Utils.clearDir(resultsDir);
 
     // 1. analyze the repo
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
@@ -141,9 +143,13 @@ public class SmartCommit {
 
     // 2. collect the data into temp dir
     DataCollector dataCollector = new DataCollector(repoName, tempDir);
-    Pair<String, String> dataPaths = dataCollector.collectDiffFilesAtCommit(commitID, diffFiles);
+    // dirs that keeps the source code of diff files
+    Pair<String, String> srcDirs = dataCollector.collectDiffFilesAtCommit(commitID, diffFiles);
 
-    Map<String, Group> results = analyze(diffFiles, allDiffHunks, dataPaths);
+    Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
+
+    exportGroupResults(results, resultsDir);
+
     return results;
   }
 
@@ -152,18 +158,18 @@ public class SmartCommit {
    *
    * @param diffFiles
    * @param allDiffHunks
-   * @param dataPaths
+   * @param srcDirs
    * @return
    */
   private Map<String, Group> analyze(
-      List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> dataPaths)
+      List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs)
       throws ExecutionException, InterruptedException {
     // build the change semantic graph
     ExecutorService executorService = Executors.newFixedThreadPool(2);
     Future<Graph<Node, Edge>> baseBuilder =
-        executorService.submit(new GraphBuilder(dataPaths.getLeft(), diffFiles));
+        executorService.submit(new GraphBuilder(srcDirs.getLeft(), diffFiles));
     Future<Graph<Node, Edge>> currentBuilder =
-        executorService.submit(new GraphBuilder(dataPaths.getRight(), diffFiles));
+        executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
     Graph<Node, Edge> baseGraph = baseBuilder.get();
     Graph<Node, Edge> currentGraph = currentBuilder.get();
     //    String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
@@ -196,16 +202,16 @@ public class SmartCommit {
   }
 
   /**
-   * Save generated group results on disk
+   * Save generated group results into the target dir
    *
    * @param generatedGroups
    */
-  public void exportGroupResults(Map<String, Group> generatedGroups) {
+  public void exportGroupResults(Map<String, Group> generatedGroups, String targetDir) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     for (Map.Entry<String, Group> entry : generatedGroups.entrySet()) {
       Utils.writeStringToFile(
           gson.toJson(entry.getValue()),
-          tempDir
+          targetDir
               + File.separator
               + "generated_groups"
               + File.separator
@@ -214,7 +220,7 @@ public class SmartCommit {
       // the copy to accept the user feedback
       Utils.writeStringToFile(
           gson.toJson(entry.getValue()),
-          tempDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
+          targetDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
     }
   }
 

@@ -12,10 +12,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringType;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -90,6 +87,30 @@ public class Utils {
       e.printStackTrace();
     }
     return content;
+  }
+
+  /**
+   * Read csv file and return a list of separated items as string
+   *
+   * @param path
+   * @param delimiter
+   * @return
+   */
+  public static List<String[]> readCSV(String path, String delimiter) {
+    List<String[]> results = new ArrayList<>();
+    try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
+//      reader.readLine(); // skip header
+      String line = null;
+      while ((line = reader.readLine()) != null) {
+        String items[] = line.split(delimiter);
+        results.add(items);
+      }
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return results;
   }
 
   /**
