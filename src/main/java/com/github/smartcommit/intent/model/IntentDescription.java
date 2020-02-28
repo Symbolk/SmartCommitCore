@@ -24,7 +24,7 @@ public enum IntentDescription {
   CLR("clear"),
   UKN("unknown"),
 
-  NFL("NoFile"), FIL("FileAdd"), DOC("docChange");
+  NFL("NoFile"), FIL("FileAdd"), DOC("DocChange");
 
   public String label;
   IntentDescription(String label) {

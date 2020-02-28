@@ -34,7 +34,7 @@ public class Action {
     StringBuilder builder = new StringBuilder();
     builder.append(operation);
     builder
-        .append(typeFrom.isEmpty() ? "" : " " + typeFrom)
+        .append(typeFrom.isEmpty() ? "" : " From:" + typeFrom)
         .append(labelFrom.isEmpty() ? "" : ":" + labelFrom);
     builder
         .append(typeTo.isEmpty() ? "" : " To:" + typeTo)

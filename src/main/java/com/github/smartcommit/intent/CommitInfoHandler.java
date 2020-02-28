@@ -106,7 +106,7 @@ public class CommitInfoHandler {
         for (int i = 0; i < size; i++) {
             CommitTrainingSample tempCommitTrainingSample = commitTrainingSample.get(i);
             String commitID = tempCommitTrainingSample.getCommitID();
-            System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
+            System.out.println("Proceeding: "+commitID+"  "+(i+1)+"/"+size);
             tempCommitTrainingSample.setRepoID(repoID);
             tempCommitTrainingSample.setRepoPath(repoPath);
             tempCommitTrainingSample.setRepoName(repoName);
@@ -124,7 +124,7 @@ public class CommitInfoHandler {
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
             DataCollector dataCollector = new DataCollector(repoName, "~/Downloads");
             // add astActionList using gumtree
-            tempCommitTrainingSample = generateActionListFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
+            tempCommitTrainingSample = generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
 
             // add DiffHunkActions using DiffHunks
             List<Action> DiffHunkActions=
@@ -203,8 +203,8 @@ public class CommitInfoHandler {
         return actionList;
     }
 
-    // generate action list from code changes: diffFile and EditScript
-    private static CommitTrainingSample generateActionListFromCodeChange(
+    // generate Gumtree action list from code changes: diffFile and EditScript
+    private static CommitTrainingSample generateGumtreeActionsFromCodeChange(
             CommitTrainingSample tempCommitTrainingSample, RepoAnalyzer repoAnalyzer) {
         try {  // if no FileChange
             List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(tempCommitTrainingSample.getCommitID());
@@ -217,8 +217,7 @@ public class CommitInfoHandler {
                 // File added or deleted, thus no content
                 if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
                     tempCommitTrainingSample.addIntentDescription(IntentDescription.FIL);
-                    // tempCommitTrainingSample.setIntent(Intent.FIL);
-                    System.out.println("Exception type: NCC: only FILE change");
+                    tempCommitTrainingSample.addGumtreeExceptionCount();
                     continue;
                 }
                 EditScript editScript = generateEditScript(baseContent, currentContent);
@@ -229,16 +228,14 @@ public class CommitInfoHandler {
                 } else {
                     // Only doc change, thus no CodeChange and AbstractJdtTree generated
                     tempCommitTrainingSample.addIntentDescription(IntentDescription.DOC);
-                    //tempCommitTrainingSample.setIntent(Intent.DOC);
-                    System.out.println("Exception type: NCC: only DOC change");
+                    tempCommitTrainingSample.addGumtreeExceptionCount();
                 }
             }
         } catch (Exception e) {
             //e.printStackTrace();
             // Lack of File, thus no DiffFiles generated
             tempCommitTrainingSample.addIntentDescription(IntentDescription.NFL);
-            //tempCommitTrainingSample.setIntent(Intent.FIL);
-            System.out.println("Exception type: NoFile");
+            tempCommitTrainingSample.addGumtreeExceptionCount();
         }
         return tempCommitTrainingSample;
     }
@@ -260,8 +257,9 @@ public class CommitInfoHandler {
         String commitID = tempCommitTrainingSample.getCommitID();
         List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
         List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
-        Integer sizeDiffFiles = diffFiles.size(), sizeDiffHunk = allDiffHunks.size();
-        System.out.println("DiffFiles: "+sizeDiffFiles+" DiffHunks: "+sizeDiffHunk);
+        if(diffFiles.isEmpty() || allDiffHunks.isEmpty())
+            System.out.println("No DiffFiles generated ");
+        Integer sizeDiffHunk = allDiffHunks.size();
         List<Action> AstActions = new ArrayList<>();
         for(Integer i = 0; i < sizeDiffHunk; i++) {
             List<Action> actions = dataCollector.analyzeASTActions(allDiffHunks.get(i));
@@ -326,7 +324,9 @@ public class CommitInfoHandler {
             doc1.put("commitTime", commitTrainingSample.getCommitTime());
             doc1.put("commitIntent", commitTrainingSample.getIntent().getLabel());
             doc1.put("commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
+            doc1.put("GumtreeExceptionCount", commitTrainingSample.getGumtreeExceptionCount());
 
+            {
             List<Action> Actions1 = new ArrayList<>();
             // add ActionList to DB
             List<AstAction> GumtreeActions = commitTrainingSample.getGumtreeActionList();
@@ -370,7 +370,6 @@ public class CommitInfoHandler {
                 }
                 doc1.put("refactorMinerActions", actions);
             }
-
             // add 3in1 to DB
             List<Document> actions = new ArrayList<>();
             Integer sizeActions1 = Actions1.size();
@@ -392,6 +391,7 @@ public class CommitInfoHandler {
                 actions.add(addrAttr);
             }
             doc1.put("AllActions", actions);
+            }
 
 
             collection.insertOne(doc1);
