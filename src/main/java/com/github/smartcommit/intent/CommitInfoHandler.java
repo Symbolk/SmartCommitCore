@@ -10,6 +10,8 @@ import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.TreeContext;
 import com.github.smartcommit.intent.model.AstAction;
+import com.github.smartcommit.model.DiffHunk;
+import com.github.smartcommit.model.constant.Operation;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
@@ -39,6 +41,7 @@ import org.refactoringminer.util.GitServiceImpl;
 // CommitTrainingSample
 import com.github.smartcommit.intent.model.CommitTrainingSample;
 import com.github.smartcommit.core.*;
+import com.github.smartcommit.io.*;
 import com.github.smartcommit.intent.model.*;
 
 
@@ -96,6 +99,8 @@ public class CommitInfoHandler {
         String repoName = repoPath.substring(index + 1);
         String repoID = String.valueOf(Math.abs(repoName.hashCode()));
 
+
+
         // Analyze the Sample List
         Integer size = commitTrainingSample.size();
         for (int i = 0; i < size; i++) {
@@ -116,9 +121,15 @@ public class CommitInfoHandler {
             List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
             tempCommitTrainingSample.setIntentDescription(intentList);
 
-            // add actionList using gumtree
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
+            DataCollector dataCollector = new DataCollector(repoName, "~/Downloads");
+            // add astActionList using gumtree
             tempCommitTrainingSample = generateActionListFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
+
+            // add DiffHunkActions using DiffHunks
+            List<com.github.smartcommit.model.Action> DiffHunkActions=
+                    generateActionListFromDiffHunks(tempCommitTrainingSample, repoAnalyzer, dataCollector);
+            tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
 
             // add refactorCodeChange using RefactoringMiner
             List<RefactorCodeChange> refactorCodeChanges = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
@@ -127,6 +138,7 @@ public class CommitInfoHandler {
             // Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainingSample);
         }
+
         return true;
     }
 
@@ -210,6 +222,22 @@ public class CommitInfoHandler {
         return tempCommitTrainingSample;
     }
 
+    // generate DiffHunkActions from diffHunks
+    private static List<com.github.smartcommit.model.Action> generateActionListFromDiffHunks(
+            CommitTrainingSample tempCommitTrainingSample, RepoAnalyzer repoAnalyzer, DataCollector dataCollector) {
+        String commitID = tempCommitTrainingSample.getCommitID();
+        List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
+        List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
+        Integer sizeDiffFiles = diffFiles.size(), sizeDiffHunk = allDiffHunks.size();
+        System.out.println("Files: "+sizeDiffFiles+" Hunks: "+sizeDiffHunk);
+        List<com.github.smartcommit.model.Action> AstActions = new ArrayList<>();
+        for(Integer i = 0; i < sizeDiffHunk; i++) {
+            List<com.github.smartcommit.model.Action> actions = dataCollector.analyzeASTActions(allDiffHunks.get(i));
+            AstActions.addAll(actions);
+        }
+        return AstActions;
+    }
+
     // generate Intent from Message
     private static Intent getIntentFromMsg(String commitMsg) {
         for (Intent intent : Intent.values()) {
@@ -250,6 +278,8 @@ public class CommitInfoHandler {
                         for (Refactoring ref : refactorings) {
                             RefactorCodeChange refactorCodeChange = new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
                             refactorCodeChanges.add(refactorCodeChange);
+                            //com.github.smartcommit.model.Action action = Utils.convertRefactoringToAction(ref);
+                            //System.out.println(action.toString());
                         }
                     }
                 }
@@ -283,6 +313,17 @@ public class CommitInfoHandler {
                     Document addrAttr = new Document();
                     addrAttr.put("operation", String.valueOf(astAction.getASTOperation()));
                     addrAttr.put("astNodeType", astAction.getASTNodeType());
+                    actions.add(addrAttr);
+                }
+                doc1.put("GumtreeActions", actions);
+            }
+            // add DiffHunkActions to DB
+            List<com.github.smartcommit.model.Action> DiffHunkActions = commitTrainingSample.getDiffHunksActions();
+            if (DiffHunkActions != null) {
+                List<Document> actions = new ArrayList<>();
+                for (com.github.smartcommit.model.Action DiffHunkAction : DiffHunkActions) {
+                    Document addrAttr = new Document();
+                    addrAttr.put("diffHunkAction", DiffHunkAction.toString());
                     actions.add(addrAttr);
                 }
                 doc1.put("astActions", actions);

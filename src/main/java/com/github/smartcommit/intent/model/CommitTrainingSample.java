@@ -1,5 +1,6 @@
 package com.github.smartcommit.intent.model;
 
+import com.github.smartcommit.model.Action;
 import org.omg.PortableInterceptor.INACTIVE;
 
 import java.util.List;
@@ -15,7 +16,8 @@ public class CommitTrainingSample {
   private String commitTime;
   private Intent intent;
   private List<IntentDescription> intentDescriptions;
-  private List<AstAction> actions;
+  private List<AstAction> gumtreeActions;
+  private List<Action> diffHunksActions;
   private List<RefactorCodeChange> refactorCodeChanges;
 
   public String getCommitID() {
@@ -59,15 +61,19 @@ public class CommitTrainingSample {
   }
 
   public List<AstAction> getActionList() {
-    return actions;
+    return gumtreeActions;
   }
 
   public void setActionList(List<AstAction> actionList) {
-    this.actions = actionList;
+    this.gumtreeActions = actionList;
   }
 
-  public void addAction(AstAction action) {
-    this.actions.add(action);
+  public List<Action> getDiffHunksActions() {
+    return diffHunksActions;
+  }
+
+  public void setDiffHunksActions(List<Action> actionList) {
+    this.diffHunksActions = actionList;
   }
 
   public Intent getIntent() {
