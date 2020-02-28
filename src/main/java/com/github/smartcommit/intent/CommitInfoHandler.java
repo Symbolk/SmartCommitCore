@@ -132,8 +132,8 @@ public class CommitInfoHandler {
             tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
 
             // add refactorCodeChange using RefactoringMiner
-            List<RefactorCodeChange> refactorCodeChanges = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
-            tempCommitTrainingSample.setRefactorCodeChanges(refactorCodeChanges);
+            List<RefactorMinerAction> refactorMinerActions = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
+            tempCommitTrainingSample.setRefactorMinerActions(refactorMinerActions);
 
             // Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainingSample);
@@ -271,10 +271,10 @@ public class CommitInfoHandler {
     }
 
     // generate RefactorCodeChangeFromCodeChagne
-    private static List<RefactorCodeChange> getRefactorCodeChangesFromCodeChange(String repoPath, String commitID) {
+    private static List<RefactorMinerAction> getRefactorCodeChangesFromCodeChange(String repoPath, String commitID) {
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
         org.refactoringminer.api.GitService gitService = new GitServiceImpl();
-        List<RefactorCodeChange> refactorCodeChanges = new ArrayList<>();
+        List<RefactorMinerAction> refactorMinerActions = new ArrayList<>();
         try {
             Repository repo = gitService.cloneIfNotExists(
                     repoPath, // "/Users/Chuncen/Downloads/"+repoName
@@ -287,8 +287,8 @@ public class CommitInfoHandler {
                         System.out.println("No refactoring generated");
                     } else {
                         for (Refactoring ref : refactorings) {
-                            RefactorCodeChange refactorCodeChange = new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
-                            refactorCodeChanges.add(refactorCodeChange);
+                            RefactorMinerAction refactorMinerAction = new RefactorMinerAction(ref.getRefactoringType(), ref.getName());
+                            refactorMinerActions.add(refactorMinerAction);
                         }
                     }
                 }
@@ -297,18 +297,18 @@ public class CommitInfoHandler {
             System.out.println("Repo Not Exist");
             //e.printStackTrace();
         }
-        return refactorCodeChanges;
+        return refactorMinerActions;
     }
 
-    public static Action convertRefactorCodeChangeToAction(RefactorCodeChange refactorCodeChange) {
+    public static Action convertRefactorCodeChangeToAction(RefactorMinerAction refactorMinerAction) {
         Operation op = Operation.UKN;
         for (Operation operation : Operation.values()) {
-            if (refactorCodeChange.getName().equals(operation.label)) {
+            if (refactorMinerAction.getName().equals(operation.label)) {
                 op = operation;
                 break;
             }
         }
-        return new Action(op, refactorCodeChange.getRefactoringType(), "");
+        return new Action(op, refactorMinerAction.getRefactoringType(), "");
     }
 
 
@@ -358,17 +358,17 @@ public class CommitInfoHandler {
 
             List<Action> Actions3 = new ArrayList<>();
             // add refactorCodeChange to DB
-            List<RefactorCodeChange> refactorCodeChanges = commitTrainingSample.getRefactorCodeChanges();
-            if (refactorCodeChanges != null) {
+            List<RefactorMinerAction> refactorMinerActions = commitTrainingSample.getRefactorMinerActions();
+            if (refactorMinerActions != null) {
                 List<Document> actions = new ArrayList<>();
-                for (RefactorCodeChange refactorCodeChange : refactorCodeChanges) {
+                for (RefactorMinerAction refactorMinerAction : refactorMinerActions) {
                     Document addrAttr = new Document();
-                    addrAttr.put("operation", refactorCodeChange.getOperation());
-                    addrAttr.put("refactoringType", refactorCodeChange.getRefactoringType());
+                    addrAttr.put("operation", refactorMinerAction.getOperation());
+                    addrAttr.put("refactoringType", refactorMinerAction.getRefactoringType());
                     actions.add(addrAttr);
-                    Actions3.add(convertRefactorCodeChangeToAction(refactorCodeChange));
+                    Actions3.add(convertRefactorCodeChangeToAction(refactorMinerAction));
                 }
-                doc1.put("refactorCodeChanges", actions);
+                doc1.put("refactorMinerActions", actions);
             }
 
             // add 3in1 to DB

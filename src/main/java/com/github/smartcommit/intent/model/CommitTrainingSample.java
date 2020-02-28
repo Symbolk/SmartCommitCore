@@ -1,8 +1,6 @@
 package com.github.smartcommit.intent.model;
 
 import com.github.smartcommit.model.Action;
-import org.omg.PortableInterceptor.INACTIVE;
-import com.github.smartcommit.model.constant.Operation;
 
 import java.util.List;
 
@@ -19,7 +17,7 @@ public class CommitTrainingSample {
   private List<IntentDescription> intentDescriptions;
   private List<AstAction> gumtreeActions;
   private List<Action> diffHunksActions;
-  private List<RefactorCodeChange> refactorCodeChanges;
+  private List<RefactorMinerAction> refactorMinerActions;
 
   public String getCommitID() {
     return commitID;
@@ -97,16 +95,16 @@ public class CommitTrainingSample {
     this.intentDescriptions.add(intentDescription);
   }
 
-  public List<RefactorCodeChange> getRefactorCodeChanges() {
-    return refactorCodeChanges;
+  public List<RefactorMinerAction> getRefactorMinerActions() {
+    return refactorMinerActions;
   }
 
-  public void setRefactorCodeChanges(List<RefactorCodeChange> refactorCodeChanges) {
-    this.refactorCodeChanges = refactorCodeChanges;
+  public void setRefactorMinerActions(List<RefactorMinerAction> refactorMinerActions) {
+    this.refactorMinerActions = refactorMinerActions;
   }
 
-  public void addRefactorCodeChange(RefactorCodeChange refactorCodeChange) {
-    this.refactorCodeChanges.add(refactorCodeChange);
+  public void addRefactorCodeChange(RefactorMinerAction refactorMinerAction) {
+    this.refactorMinerActions.add(refactorMinerAction);
   }
 
   public void setRepoID(String repoID) {

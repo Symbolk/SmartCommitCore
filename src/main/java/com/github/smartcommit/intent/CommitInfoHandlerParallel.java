@@ -207,8 +207,8 @@ public class CommitInfoHandlerParallel {
             tempCommitTrainingSample = generateActionListFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
 
             // add refactorCodeChange using RefactoringMiner
-            List<RefactorCodeChange> refactorCodeChanges = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
-            tempCommitTrainingSample.setRefactorCodeChanges(refactorCodeChanges);
+            List<RefactorMinerAction> refactorMinerActions = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
+            tempCommitTrainingSample.setRefactorMinerActions(refactorMinerActions);
 
             // Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainingSample);
@@ -270,10 +270,10 @@ public class CommitInfoHandlerParallel {
     }
 
     // generate RefactorCodeChangeFromCodeChagne
-    private static List<RefactorCodeChange> getRefactorCodeChangesFromCodeChange(String repoPath, String commitID) {
+    private static List<RefactorMinerAction> getRefactorCodeChangesFromCodeChange(String repoPath, String commitID) {
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
         org.refactoringminer.api.GitService gitService = new GitServiceImpl();
-        List<RefactorCodeChange> refactorCodeChanges = new ArrayList<>();
+        List<RefactorMinerAction> refactorMinerActions = new ArrayList<>();
         try {
             Repository repo = gitService.cloneIfNotExists(
                     repoPath, // "/Users/Chuncen/Downloads/"+repoName
@@ -286,8 +286,8 @@ public class CommitInfoHandlerParallel {
                         System.out.println("No refactoring generated");
                     } else {
                         for (Refactoring ref : refactorings) {
-                            RefactorCodeChange refactorCodeChange = new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
-                            refactorCodeChanges.add(refactorCodeChange);
+                            RefactorMinerAction refactorMinerAction = new RefactorMinerAction(ref.getRefactoringType(), ref.getName());
+                            refactorMinerActions.add(refactorMinerAction);
                         }
                     }
                 }
@@ -296,7 +296,7 @@ public class CommitInfoHandlerParallel {
             System.out.println("Repo Not Exist");
             e.printStackTrace();
         }
-        return refactorCodeChanges;
+        return refactorMinerActions;
     }
 
     // Load given commitTrainingSample into given DB collection
@@ -326,13 +326,13 @@ public class CommitInfoHandlerParallel {
                 doc1.put("astActions", actions);
             }
             // add refactorCodeChange to DB
-            List<RefactorCodeChange> refactorCodeChangeList = commitTrainingSample.getRefactorCodeChanges();
-            if (refactorCodeChangeList != null) {
+            List<RefactorMinerAction> refactorMinerActionList = commitTrainingSample.getRefactorMinerActions();
+            if (refactorMinerActionList != null) {
                 List<Document> refactorCodeChanges = new ArrayList<>();
-                for (RefactorCodeChange refactorCodeChange : refactorCodeChangeList) {
+                for (RefactorMinerAction refactorMinerAction : refactorMinerActionList) {
                     Document addrAttr = new Document();
-                    addrAttr.put("operation", refactorCodeChange.getOperation());
-                    addrAttr.put("refactoringType", refactorCodeChange.getRefactoringType());
+                    addrAttr.put("operation", refactorMinerAction.getOperation());
+                    addrAttr.put("refactoringType", refactorMinerAction.getRefactoringType());
                     refactorCodeChanges.add(addrAttr);
                 }
                 doc1.put("refactorCodeChanges", refactorCodeChanges);

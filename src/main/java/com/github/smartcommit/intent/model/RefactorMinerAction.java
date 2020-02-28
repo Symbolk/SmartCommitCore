@@ -2,11 +2,11 @@ package com.github.smartcommit.intent.model;
 
 import org.refactoringminer.api.RefactoringType;
 
-public class RefactorCodeChange {
+public class RefactorMinerAction {
     private RefactoringType refactoringType;
     private String name;
 
-    public RefactorCodeChange(RefactoringType refactoringType, String name) {
+    public RefactorMinerAction(RefactoringType refactoringType, String name) {
         this.refactoringType = refactoringType;
         this.name = name;
     }
