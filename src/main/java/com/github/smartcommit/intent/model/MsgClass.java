@@ -1,5 +1,7 @@
 package com.github.smartcommit.intent.model;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 /**
  * Classification of commit message
  */
