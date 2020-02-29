@@ -26,8 +26,13 @@ public class CommitMsgGenerator {
    */
   public List<Integer> generateGroupVector() {
     List<Integer> vectors = new ArrayList<>(Collections.nCopies(50,0));
+    int index;
     for(Action action : astActions){
-      int index = action.getOperationIndex();
+      index = action.getOperationIndex();
+      vectors.set(index, vectors.get(index)+1);
+    }
+    for(Action action : refactorActions){
+      index = action.getOperationIndex();
       vectors.set(index, vectors.get(index)+1);
     }
     return vectors;
