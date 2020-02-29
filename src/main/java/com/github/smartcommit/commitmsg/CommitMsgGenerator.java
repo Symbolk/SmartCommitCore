@@ -5,6 +5,7 @@ import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.GroupLabel;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class CommitMsgGenerator {
@@ -24,7 +25,12 @@ public class CommitMsgGenerator {
    * @return
    */
   public List<Integer> generateGroupVector() {
-    return null;
+    List<Integer> vectors = new ArrayList<>(Collections.nCopies(50,0));
+    for(Action action : astActions){
+      int index = action.getOperationIndex();
+      vectors.set(index, vectors.get(index)+1);
+    }
+    return vectors;
   }
 
   /**

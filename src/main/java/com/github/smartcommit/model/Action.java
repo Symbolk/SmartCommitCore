@@ -61,4 +61,8 @@ public class Action {
         && a.labelFrom.equals(this.labelFrom)
         && a.labelTo.equals(this.labelTo);
   }
+
+  public int getOperationIndex() {
+    return operation.index;
+  }
 }
