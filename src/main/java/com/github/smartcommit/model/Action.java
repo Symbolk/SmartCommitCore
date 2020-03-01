@@ -65,4 +65,24 @@ public class Action {
   public int getOperationIndex() {
     return operation.index;
   }
+
+  public Operation getOperation() {
+    return operation;
+  }
+
+  public String getTypeFrom() {
+    return typeFrom;
+  }
+
+  public String getLabelFrom() {
+    return labelFrom;
+  }
+
+  public String getTypeTo() {
+    return typeTo;
+  }
+
+  public String getLabelTo() {
+    return  labelTo;
+  }
 }
