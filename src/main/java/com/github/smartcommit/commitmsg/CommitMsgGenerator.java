@@ -82,6 +82,13 @@ public class CommitMsgGenerator {
     String typeTo = astActions.get(maxIndex).getTypeTo();
     String labelTo = astActions.get(maxIndex).getLabelTo();
 
+    List<String> recommendedCommitMsgs = new ArrayList<>();
+    // Directly generate recommendedCommitMsg for chosen MsgClass
+    if(key.equals("Add") || key.equals("Create") || key.equals("implement") || key.equals("update") || key.equals("upgrade")
+            || key.equals("replace") || key.equals("change") || key.equals("rename")){
+      recommendedCommitMsgs.add("Intent: "+msgClass.label+" "+typeFrom+" to "+labelTo+" in "+labelFrom);
+      return recommendedCommitMsgs;
+    }
     // fill the first blank using substring
     // the first as the suggested
     templateMsg = jsonArray.get(0).toString();
@@ -96,12 +103,11 @@ public class CommitMsgGenerator {
     int start = templateMsg.indexOf("(.+)");
     commitMsg = templateMsg.substring(0, start)+labelFrom+templateMsg.substring(start+4);
 
-    List<String> recommendedCommitMsgs = new ArrayList<>();
     // the most recommended at the first place
-    recommendedCommitMsgs.add(commitMsg);
+    recommendedCommitMsgs.add("Intent: "+commitMsg);
     // Leftover as the follows
     for(int i = 0; i < jsonArray.length(); i ++)
-      if(i != chosenIndex) recommendedCommitMsgs.add(jsonArray.get(i).toString());
+      if(i != chosenIndex) recommendedCommitMsgs.add("Intent: "+jsonArray.get(i).toString());
     return recommendedCommitMsgs;
   }
 
