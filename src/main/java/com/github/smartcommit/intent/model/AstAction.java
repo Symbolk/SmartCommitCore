@@ -1,10 +1,10 @@
 package com.github.smartcommit.intent.model;
 
-public class Action {
+public class AstAction {
   private ASTOperation operation;
   private String astNodeType;
 
-  public Action(ASTOperation operation, String astNodeType) {
+  public AstAction(ASTOperation operation, String astNodeType) {
     this.operation = operation;
     this.astNodeType = astNodeType;
   }

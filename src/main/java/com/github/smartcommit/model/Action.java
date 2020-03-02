@@ -34,7 +34,7 @@ public class Action {
     StringBuilder builder = new StringBuilder();
     builder.append(operation);
     builder
-        .append(typeFrom.isEmpty() ? "" : " " + typeFrom)
+        .append(typeFrom.isEmpty() ? "" : " From:" + typeFrom)
         .append(labelFrom.isEmpty() ? "" : ":" + labelFrom);
     builder
         .append(typeTo.isEmpty() ? "" : " To:" + typeTo)
@@ -60,5 +60,29 @@ public class Action {
         && a.typeTo.equals(this.typeTo)
         && a.labelFrom.equals(this.labelFrom)
         && a.labelTo.equals(this.labelTo);
+  }
+
+  public int getOperationIndex() {
+    return operation.index;
+  }
+
+  public Operation getOperation() {
+    return operation;
+  }
+
+  public String getTypeFrom() {
+    return typeFrom;
+  }
+
+  public String getLabelFrom() {
+    return labelFrom;
+  }
+
+  public String getTypeTo() {
+    return typeTo;
+  }
+
+  public String getLabelTo() {
+    return  labelTo;
   }
 }

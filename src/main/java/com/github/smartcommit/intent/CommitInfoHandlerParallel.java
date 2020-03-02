@@ -9,7 +9,7 @@ import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.TreeContext;
-import com.github.smartcommit.intent.model.Action;
+import com.github.smartcommit.intent.model.AstAction;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
@@ -58,12 +58,12 @@ class RunnableDemoDiffFileLevel implements Runnable {
     public void run() {
         System.out.println("Running " +  threadName );
 
-        List<Action> tempActionList = new ArrayList<>();
+        List<AstAction> tempActionList = new ArrayList<>();
         EditScript editScript = generateEditScript(baseContent, currentContent);
         if (editScript != null) {
-            List<Action> actionList = generateActionList(editScript);
+            List<AstAction> actionList = generateAstActionList(editScript);
             tempActionList.addAll(actionList);
-            tempCommitTrainingSample.setActionList(tempActionList);
+            tempCommitTrainingSample.setGumtreeActionList(tempActionList);
         } else {
             // Only doc change, thus no CodeChange and AbstractJdtTree generated
             tempCommitTrainingSample.addIntentDescription(IntentDescription.DOC);
@@ -94,8 +94,8 @@ class RunnableDemoDiffFileLevel implements Runnable {
     }
 
     // generate commit info from different file pathway
-    private static List<Action> generateActionList(EditScript editScript) {
-        List<Action> actionList = new ArrayList<>();
+    private static List<AstAction> generateAstActionList(EditScript editScript) {
+        List<AstAction> actionList = new ArrayList<>();
         for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
             com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
             ASTOperation ASTOperation = null;
@@ -108,8 +108,8 @@ class RunnableDemoDiffFileLevel implements Runnable {
             } else if (action instanceof Update) {
                 ASTOperation = ASTOperation.UPD;
             }
-            Action myAction = new Action(ASTOperation, action.getNode().getType().toString());
-            actionList.add(myAction);
+            AstAction myAstAction = new AstAction(ASTOperation, action.getNode().getType().toString());
+            actionList.add(myAstAction);
         }
         return actionList;
     }
@@ -207,8 +207,8 @@ public class CommitInfoHandlerParallel {
             tempCommitTrainingSample = generateActionListFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
 
             // add refactorCodeChange using RefactoringMiner
-            List<RefactorCodeChange> refactorCodeChanges = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
-            tempCommitTrainingSample.setRefactorCodeChanges(refactorCodeChanges);
+            List<RefactorMinerAction> refactorMinerActions = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
+            tempCommitTrainingSample.setRefactorMinerActions(refactorMinerActions);
 
             // Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainingSample);
@@ -270,10 +270,10 @@ public class CommitInfoHandlerParallel {
     }
 
     // generate RefactorCodeChangeFromCodeChagne
-    private static List<RefactorCodeChange> getRefactorCodeChangesFromCodeChange(String repoPath, String commitID) {
+    private static List<RefactorMinerAction> getRefactorCodeChangesFromCodeChange(String repoPath, String commitID) {
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
         org.refactoringminer.api.GitService gitService = new GitServiceImpl();
-        List<RefactorCodeChange> refactorCodeChanges = new ArrayList<>();
+        List<RefactorMinerAction> refactorMinerActions = new ArrayList<>();
         try {
             Repository repo = gitService.cloneIfNotExists(
                     repoPath, // "/Users/Chuncen/Downloads/"+repoName
@@ -286,8 +286,8 @@ public class CommitInfoHandlerParallel {
                         System.out.println("No refactoring generated");
                     } else {
                         for (Refactoring ref : refactorings) {
-                            RefactorCodeChange refactorCodeChange = new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
-                            refactorCodeChanges.add(refactorCodeChange);
+                            RefactorMinerAction refactorMinerAction = new RefactorMinerAction(ref.getRefactoringType(), ref.getName());
+                            refactorMinerActions.add(refactorMinerAction);
                         }
                     }
                 }
@@ -296,7 +296,7 @@ public class CommitInfoHandlerParallel {
             System.out.println("Repo Not Exist");
             e.printStackTrace();
         }
-        return refactorCodeChanges;
+        return refactorMinerActions;
     }
 
     // Load given commitTrainingSample into given DB collection
@@ -313,26 +313,26 @@ public class CommitInfoHandlerParallel {
             doc1.put("commitTime", commitTrainingSample.getCommitTime());
             doc1.put("commitIntent", commitTrainingSample.getIntent().getLabel());
             doc1.put("commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
-            // add ActionList to DB
-            List<Action> actionList = commitTrainingSample.getActionList();
+            // add GumtreeAction to DB
+            List<AstAction> actionList = commitTrainingSample.getGumtreeActionList();
             if (actionList != null) {
                 List<Document> actions = new ArrayList<>();
-                for (Action action : actionList) {
+                for (AstAction astAction : actionList) {
                     Document addrAttr = new Document();
-                    addrAttr.put("operation", String.valueOf(action.getASTOperation()));
-                    addrAttr.put("astNodeType", action.getASTNodeType());
+                    addrAttr.put("operation", String.valueOf(astAction.getASTOperation()));
+                    addrAttr.put("astNodeType", astAction.getASTNodeType());
                     actions.add(addrAttr);
                 }
-                doc1.put("actions", actions);
+                doc1.put("astActions", actions);
             }
             // add refactorCodeChange to DB
-            List<RefactorCodeChange> refactorCodeChangeList = commitTrainingSample.getRefactorCodeChanges();
-            if (refactorCodeChangeList != null) {
+            List<RefactorMinerAction> refactorMinerActionList = commitTrainingSample.getRefactorMinerActions();
+            if (refactorMinerActionList != null) {
                 List<Document> refactorCodeChanges = new ArrayList<>();
-                for (RefactorCodeChange refactorCodeChange : refactorCodeChangeList) {
+                for (RefactorMinerAction refactorMinerAction : refactorMinerActionList) {
                     Document addrAttr = new Document();
-                    addrAttr.put("operation", refactorCodeChange.getOperation());
-                    addrAttr.put("refactoringType", refactorCodeChange.getRefactoringType());
+                    addrAttr.put("operation", refactorMinerAction.getOperation());
+                    addrAttr.put("refactoringType", refactorMinerAction.getRefactoringType());
                     refactorCodeChanges.add(addrAttr);
                 }
                 doc1.put("refactorCodeChanges", refactorCodeChanges);

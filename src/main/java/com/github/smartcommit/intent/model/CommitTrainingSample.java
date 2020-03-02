@@ -1,6 +1,6 @@
 package com.github.smartcommit.intent.model;
 
-import org.omg.PortableInterceptor.INACTIVE;
+import com.github.smartcommit.model.Action;
 
 import java.util.List;
 
@@ -15,8 +15,10 @@ public class CommitTrainingSample {
   private String commitTime;
   private Intent intent;
   private List<IntentDescription> intentDescriptions;
-  private List<Action> actions;
-  private List<RefactorCodeChange> refactorCodeChanges;
+  private Integer GumtreeExceptionCount = 0;
+  private List<AstAction> gumtreeActions;
+  private List<Action> diffHunksActions;
+  private List<RefactorMinerAction> refactorMinerActions;
 
   public String getCommitID() {
     return commitID;
@@ -58,16 +60,20 @@ public class CommitTrainingSample {
     this.commitTime = commitTime;
   }
 
-  public List<Action> getActionList() {
-    return actions;
+  public List<AstAction> getGumtreeActionList() {
+    return gumtreeActions;
   }
 
-  public void setActionList(List<Action> actionList) {
-    this.actions = actionList;
+  public void setGumtreeActionList(List<AstAction> gumtreeActionList) {
+    this.gumtreeActions = gumtreeActionList;
   }
 
-  public void addAction(Action action) {
-    this.actions.add(action);
+  public List<Action> getDiffHunksActions() {
+    return diffHunksActions;
+  }
+
+  public void setDiffHunksActions(List<Action> actionList) {
+    this.diffHunksActions = actionList;
   }
 
   public Intent getIntent() {
@@ -90,16 +96,24 @@ public class CommitTrainingSample {
     this.intentDescriptions.add(intentDescription);
   }
 
-  public List<RefactorCodeChange> getRefactorCodeChanges() {
-    return refactorCodeChanges;
+  public Integer getGumtreeExceptionCount() {
+    return GumtreeExceptionCount;
   }
 
-  public void setRefactorCodeChanges(List<RefactorCodeChange> refactorCodeChanges) {
-    this.refactorCodeChanges = refactorCodeChanges;
+  public void addGumtreeExceptionCount() {
+    this.GumtreeExceptionCount ++;
   }
 
-  public void addRefactorCodeChange(RefactorCodeChange refactorCodeChange) {
-    this.refactorCodeChanges.add(refactorCodeChange);
+  public List<RefactorMinerAction> getRefactorMinerActions() {
+    return refactorMinerActions;
+  }
+
+  public void setRefactorMinerActions(List<RefactorMinerAction> refactorMinerActions) {
+    this.refactorMinerActions = refactorMinerActions;
+  }
+
+  public void addRefactorCodeChange(RefactorMinerAction refactorMinerAction) {
+    this.refactorMinerActions.add(refactorMinerAction);
   }
 
   public void setRepoID(String repoID) {

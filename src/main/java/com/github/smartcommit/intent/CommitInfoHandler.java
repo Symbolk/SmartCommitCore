@@ -9,7 +9,9 @@ import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.TreeContext;
-import com.github.smartcommit.intent.model.Action;
+import com.github.smartcommit.intent.model.AstAction;
+import com.github.smartcommit.model.DiffHunk;
+import com.github.smartcommit.model.constant.Operation;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
@@ -39,8 +41,9 @@ import org.refactoringminer.util.GitServiceImpl;
 // CommitTrainingSample
 import com.github.smartcommit.intent.model.CommitTrainingSample;
 import com.github.smartcommit.core.*;
+import com.github.smartcommit.io.*;
 import com.github.smartcommit.intent.model.*;
-
+import com.github.smartcommit.model.Action;
 
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
@@ -96,12 +99,14 @@ public class CommitInfoHandler {
         String repoName = repoPath.substring(index + 1);
         String repoID = String.valueOf(Math.abs(repoName.hashCode()));
 
+
+
         // Analyze the Sample List
         Integer size = commitTrainingSample.size();
         for (int i = 0; i < size; i++) {
             CommitTrainingSample tempCommitTrainingSample = commitTrainingSample.get(i);
             String commitID = tempCommitTrainingSample.getCommitID();
-            System.out.println("Proceeding: "+commitID+"  "+i+"/"+size);
+            System.out.println("Proceeding: "+commitID+"  "+(i+1)+"/"+size);
             tempCommitTrainingSample.setRepoID(repoID);
             tempCommitTrainingSample.setRepoPath(repoPath);
             tempCommitTrainingSample.setRepoName(repoName);
@@ -116,98 +121,25 @@ public class CommitInfoHandler {
             List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
             tempCommitTrainingSample.setIntentDescription(intentList);
 
-            // add actionList using gumtree
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
-            tempCommitTrainingSample = generateActionListFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
+            DataCollector dataCollector = new DataCollector(repoName, "~/Downloads");
+            // add astActionList using gumtree
+            tempCommitTrainingSample = generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
+
+            // add DiffHunkActions using DiffHunks
+            List<Action> DiffHunkActions=
+                    generateActionListFromDiffHunks(tempCommitTrainingSample, repoAnalyzer, dataCollector);
+            tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
 
             // add refactorCodeChange using RefactoringMiner
-            List<RefactorCodeChange> refactorCodeChanges = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
-            tempCommitTrainingSample.setRefactorCodeChanges(refactorCodeChanges);
+            List<RefactorMinerAction> refactorMinerActions = getRefactorCodeChangesFromCodeChange(repoPath, commitID);
+            tempCommitTrainingSample.setRefactorMinerActions(refactorMinerActions);
 
             // Load into DB
             loadTrainSampleToDB(collection, tempCommitTrainingSample);
         }
+
         return true;
-    }
-
-    // generate Edit Script from file contents
-    private static EditScript generateEditScript(String baseContent, String currentContent) {
-        JdtTreeGenerator generator = new JdtTreeGenerator();
-        try {
-            TreeContext oldContext = generator.generateFrom().string(baseContent);
-            TreeContext newContext = generator.generateFrom().string(currentContent);
-
-            Matcher matcher = Matchers.getInstance().getMatcher();
-            MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
-            EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
-            return editScript;
-        } catch (Exception e) {
-            //e.printStackTrace();
-            // Failure to generate AbstractJdtTree because of the docChange instead of codeChange
-            return null;
-        }
-
-    }
-
-    // generate commit info from different file pathway
-    private static List<Action> generateActionList(EditScript editScript) {
-        List<Action> actionList = new ArrayList<>();
-        for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
-            com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
-            ASTOperation ASTOperation = null;
-            if (action instanceof Insert) {
-                ASTOperation = ASTOperation.ADD;
-            } else if (action instanceof Delete) {
-                ASTOperation = ASTOperation.DEL;
-            } else if (action instanceof Move) {
-                ASTOperation = ASTOperation.MOV;
-            } else if (action instanceof Update) {
-                ASTOperation = ASTOperation.UPD;
-            }
-            Action myAction = new Action(ASTOperation, action.getNode().getType().toString());
-            actionList.add(myAction);
-        }
-        return actionList;
-    }
-
-    // generate action list from code changes: diffFile and EditScript
-    private static CommitTrainingSample generateActionListFromCodeChange(
-            CommitTrainingSample tempCommitTrainingSample, RepoAnalyzer repoAnalyzer) {
-        try {  // if no FileChange
-            List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(tempCommitTrainingSample.getCommitID());
-            // get EditScript from diffFiles, and get ActionList from EditScript
-            List<Action> tempActionList = new ArrayList<>();
-            Integer sizeDiff = diffFiles.size();
-            for (int j = 0; j < sizeDiff; j++) {
-                String baseContent = diffFiles.get(j).getBaseContent();
-                String currentContent = diffFiles.get(j).getCurrentContent();
-                // File added or deleted, thus no content
-                if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
-                    tempCommitTrainingSample.addIntentDescription(IntentDescription.FIL);
-                    // tempCommitTrainingSample.setIntent(Intent.FIL);
-                    System.out.println("Exception type: NCC: only FILE change");
-                    continue;
-                }
-                EditScript editScript = generateEditScript(baseContent, currentContent);
-                if (editScript != null) {
-                    List<Action> actionList = generateActionList(editScript);
-                    tempActionList.addAll(actionList);
-                    tempCommitTrainingSample.setActionList(tempActionList);
-                } else {
-                    // Only doc change, thus no CodeChange and AbstractJdtTree generated
-                    tempCommitTrainingSample.addIntentDescription(IntentDescription.DOC);
-                    //tempCommitTrainingSample.setIntent(Intent.DOC);
-                    System.out.println("Exception type: NCC: only DOC change");
-                }
-            }
-        } catch (Exception e) {
-            //e.printStackTrace();
-            // Lack of File, thus no DiffFiles generated
-            tempCommitTrainingSample.addIntentDescription(IntentDescription.NFL);
-            //tempCommitTrainingSample.setIntent(Intent.FIL);
-            System.out.println("Exception type: NoFile");
-        }
-        return tempCommitTrainingSample;
     }
 
     // generate Intent from Message
@@ -231,11 +163,116 @@ public class CommitInfoHandler {
         return intentList;
     }
 
+    // generate Edit Script from file contents
+    private static EditScript generateEditScript(String baseContent, String currentContent) {
+        JdtTreeGenerator generator = new JdtTreeGenerator();
+        try {
+            TreeContext oldContext = generator.generateFrom().string(baseContent);
+            TreeContext newContext = generator.generateFrom().string(currentContent);
+
+            Matcher matcher = Matchers.getInstance().getMatcher();
+            MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
+            EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
+            return editScript;
+        } catch (Exception e) {
+            //e.printStackTrace();
+            // Failure to generate AbstractJdtTree because of the docChange instead of codeChange
+            return null;
+        }
+
+    }
+
+    // generate commit info from different file pathway
+    private static List<AstAction> generateAstActionList(EditScript editScript) {
+        List<AstAction> actionList = new ArrayList<>();
+        for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
+            com.github.gumtreediff.actions.model.Action action = (com.github.gumtreediff.actions.model.Action) iter.next();
+            ASTOperation ASTOperation = null;
+            if (action instanceof Insert) {
+                ASTOperation = ASTOperation.ADD;
+            } else if (action instanceof Delete) {
+                ASTOperation = ASTOperation.DEL;
+            } else if (action instanceof Move) {
+                ASTOperation = ASTOperation.MOV;
+            } else if (action instanceof Update) {
+                ASTOperation = ASTOperation.UPD;
+            }
+            AstAction myAction = new AstAction(ASTOperation, action.getNode().getType().toString());
+            actionList.add(myAction);
+        }
+        return actionList;
+    }
+
+    // generate Gumtree action list from code changes: diffFile and EditScript
+    private static CommitTrainingSample generateGumtreeActionsFromCodeChange(
+            CommitTrainingSample tempCommitTrainingSample, RepoAnalyzer repoAnalyzer) {
+        try {  // if no FileChange
+            List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(tempCommitTrainingSample.getCommitID());
+            // get EditScript from diffFiles, and get ActionList from EditScript
+            List<AstAction> tempActionList = new ArrayList<>();
+            Integer sizeDiff = diffFiles.size();
+            for (int j = 0; j < sizeDiff; j++) {
+                String baseContent = diffFiles.get(j).getBaseContent();
+                String currentContent = diffFiles.get(j).getCurrentContent();
+                // File added or deleted, thus no content
+                if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
+                    tempCommitTrainingSample.addIntentDescription(IntentDescription.FIL);
+                    tempCommitTrainingSample.addGumtreeExceptionCount();
+                    continue;
+                }
+                EditScript editScript = generateEditScript(baseContent, currentContent);
+                if (editScript != null) {
+                    List<AstAction> actionList = generateAstActionList(editScript);
+                    tempActionList.addAll(actionList);
+                    tempCommitTrainingSample.setGumtreeActionList(tempActionList);
+                } else {
+                    // Only doc change, thus no CodeChange and AbstractJdtTree generated
+                    tempCommitTrainingSample.addIntentDescription(IntentDescription.DOC);
+                    tempCommitTrainingSample.addGumtreeExceptionCount();
+                }
+            }
+        } catch (Exception e) {
+            //e.printStackTrace();
+            // Lack of File, thus no DiffFiles generated
+            tempCommitTrainingSample.addIntentDescription(IntentDescription.NFL);
+            tempCommitTrainingSample.addGumtreeExceptionCount();
+        }
+        return tempCommitTrainingSample;
+    }
+
+    public static Action convertAstActionToAction(AstAction astAction) {
+        Operation op = Operation.UKN;
+        for (Operation operation : Operation.values()) {
+            if (astAction.getASTOperation().label.equals(operation.label)) {
+                op = operation;
+                break;
+            }
+        }
+        return new Action(op, astAction.getASTNodeType(), "");
+    }
+
+    // generate DiffHunkActions from diffHunks
+    private static List<Action> generateActionListFromDiffHunks(
+            CommitTrainingSample tempCommitTrainingSample, RepoAnalyzer repoAnalyzer, DataCollector dataCollector) {
+        String commitID = tempCommitTrainingSample.getCommitID();
+        List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
+        List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
+        if(diffFiles.isEmpty() || allDiffHunks.isEmpty())
+            System.out.println("No DiffFiles generated ");
+        Integer sizeDiffHunk = allDiffHunks.size();
+        List<Action> AstActions = new ArrayList<>();
+        for(Integer i = 0; i < sizeDiffHunk; i++) {
+            List<Action> actions = dataCollector.analyzeASTActions(allDiffHunks.get(i));
+            AstActions.addAll(actions);
+        }
+        return AstActions;
+    }
+
     // generate RefactorCodeChangeFromCodeChagne
-    private static List<RefactorCodeChange> getRefactorCodeChangesFromCodeChange(String repoPath, String commitID) {
+    private static List<RefactorMinerAction> getRefactorCodeChangesFromCodeChange(String repoPath, String commitID) {
         GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
         org.refactoringminer.api.GitService gitService = new GitServiceImpl();
-        List<RefactorCodeChange> refactorCodeChanges = new ArrayList<>();
+        List<RefactorMinerAction> refactorMinerActions = new ArrayList<>();
         try {
             Repository repo = gitService.cloneIfNotExists(
                     repoPath, // "/Users/Chuncen/Downloads/"+repoName
@@ -248,18 +285,30 @@ public class CommitInfoHandler {
                         System.out.println("No refactoring generated");
                     } else {
                         for (Refactoring ref : refactorings) {
-                            RefactorCodeChange refactorCodeChange = new RefactorCodeChange(ref.getRefactoringType(), ref.getName());
-                            refactorCodeChanges.add(refactorCodeChange);
+                            RefactorMinerAction refactorMinerAction = new RefactorMinerAction(ref.getRefactoringType(), ref.getName());
+                            refactorMinerActions.add(refactorMinerAction);
                         }
                     }
                 }
             });
         } catch (Exception e) {
             System.out.println("Repo Not Exist");
-            e.printStackTrace();
+            //e.printStackTrace();
         }
-        return refactorCodeChanges;
+        return refactorMinerActions;
     }
+
+    public static Action convertRefactorCodeChangeToAction(RefactorMinerAction refactorMinerAction) {
+        Operation op = Operation.UKN;
+        for (Operation operation : Operation.values()) {
+            if (refactorMinerAction.getName().equals(operation.label)) {
+                op = operation;
+                break;
+            }
+        }
+        return new Action(op, refactorMinerAction.getRefactoringType(), "");
+    }
+
 
     // Load given commitTrainingSample into given DB collection
     private static void loadTrainSampleToDB(MongoCollection<Document> collection, CommitTrainingSample commitTrainingSample) {
@@ -275,30 +324,76 @@ public class CommitInfoHandler {
             doc1.put("commitTime", commitTrainingSample.getCommitTime());
             doc1.put("commitIntent", commitTrainingSample.getIntent().getLabel());
             doc1.put("commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
+            doc1.put("GumtreeExceptionCount", commitTrainingSample.getGumtreeExceptionCount());
+
+            {
+            List<Action> Actions1 = new ArrayList<>();
             // add ActionList to DB
-            List<Action> actionList = commitTrainingSample.getActionList();
-            if (actionList != null) {
+            List<AstAction> GumtreeActions = commitTrainingSample.getGumtreeActionList();
+            if (GumtreeActions != null) {
                 List<Document> actions = new ArrayList<>();
-                for (Action action : actionList) {
+                for (AstAction astAction : GumtreeActions) {
                     Document addrAttr = new Document();
-                    addrAttr.put("operation", String.valueOf(action.getASTOperation()));
-                    addrAttr.put("astNodeType", action.getASTNodeType());
+                    Actions1.add(convertAstActionToAction(astAction));
+                    addrAttr.put("operation", String.valueOf(astAction.getASTOperation()));
+                    addrAttr.put("astNodeType", astAction.getASTNodeType());
                     actions.add(addrAttr);
                 }
-                doc1.put("actions", actions);
+                doc1.put("GumtreeActions", actions);
             }
-            // add refactorCodeChange to DB
-            List<RefactorCodeChange> refactorCodeChangeList = commitTrainingSample.getRefactorCodeChanges();
-            if (refactorCodeChangeList != null) {
-                List<Document> refactorCodeChanges = new ArrayList<>();
-                for (RefactorCodeChange refactorCodeChange : refactorCodeChangeList) {
+
+            List<Action> Actions2 = new ArrayList<>();
+            // add DiffHunkActions to DB
+            List<Action> DiffHunkActions = commitTrainingSample.getDiffHunksActions();
+            if (DiffHunkActions != null) {
+                List<Document> actions = new ArrayList<>();
+                for (Action DiffHunkAction : DiffHunkActions) {
                     Document addrAttr = new Document();
-                    addrAttr.put("operation", refactorCodeChange.getOperation());
-                    addrAttr.put("refactoringType", refactorCodeChange.getRefactoringType());
-                    refactorCodeChanges.add(addrAttr);
+                    addrAttr.put("diffHunkAction", DiffHunkAction.toString());
+                    actions.add(addrAttr);
+                    Actions2.add(DiffHunkAction);
                 }
-                doc1.put("refactorCodeChanges", refactorCodeChanges);
+                doc1.put("DiffHunkActions", actions);
             }
+
+            List<Action> Actions3 = new ArrayList<>();
+            // add refactorCodeChange to DB
+            List<RefactorMinerAction> refactorMinerActions = commitTrainingSample.getRefactorMinerActions();
+            if (refactorMinerActions != null) {
+                List<Document> actions = new ArrayList<>();
+                for (RefactorMinerAction refactorMinerAction : refactorMinerActions) {
+                    Document addrAttr = new Document();
+                    addrAttr.put("operation", refactorMinerAction.getOperation());
+                    addrAttr.put("refactoringType", refactorMinerAction.getRefactoringType());
+                    actions.add(addrAttr);
+                    Actions3.add(convertRefactorCodeChangeToAction(refactorMinerAction));
+                }
+                doc1.put("refactorMinerActions", actions);
+            }
+            // add 3in1 to DB
+            List<Document> actions = new ArrayList<>();
+            Integer sizeActions1 = Actions1.size();
+            Integer sizeActions2 = Actions2.size();
+            Integer sizeActions3 = Actions3.size();
+            for (int i = 0; i < sizeActions1; i ++) {
+                Document addrAttr = new Document();
+                addrAttr.put("Gumtree", Actions1.get(i).toString());
+                actions.add(addrAttr);
+            }
+            for (int i = 0; i < sizeActions2; i ++) {
+                Document addrAttr = new Document();
+                addrAttr.put("DiffHunk", Actions2.get(i).toString());
+                actions.add(addrAttr);
+            }
+            for (int i = 0; i < sizeActions3; i ++) {
+                Document addrAttr = new Document();
+                addrAttr.put("RefactorMiner", Actions3.get(i).toString());
+                actions.add(addrAttr);
+            }
+            doc1.put("AllActions", actions);
+            }
+
+
             collection.insertOne(doc1);
 
         } catch (Exception e) {
