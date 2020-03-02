@@ -6,8 +6,13 @@ import com.github.smartcommit.model.Group;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
+import org.bson.Document;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -93,22 +98,33 @@ public class Evaluation {
         new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
 
     // analyze each commit
-    for (int i = 0; i < lines.size(); i++) {
-      String commitID = lines.get(i)[0];
-      if (!commitID.isEmpty()) {
-        // call analyze commit and generate groups
-        System.out.println(commitID);
-        try {
+    try {
+      MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
+      MongoClient mongoClient = new MongoClient(connectionString);
+      MongoDatabase db = mongoClient.getDatabase("smartcommit");
+      MongoCollection<Document> col = db.getCollection(repoName);
+      // col.drop()
+
+      for (int i = 0; i < lines.size(); i++) {
+        String commitID = lines.get(i)[0];
+        if (!commitID.isEmpty()) {
+          // get committer name and email
+          String committerName = "";
+          String committerEmail = "";
+          System.out.println(commitID);
+          // call analyze commit and generate groups
           Map<String, Group> results = smartCommit.analyzeCommit(commitID);
-        } catch (Exception e) {
-          e.printStackTrace();
+          // save results in mongodb (for committers to review online)
+          System.out.println(results);
+          Document doc = new Document("repo_name", repoName).append("commit_id", commitID);
+          doc.append("committer_name", committerName);
+          doc.append("committer_email", committerEmail);
+          col.insertOne(doc);
         }
       }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
-    // show the results on a webpage
-
-    // send the link to the author for surveying
-
   }
 
   private void runRQ3() {
