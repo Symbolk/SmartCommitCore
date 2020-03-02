@@ -103,14 +103,15 @@ public class Evaluation {
       MongoClient mongoClient = new MongoClient(connectionString);
       MongoDatabase db = mongoClient.getDatabase("smartcommit");
       MongoCollection<Document> col = db.getCollection(repoName);
-      // col.drop()
+      // drop the last testing results
+      col.drop();
 
       for (int i = 0; i < lines.size(); i++) {
         String commitID = lines.get(i)[0];
         if (!commitID.isEmpty()) {
           // get committer name and email
-          String committerName = "";
-          String committerEmail = "";
+          String committerName = gitService.getCommitterName(repoPath, commitID);
+          String committerEmail = gitService.getCommitterEmail(repoPath, commitID);
           System.out.println(commitID);
           // call analyze commit and generate groups
           Map<String, Group> results = smartCommit.analyzeCommit(commitID);

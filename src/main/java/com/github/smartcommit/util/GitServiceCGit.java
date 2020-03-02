@@ -446,4 +446,19 @@ public class GitServiceCGit implements GitService {
       return false;
     }
   }
+
+  @Override
+  public String getCommitterName(String repoDir, String commitID) {
+    // git show HEAD | grep Author
+    // git log -1 --format='%an' HASH
+    // git show -s --format='%an' HASH
+    return Utils.runSystemCommand(repoDir, "git", "show", "-s", "--format='%an'", commitID).trim();
+  }
+
+  @Override
+  public String getCommitterEmail(String repoDir, String commitID) {
+    // git log -1 --format='%ae' HASH
+    // git show -s --format='%ae' HASH
+    return Utils.runSystemCommand(repoDir, "git", "show", "-s", "--format='%ae'", commitID).trim();
+  }
 }
