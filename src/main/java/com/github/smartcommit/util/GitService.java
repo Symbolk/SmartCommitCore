@@ -54,4 +54,21 @@ public interface GitService {
    * @returnØØ
    */
   String getContentAtCommit(String repoDir, String relativePath, String commitID);
+
+  /**
+   * Get the name of the author of a commit
+   * @param repoDir
+   * @param commitID
+   * @return
+   */
+  String getCommitterName(String repoDir, String commitID);
+
+  /**
+   * Get the email of the author of a commit
+   *
+   * @param repoDir
+   * @param commitID
+   * @return
+   */
+  String getCommitterEmail(String repoDir, String commitID);
 }

@@ -38,4 +38,14 @@ public class GitServiceJGit implements GitService {
   public String getContentAtCommit(String repoDir, String relativePath, String commitID) {
     return null;
   }
+
+  @Override
+  public String getCommitterName(String repoDir, String commitID) {
+    return null;
+  }
+
+  @Override
+  public String getCommitterEmail(String repoDir, String commitID) {
+    return null;
+  }
 }
