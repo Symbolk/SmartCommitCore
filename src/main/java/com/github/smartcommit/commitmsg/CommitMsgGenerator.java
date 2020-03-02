@@ -27,7 +27,6 @@ public class CommitMsgGenerator {
     this.astActions = astActions;
     this.refactorActions = refactorActions;
   }
-
   /**
    * Vectorize the group features
    *
@@ -76,16 +75,46 @@ public class CommitMsgGenerator {
     JSONObject jsonObject=new JSONObject(content);
     JSONArray jsonArray = jsonObject.getJSONArray(key);
 
-    // Simply count Frequency of typeFrom in astActions to get the first keyword in the first template
-    // get maxCount using C-style :(
-    int sizeAstActions = astActions.size();
-    int count[] = new int[sizeAstActions];
-    String types[] = new String[sizeAstActions];
-    for(int i = 0; i < sizeAstActions; i ++){
-      String typeFrom = astActions.get(i).getTypeFrom();
+    // Simply count Frequency of typeFrom in astActions
+    int maxIndex = getMaxIndexTypeFrom(astActions);
+    String typeFrom = astActions.get(maxIndex).getTypeFrom();
+    String labelFrom = astActions.get(maxIndex).getLabelFrom();
+    String typeTo = astActions.get(maxIndex).getTypeTo();
+    String labelTo = astActions.get(maxIndex).getLabelTo();
+
+    // fill the first blank using substring
+    // the first as the suggested
+    templateMsg = jsonArray.get(0).toString();
+    int chosenIndex = 0;
+    // the same type as the fittest
+    for(int i = 0; i < jsonArray.length(); i++){
+      if(jsonArray.get(i).toString().contains(typeFrom)){
+        templateMsg = jsonArray.get(i).toString();
+        chosenIndex = i;
+      }
+    }
+    int start = templateMsg.indexOf("(.+)");
+    commitMsg = templateMsg.substring(0, start)+labelFrom+templateMsg.substring(start+4);
+
+    List<String> recommendedCommitMsgs = new ArrayList<>();
+    // the most recommended at the first place
+    recommendedCommitMsgs.add(commitMsg);
+    // Leftover as the follows
+    for(int i = 0; i < jsonArray.length(); i ++)
+      if(i != chosenIndex) recommendedCommitMsgs.add(jsonArray.get(i).toString());
+    return recommendedCommitMsgs;
+  }
+
+  // get maxCount of Frequency in Actions using C-style :(
+  private int getMaxIndexTypeFrom(List<Action> Actions) {
+    int sizeActions = Actions.size();
+    int count[] = new int[sizeActions];
+    String types[] = new String[sizeActions];
+    for(int i = 0; i < sizeActions; i ++){
+      String typeFrom = Actions.get(i).getTypeFrom();
       int j;
       for(j = 0; j < i; j ++){
-        if(astActions.get(j).getTypeFrom().equals(typeFrom)) {
+        if(Actions.get(j).getTypeFrom().equals(typeFrom)) {
           count[j] = count[j]+1;
           break;
         }
@@ -93,26 +122,13 @@ public class CommitMsgGenerator {
       if(j == i) count[j] = 1;
     }
     int max = 0, maxIndex = 0;
-    for(int i = 0; i < sizeAstActions; i ++){
+    for(int i = 0; i < sizeActions; i ++){
       if(count[i] == 0)break;
       if(count[i] > max) {
         max = count[i];
         maxIndex = i;
       }
     }
-    String type = astActions.get(maxIndex).getTypeFrom();
-
-    // fill the first blank using substring,
-    templateMsg = jsonArray.get(0).toString();
-    int start = templateMsg.indexOf("(.+)");
-    commitMsg = templateMsg.substring(0, start)+type+templateMsg.substring(start+4);
-
-    List<String> recommendedCommitMsgs = new ArrayList<>();
-    recommendedCommitMsgs.add("\nMsgClass: " + msgClass.label);
-    recommendedCommitMsgs.add("\nGroupLabel: "+intentLabel.label);
-    recommendedCommitMsgs.add("\ntemplateMsg: " + templateMsg);
-    recommendedCommitMsgs.add("\ncommitMsg: " + commitMsg);
-    recommendedCommitMsgs.add(("\nAll possible templates: " + jsonArray.toString()));
-    return recommendedCommitMsgs;
+    return maxIndex;
   }
 }

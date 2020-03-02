@@ -255,7 +255,7 @@ public class CommitInfoHandlerParallel {
                 return intent;
             }
         }
-        return Intent.CHR;
+        return Intent.UNKNOWN;
     }
 
     // generate IntentDescription from Message

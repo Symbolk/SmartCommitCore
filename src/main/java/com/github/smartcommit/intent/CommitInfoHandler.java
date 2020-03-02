@@ -149,7 +149,7 @@ public class CommitInfoHandler {
                 return intent;
             }
         }
-        return Intent.CHR;
+        return Intent.UNKNOWN;
     }
 
     // generate IntentDescription from Message
