@@ -3,28 +3,29 @@ package com.github.smartcommit.intent.model;
 import org.omg.CORBA.UNKNOWN;
 
 public enum IntentDescription {
-  ADD("add"), CRT("create"), MAK("make"), IMP("implement"),
-  FIX("fix"),
-  RMV("remove"),
-  UPD("update"), UPG("upgrade"),
-  USE("use"),
-  MOV("move"), CHG("change"),
-  PRP("prepare"),
-  IPV("improve"), OPT("optimize"),
-  IGN("ignore"),
-  HDL("handle"),
-  RNM("rename"),
-  ALW("allow"),
-  SET("set"),
-  RVT("revert"),
-  RPL("replace"),
-  RFC("refactor"),
-  RFM("reformat"), FMT("format"),
-  TST("test"),
-  CLR("clear"),
-  UKN("unknown"),
-
-  NFL("NoFile"), FIL("FileAdd"), DOC("DocChange");
+  ADD("Add"),
+  CRT("Create"),
+  IMP("Implement"),
+  MAK("Make"),
+  UPD("Update"),
+  USE("Use"),
+  SET("Set"),
+  HDL("Handle"),
+  IMV("Improve"),
+  OPT("Optimize"),
+  UPG("Upgrade"),
+  RMV("Remove"),
+  RFC("Refactor"),
+  REP("Replace"),
+  MOV("Move"),
+  CHG("Change"),
+  RNM("Rename"),
+  DOC("Document"),
+  RFM("Reformat"),
+  FIX("Fix"),
+  RVT("Revert"),
+  TST("Test"),
+  UNKNOWN("unknown");
 
   public String label;
   IntentDescription(String label) {

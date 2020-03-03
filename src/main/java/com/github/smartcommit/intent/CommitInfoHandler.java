@@ -149,7 +149,7 @@ public class CommitInfoHandler {
                 return intent;
             }
         }
-        return Intent.UNKNOWN;
+        return Intent.CHR;
     }
 
     // generate IntentDescription from Message
@@ -216,8 +216,7 @@ public class CommitInfoHandler {
                 String currentContent = diffFiles.get(j).getCurrentContent();
                 // File added or deleted, thus no content
                 if (baseContent == null || baseContent.equals("") || currentContent == null || currentContent.equals("")) {
-                    tempCommitTrainingSample.addIntentDescription(IntentDescription.FIL);
-                    tempCommitTrainingSample.addGumtreeExceptionCount();
+                    tempCommitTrainingSample.addGumtreeCountFileChange();
                     continue;
                 }
                 EditScript editScript = generateEditScript(baseContent, currentContent);
@@ -227,15 +226,13 @@ public class CommitInfoHandler {
                     tempCommitTrainingSample.setGumtreeActionList(tempActionList);
                 } else {
                     // Only doc change, thus no CodeChange and AbstractJdtTree generated
-                    tempCommitTrainingSample.addIntentDescription(IntentDescription.DOC);
-                    tempCommitTrainingSample.addGumtreeExceptionCount();
+                    tempCommitTrainingSample.addGumtreeCountDocChange();
                 }
             }
         } catch (Exception e) {
             //e.printStackTrace();
             // Lack of File, thus no DiffFiles generated
-            tempCommitTrainingSample.addIntentDescription(IntentDescription.NFL);
-            tempCommitTrainingSample.addGumtreeExceptionCount();
+            tempCommitTrainingSample.addGumtreeCountFileChange();
         }
         return tempCommitTrainingSample;
     }
@@ -324,7 +321,8 @@ public class CommitInfoHandler {
             doc1.put("commitTime", commitTrainingSample.getCommitTime());
             doc1.put("commitIntent", commitTrainingSample.getIntent().getLabel());
             doc1.put("commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
-            doc1.put("GumtreeExceptionCount", commitTrainingSample.getGumtreeExceptionCount());
+            doc1.put("GumtreeCountFileChange", commitTrainingSample.getGumtreeCountFileChange());
+            doc1.put("GumtreeCountDocChange", commitTrainingSample.getGumtreeCountDocChange());
 
             {
             List<Action> Actions1 = new ArrayList<>();

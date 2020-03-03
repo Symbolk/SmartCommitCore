@@ -15,7 +15,8 @@ public class CommitTrainingSample {
   private String commitTime;
   private Intent intent;
   private List<IntentDescription> intentDescriptions;
-  private Integer GumtreeExceptionCount = 0;
+  private Integer GumtreeCountFileChange = 0;
+  private Integer GuntreeCountDocChange = 0;
   private List<AstAction> gumtreeActions;
   private List<Action> diffHunksActions;
   private List<RefactorMinerAction> refactorMinerActions;
@@ -96,13 +97,22 @@ public class CommitTrainingSample {
     this.intentDescriptions.add(intentDescription);
   }
 
-  public Integer getGumtreeExceptionCount() {
-    return GumtreeExceptionCount;
+  public Integer getGumtreeCountFileChange() {
+    return GumtreeCountFileChange;
   }
 
-  public void addGumtreeExceptionCount() {
-    this.GumtreeExceptionCount ++;
+  public void addGumtreeCountFileChange() {
+    this.GumtreeCountFileChange ++;
   }
+
+  public Integer getGumtreeCountDocChange() {
+    return GuntreeCountDocChange;
+  }
+
+  public void addGumtreeCountDocChange() {
+    this.GuntreeCountDocChange ++;
+  }
+
 
   public List<RefactorMinerAction> getRefactorMinerActions() {
     return refactorMinerActions;
