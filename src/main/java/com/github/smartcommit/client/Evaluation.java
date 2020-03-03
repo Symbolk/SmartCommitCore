@@ -3,6 +3,8 @@ package com.github.smartcommit.client;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
+import com.github.smartcommit.model.Hunk;
+import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
@@ -14,6 +16,7 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.bson.Document;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -103,7 +106,7 @@ public class Evaluation {
       MongoClient mongoClient = new MongoClient(connectionString);
       MongoDatabase db = mongoClient.getDatabase("smartcommit");
       MongoCollection<Document> col = db.getCollection(repoName);
-      // drop the last testing results
+      // !!! drop the last testing results
       col.drop();
 
       for (int i = 0; i < lines.size(); i++) {
@@ -115,17 +118,83 @@ public class Evaluation {
           System.out.println(commitID);
           // call analyze commit and generate groups
           Map<String, Group> results = smartCommit.analyzeCommit(commitID);
+          Map<String, DiffHunk> id2DiffHunkMap = smartCommit.getId2DiffHunkMap();
           // save results in mongodb (for committers to review online)
-          System.out.println(results);
-          Document doc = new Document("repo_name", repoName).append("commit_id", commitID);
-          doc.append("committer_name", committerName);
-          doc.append("committer_email", committerEmail);
-          col.insertOne(doc);
+          Document commitDoc = new Document("repo_name", repoName);
+          commitDoc.append("commit_id", commitID);
+          commitDoc
+              .append("committer_name", committerName)
+              .append("committer_email", committerEmail);
+          List<Document> groupDocs = new ArrayList<>();
+          for (Map.Entry<String, Group> entry : results.entrySet()) {
+            Group group = entry.getValue();
+            Document groupDoc = new Document("group_id", group.getGroupID());
+            groupDoc.append("group_label", group.getIntentLabel().label);
+            List<Document> diffHunkDocs = new ArrayList<>();
+            for (String id : group.getDiffHunkIDs()) {
+              DiffHunk diffHunk = id2DiffHunkMap.getOrDefault(id.split(":")[1], null);
+              if (diffHunk != null) {
+                Document diffHunkDoc = new Document();
+                diffHunkDoc.append("file_index", diffHunk.getFileIndex());
+                diffHunkDoc.append("file_type", diffHunk.getFileType().label);
+                diffHunkDoc.append("diff_hunk_index", diffHunk.getIndex());
+                diffHunkDoc.append("change_type", diffHunk.getChangeType().label);
+                diffHunkDoc.append("description", diffHunk.getDescription());
+                diffHunkDoc.append(
+                    "a_hunk",
+                    convertHunkToDoc(
+                        diffHunk.getBaseHunk(),
+                        tempDir
+                            + File.separator
+                            + commitID
+                            + File.separator
+                            + Version.BASE.asString()
+                            + File.separator));
+                diffHunkDoc.append(
+                    "b_hunk",
+                    convertHunkToDoc(
+                        diffHunk.getCurrentHunk(),
+                        tempDir
+                            + File.separator
+                            + commitID
+                            + File.separator
+                            + Version.CURRENT.asString()
+                            + File.separator));
+                diffHunkDocs.add(diffHunkDoc);
+              }
+              groupDoc.append("diff_hunks", diffHunkDocs);
+            }
+            groupDocs.add(groupDoc);
+          }
+          commitDoc.append("groups", groupDocs);
+          col.insertOne(commitDoc);
         }
       }
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  /**
+   * Convert a given diff hunk to a mongo doc
+   *
+   * @param hunk
+   * @param dir
+   * @return
+   */
+  private static Document convertHunkToDoc(Hunk hunk, String dir) {
+    Document hunkDoc = new Document();
+    hunkDoc.append("git_path", hunk.getRelativeFilePath());
+    if (hunk.getRelativeFilePath().equals("/dev/null")) {
+      hunkDoc.append("file_path", hunk.getRelativeFilePath());
+    } else {
+      hunkDoc.append("file_path", dir + hunk.getRelativeFilePath());
+    }
+    hunkDoc.append("start_line", hunk.getStartLine());
+    hunkDoc.append("end_line", hunk.getEndLine());
+    hunkDoc.append("content", Utils.convertListLinesToString(hunk.getCodeSnippet()));
+    hunkDoc.append("content_type", hunk.getContentType().label);
+    return hunkDoc;
   }
 
   private void runRQ3() {

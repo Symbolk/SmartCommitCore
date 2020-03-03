@@ -388,4 +388,8 @@ public class SmartCommit {
       return false;
     }
   }
+
+  public Map<String, DiffHunk> getId2DiffHunkMap() {
+    return id2DiffHunkMap;
+  }
 }

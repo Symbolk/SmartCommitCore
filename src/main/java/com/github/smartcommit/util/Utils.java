@@ -100,7 +100,7 @@ public class Utils {
   public static List<String[]> readCSV(String path, String delimiter) {
     List<String[]> results = new ArrayList<>();
     try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
-//      reader.readLine(); // skip header
+      //      reader.readLine(); // skip header
       String line = null;
       while ((line = reader.readLine()) != null) {
         String items[] = line.split(delimiter);
@@ -360,6 +360,16 @@ public class Utils {
   }
 
   /**
+   * Convert a list of lines into one string with enter
+   *
+   * @param list
+   * @return
+   */
+  public static String convertListLinesToString(List<String> list) {
+    return String.join(System.lineSeparator(), list);
+  }
+
+  /**
    * Convert a list of lines to one string without format (to compare)
    *
    * @param list
@@ -431,24 +441,20 @@ public class Utils {
     String TypeTo = "";
     // tell apart from-on via order
     boolean OnlyOne = true;
-    for (RefActionType refActionType: RefActionType.values()) {
-      if(displayName.contains(refActionType.label)) {
+    for (RefActionType refActionType : RefActionType.values()) {
+      if (displayName.contains(refActionType.label)) {
         TypeFrom = refActionType.label;
-        if(OnlyOne) {
+        if (OnlyOne) {
           TypeTo = TypeFrom;
           OnlyOne = false;
-        }
-        else {
+        } else {
           TypeTo = refActionType.label;
           break;
         }
       }
     }
     if (codeChangesTo.isEmpty()) {
-      return new Action(
-          operation,
-          TypeFrom,
-          codeChangeFrom.getCodeElement());
+      return new Action(operation, TypeFrom, codeChangeFrom.getCodeElement());
     } else {
       CodeRange codeChangeTo = codeChangesTo.get(0);
       return new Action(
