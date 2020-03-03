@@ -156,21 +156,22 @@ public class CommitInfoHandler {
 
     // generate IntentDescription from Message
     private static List<IntentDescription> getIntentDescriptionFromMsg(String commitMsg) {
+        int msgSize = commitMsg.length();
         List<IntentDescription> IntentDescriptions = new ArrayList<>();
-        for (IntentDescription id : IntentDescription.values()) {
-            if (commitMsg.contains(id.label.toLowerCase())) {
-                IntentDescriptions.add(id);
+        for (int i = 0; i < msgSize; i++) {
+            for (IntentDescription id : IntentDescription.values()) {
+                String des = id.label.toLowerCase();
+                int len = des.length();
+                for (int j = 0; j < len; j++) {
+                    if(commitMsg.charAt(i+j) != des.charAt(j))
+                        break;
+                    if(j+1 == len){
+                        IntentDescriptions.add(id);
+                        i += len;
+                    }
+                }
             }
         }
-        Collections.sort(IntentDescriptions, (id1, id2) -> {
-                int diff = commitMsg.indexOf(id1.label) - commitMsg.indexOf(id2.label);
-                if (diff > 0) {
-                    return 1;
-                } else if (diff < 0) {
-                    return -1;
-                }
-                return 0;
-            });
         return IntentDescriptions;
     }
 
