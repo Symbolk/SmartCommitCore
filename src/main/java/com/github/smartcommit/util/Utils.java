@@ -1,5 +1,6 @@
 package com.github.smartcommit.util;
 
+import com.github.smartcommit.commitmsg.RefActionType;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileStatus;
@@ -420,24 +421,41 @@ public class Utils {
     List<CodeRange> codeChangesTo = ref.rightSide();
     CodeRange codeChangeFrom = codeChangesFrom.get(0);
     Operation operation = Operation.UKN;
+    String displayName = type.getDisplayName();
     for (Operation op : Operation.values()) {
-      if (type.name().equals(op.name())) {
+      if (displayName.contains(op.label)) {
         operation = op;
-        break;
+      }
+    }
+    String TypeFrom = "";
+    String TypeTo = "";
+    // tell apart from-on via order
+    boolean OnlyOne = true;
+    for (RefActionType refActionType: RefActionType.values()) {
+      if(displayName.contains(refActionType.label)) {
+        TypeFrom = refActionType.label;
+        if(OnlyOne) {
+          TypeTo = TypeFrom;
+          OnlyOne = false;
+        }
+        else {
+          TypeTo = refActionType.label;
+          break;
+        }
       }
     }
     if (codeChangesTo.isEmpty()) {
       return new Action(
           operation,
-          codeChangeFrom.getCodeElementType().toString(),
+          TypeFrom,
           codeChangeFrom.getCodeElement());
     } else {
       CodeRange codeChangeTo = codeChangesTo.get(0);
       return new Action(
           operation,
-          codeChangeFrom.getCodeElementType().toString(),
+          TypeFrom,
           codeChangeFrom.getCodeElement(),
-          codeChangeTo.getCodeElementType().toString(),
+          TypeTo,
           codeChangeTo.getCodeElement());
     }
   }
