@@ -20,6 +20,8 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 // GumtreeExample
 import com.github.gumtreediff.actions.EditScript;
@@ -118,7 +120,7 @@ public class CommitInfoHandler {
             tempCommitTrainingSample.setIntent(intent);
 
             // get List<IntentDescription> from commitMsg
-            List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
+            List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg.toLowerCase());
             tempCommitTrainingSample.setIntentDescription(intentList);
 
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
@@ -154,13 +156,22 @@ public class CommitInfoHandler {
 
     // generate IntentDescription from Message
     private static List<IntentDescription> getIntentDescriptionFromMsg(String commitMsg) {
-        List<IntentDescription> intentList = new ArrayList<>();
-        for (IntentDescription intent : IntentDescription.values()) {
-            if (commitMsg.toLowerCase().contains(intent.label)) {
-                intentList.add(intent);
+        List<IntentDescription> IntentDescriptions = new ArrayList<>();
+        for (IntentDescription id : IntentDescription.values()) {
+            if (commitMsg.contains(id.label.toLowerCase())) {
+                IntentDescriptions.add(id);
             }
         }
-        return intentList;
+        Collections.sort(IntentDescriptions, (id1, id2) -> {
+                int diff = commitMsg.indexOf(id1.label) - commitMsg.indexOf(id2.label);
+                if (diff > 0) {
+                    return 1;
+                } else if (diff < 0) {
+                    return -1;
+                }
+                return 0;
+            });
+        return IntentDescriptions;
     }
 
     // generate Edit Script from file contents
