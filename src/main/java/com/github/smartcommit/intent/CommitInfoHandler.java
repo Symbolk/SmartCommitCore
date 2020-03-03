@@ -359,7 +359,8 @@ public class CommitInfoHandler {
                 List<Document> actions = new ArrayList<>();
                 for (Action DiffHunkAction : DiffHunkActions) {
                     Document addrAttr = new Document();
-                    addrAttr.put("diffHunkAction", DiffHunkAction.toString());
+                    addrAttr.put("operation", DiffHunkAction.getOperation().toString());
+                    addrAttr.put("DiffHunkType", DiffHunkAction.getTypeFrom());
                     actions.add(addrAttr);
                     Actions2.add(DiffHunkAction);
                 }
