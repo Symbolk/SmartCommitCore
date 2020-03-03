@@ -452,13 +452,17 @@ public class GitServiceCGit implements GitService {
     // git show HEAD | grep Author
     // git log -1 --format='%an' HASH
     // git show -s --format='%an' HASH
-    return Utils.runSystemCommand(repoDir, "git", "show", "-s", "--format='%an'", commitID).trim();
+    return Utils.runSystemCommand(repoDir, "git", "show", "-s", "--format='%an'", commitID)
+        .trim()
+        .replaceAll("'", "");
   }
 
   @Override
   public String getCommitterEmail(String repoDir, String commitID) {
     // git log -1 --format='%ae' HASH
     // git show -s --format='%ae' HASH
-    return Utils.runSystemCommand(repoDir, "git", "show", "-s", "--format='%ae'", commitID).trim();
+    return Utils.runSystemCommand(repoDir, "git", "show", "-s", "--format='%ae'", commitID)
+        .trim()
+        .replaceAll("'", "");
   }
 }
