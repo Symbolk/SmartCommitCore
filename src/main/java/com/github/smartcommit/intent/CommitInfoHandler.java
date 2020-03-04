@@ -3,49 +3,44 @@ package com.github.smartcommit.intent;
 // DataCollector
 
 import com.github.gumtreediff.actions.ChawatheScriptGenerator;
-import com.github.gumtreediff.actions.model.*;
+import com.github.gumtreediff.actions.EditScript;
+import com.github.gumtreediff.actions.model.Delete;
+import com.github.gumtreediff.actions.model.Insert;
+import com.github.gumtreediff.actions.model.Move;
+import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.TreeContext;
-import com.github.smartcommit.intent.model.AstAction;
+import com.github.smartcommit.client.SmartCommit;
+import com.github.smartcommit.client.Config;
+import com.github.smartcommit.core.RepoAnalyzer;
+import com.github.smartcommit.intent.model.*;
+import com.github.smartcommit.io.DataCollector;
+import com.github.smartcommit.model.Action;
+import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
+import com.github.smartcommit.model.Group;
 import com.github.smartcommit.model.constant.Operation;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
-
-import java.io.File;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-
-// GumtreeExample
-import com.github.gumtreediff.actions.EditScript;
-import com.github.smartcommit.model.DiffFile;
-
-// MongoExample
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
-
-// RefactoringMiner
-import org.eclipse.jgit.lib.*;
+import org.eclipse.jgit.lib.Repository;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.util.GitServiceImpl;
 
-// CommitTrainingSample
-import com.github.smartcommit.intent.model.CommitTrainingSample;
-import com.github.smartcommit.core.*;
-import com.github.smartcommit.io.*;
-import com.github.smartcommit.intent.model.*;
-import com.github.smartcommit.model.Action;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
@@ -115,6 +110,7 @@ public class CommitInfoHandler {
 
 
             String commitMsg = tempCommitTrainingSample.getCommitMsg();
+            String tempDir = "~/Downloads/";
             // get Intent from commitMsg
             Intent intent = getIntentFromMsg(commitMsg);
             tempCommitTrainingSample.setIntent(intent);
@@ -124,13 +120,13 @@ public class CommitInfoHandler {
             tempCommitTrainingSample.setIntentDescription(intentList);
 
             RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
-            DataCollector dataCollector = new DataCollector(repoName, "~/Downloads");
+            DataCollector dataCollector = new DataCollector(repoName, tempDir);
             // add astActionList using gumtree
             tempCommitTrainingSample = generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
 
             // add DiffHunkActions using DiffHunks
             List<Action> DiffHunkActions=
-                    generateActionListFromDiffHunks(tempCommitTrainingSample, repoAnalyzer, dataCollector);
+                    generateActionListFromDiffHunks(tempCommitTrainingSample, dataCollector);
             tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
 
             // add refactorCodeChange using RefactoringMiner
@@ -262,17 +258,35 @@ public class CommitInfoHandler {
 
     // generate DiffHunkActions from diffHunks
     private static List<Action> generateActionListFromDiffHunks(
-            CommitTrainingSample tempCommitTrainingSample, RepoAnalyzer repoAnalyzer, DataCollector dataCollector) {
-        String commitID = tempCommitTrainingSample.getCommitID();
-        List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
-        List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
-        if(diffFiles.isEmpty() || allDiffHunks.isEmpty())
-            System.out.println("No DiffFiles generated ");
-        Integer sizeDiffHunk = allDiffHunks.size();
+            CommitTrainingSample tempCommitTrainingSample, DataCollector dataCollector) throws Exception {
+
+        String REPO_ID = tempCommitTrainingSample.getRepoID();
+        String REPO_NAME = tempCommitTrainingSample.getRepoName();
+        String REPO_PATH = tempCommitTrainingSample.getRepoPath();
+        String TEMP_DIR = "~/Downloads/";
+        String COMMIT_ID = tempCommitTrainingSample.getCommitID();
         List<Action> AstActions = new ArrayList<>();
-        for(Integer i = 0; i < sizeDiffHunk; i++) {
-            List<Action> actions = dataCollector.analyzeASTActions(allDiffHunks.get(i));
-            AstActions.addAll(actions);
+
+        SmartCommit smartCommit =
+                new SmartCommit(REPO_ID, REPO_NAME, REPO_PATH, TEMP_DIR);
+        smartCommit.setDetectRefactorings(false);
+        smartCommit.setSimilarityThreshold(Config.SIMI_THRESHOLD);
+        smartCommit.setDistanceThreshold(Config.DIS_THRESHOLD);
+
+        try{
+            Map<String, Group> groups = smartCommit.analyzeCommit(COMMIT_ID);
+            Map<String, DiffHunk> id2DiffHunkMap = smartCommit.getId2DiffHunkMap();
+            for (Map.Entry<String, Group> entry : groups.entrySet()) {
+                Group group = entry.getValue();
+                List<String> diffHunkIDs = group.getDiffHunkIDs();
+                for (String id : diffHunkIDs) {
+                    DiffHunk diffHunk = id2DiffHunkMap.getOrDefault(id.split(":")[1], null);
+                    if(diffHunk != null)
+                        AstActions.addAll(dataCollector.analyzeASTActions(diffHunk));
+                }
+            }
+        } catch (Exception e){
+            System.out.println("DiffHunk Graph building fail");
         }
         return AstActions;
     }

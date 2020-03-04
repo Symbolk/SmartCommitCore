@@ -164,6 +164,7 @@ public class SmartCommit {
   private Map<String, Group> analyze(
       List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs)
       throws ExecutionException, InterruptedException {
+
     // build the change semantic graph
     ExecutorService executorService = Executors.newFixedThreadPool(2);
     Future<Graph<Node, Edge>> baseBuilder =
