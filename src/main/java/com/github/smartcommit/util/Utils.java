@@ -439,7 +439,7 @@ public class Utils {
     }
     String TypeFrom = "";
     String TypeTo = "";
-    // tell apart from-on via order
+    // tell apart from-to via order
     boolean OnlyOne = true;
     for (RefActionType refActionType : RefActionType.values()) {
       if (displayName.contains(refActionType.label)) {
