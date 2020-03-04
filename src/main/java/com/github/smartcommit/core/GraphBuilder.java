@@ -381,7 +381,9 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
       // save covered nodes also in hunks
       Pair<Integer, Integer> indices = Utils.parseIndices(index);
-      DiffHunk diffHunk = diffFiles.get(fileIndex).getDiffHunks().get(indices.getRight());
+      DiffHunk diffHunk = null;
+      if(fileIndex < diffFiles.size())
+        diffHunk = diffFiles.get(fileIndex).getDiffHunks().get(indices.getRight());
       if (diffHunk != null) {
         if (version.equals(Version.BASE)) {
           diffHunk.getBaseHunk().setCoveredNodes(new ArrayList<>(coveredNodes));
