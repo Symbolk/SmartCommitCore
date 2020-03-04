@@ -34,18 +34,15 @@ public class CommitMsgGenerator {
    * @return
    */
   public List<Integer> generateGroupVector() {
-    // Operation: 4(astAction) 13(refAction) 1(unknown)
+    // Operation: 4(astAction) 13(refAction)
     // Type: 99(astAction) 18(refAction)
     int AstOperationSum = 4;
     int RefOperationSum = 13;
-    int UnkOperationSum = 1;
     int AstTypeSum = 99;
     int RefTypeSum = 18;
-    int UnkTypeSum = 1;
     int AstSum = AstOperationSum*AstTypeSum;
     int RefSum = RefOperationSum*RefTypeSum;
-    int UnkSum = UnkOperationSum*UnkTypeSum;
-    int vectorSize = AstSum + RefSum + UnkSum;
+    int vectorSize = AstSum + RefSum;
 
     List<Integer> vectors = new ArrayList<>(Collections.nCopies(vectorSize,0));
     int indexOperation = 0, indexType = 0, indexFinal = 0;
@@ -53,7 +50,10 @@ public class CommitMsgGenerator {
     for(Action action : astActions){
       indexOperation = action.getOperationIndex();
       if(indexOperation == AstOperationSum + RefOperationSum + 1)
-        indexFinal = AstSum + RefSum + 1;
+        continue;
+      // when DiffHunk Graph building fails, get "code" and contribute nothing to vector
+      else if(action.getTypeFrom().equals("code"))
+        continue;
       else {
         for(AstActionType astActionType: AstActionType.values()){
           if(action.getTypeFrom().equals(astActionType.label)){
@@ -69,7 +69,7 @@ public class CommitMsgGenerator {
     for(Action action : refactorActions){
       indexOperation = action.getOperationIndex();
       if (indexOperation == AstOperationSum + RefOperationSum + 1)
-        indexFinal = AstSum + RefSum + 1;
+        continue;
       else {
         for (RefActionType refActionType : RefActionType.values()) {
           if (action.getTypeFrom().equals(refActionType.label)) {
