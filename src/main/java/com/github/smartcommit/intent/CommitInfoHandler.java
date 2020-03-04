@@ -272,8 +272,8 @@ public class CommitInfoHandler {
         smartCommit.setDetectRefactorings(false);
         smartCommit.setSimilarityThreshold(Config.SIMI_THRESHOLD);
         smartCommit.setDistanceThreshold(Config.DIS_THRESHOLD);
-        try{
 
+        try{
             Map<String, Group> groups = smartCommit.analyzeCommit(COMMIT_ID);
             Map<String, DiffHunk> id2DiffHunkMap = smartCommit.getId2DiffHunkMap();
             for (Map.Entry<String, Group> entry : groups.entrySet()) {
@@ -286,9 +286,8 @@ public class CommitInfoHandler {
                 }
             }
         } catch (Exception e){
-            System.out.println("NumberFormatException");
+            System.out.println("DiffHunk Graph building fail");
         }
-        System.out.println(AstActions.toString());
         return AstActions;
     }
 
