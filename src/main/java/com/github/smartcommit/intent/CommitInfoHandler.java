@@ -288,6 +288,7 @@ public class CommitInfoHandler {
         } catch (Exception e){
             System.out.println("NumberFormatException");
         }
+        System.out.println(AstActions.toString());
         return AstActions;
     }
 

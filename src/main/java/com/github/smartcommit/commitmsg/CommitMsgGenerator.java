@@ -1,5 +1,6 @@
 package com.github.smartcommit.commitmsg;
 
+import com.github.smartcommit.intent.model.ASTOperation;
 import com.github.smartcommit.intent.model.Intent;
 import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
@@ -33,15 +34,52 @@ public class CommitMsgGenerator {
    * @return
    */
   public List<Integer> generateGroupVector() {
-    List<Integer> vectors = new ArrayList<>(Collections.nCopies(50,0));
-    int index;
+    // Operation: 4(astAction) 13(refAction) 1(unknown)
+    // Type: 99(astAction) 18(refAction)
+    int AstOperationSum = 4;
+    int RefOperationSum = 13;
+    int UnkOperationSum = 1;
+    int AstTypeSum = 99;
+    int RefTypeSum = 18;
+    int UnkTypeSum = 1;
+    int AstSum = AstOperationSum*AstTypeSum;
+    int RefSum = RefOperationSum*RefTypeSum;
+    int UnkSum = UnkOperationSum*UnkTypeSum;
+    int vectorSize = AstSum + RefSum + UnkSum;
+
+    List<Integer> vectors = new ArrayList<>(Collections.nCopies(vectorSize,0));
+    int indexOperation = 0, indexType = 0, indexFinal = 0;
+
     for(Action action : astActions){
-      index = action.getOperationIndex();
-      vectors.set(index, vectors.get(index)+1);
+      indexOperation = action.getOperationIndex();
+      if(indexOperation == AstOperationSum + RefOperationSum + 1)
+        indexFinal = AstSum + RefSum + 1;
+      else {
+        for(AstActionType astActionType: AstActionType.values()){
+          if(action.getTypeFrom().equals(astActionType.label)){
+            indexType = astActionType.index;
+            break;
+          }
+        }
+        indexFinal = (indexOperation-1)*AstOperationSum + indexType-1;
+      }
+      vectors.set(indexFinal, vectors.get(indexFinal)+1);
     }
+
     for(Action action : refactorActions){
-      index = action.getOperationIndex();
-      vectors.set(index, vectors.get(index)+1);
+      indexOperation = action.getOperationIndex();
+      if (indexOperation == AstOperationSum + RefOperationSum + 1)
+        indexFinal = AstSum + RefSum + 1;
+      else {
+        for (RefActionType refActionType : RefActionType.values()) {
+          if (action.getTypeFrom().equals(refActionType.label)) {
+            indexType = refActionType.index;
+            break;
+          }
+        }
+        indexFinal = AstSum + (indexOperation - 1) * RefOperationSum + indexType - 1;
+      }
+      vectors.set(indexFinal, vectors.get(indexFinal)+1);
     }
     return vectors;
   }
