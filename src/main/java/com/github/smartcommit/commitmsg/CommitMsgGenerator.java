@@ -106,23 +106,37 @@ public class CommitMsgGenerator {
     List<Action> actions = new ArrayList<>();
     actions.addAll(astActions);
     actions.addAll(refactorActions);
-    List<Integer> max3Indexes = getMaxIndexTypeFrom(actions, key);
-    Action action1 = actions.get(max3Indexes.get(0));
-    commitMsg = key +" "+ action1.getTypeFrom() +" "+ action1.getLabelFrom();
-    if(!action1.getLabelTo().isEmpty())
-      commitMsg += " to "+ action1.getTypeTo() +" "+ action1.getLabelTo();
-    // Change takes top2, while others takes top3
-    if(max3Indexes.get(1) != max3Indexes.get(0)) {
-      Action action2 = actions.get(max3Indexes.get(1));
-      commitMsg += ", and "+ action2.getTypeFrom() +" "+ action2.getLabelFrom();
-      if(!action1.getLabelTo().isEmpty())
-        commitMsg += " to "+ action2.getTypeTo() +" "+ action2.getLabelTo();
-    }
-    if(max3Indexes.get(2) != max3Indexes.get(1) && !key.equals("Change")) {
-      Action action3 = actions.get(max3Indexes.get(2));
-      commitMsg += ", and "+ action3.getTypeFrom() +" "+ action3.getLabelFrom();
-      if(!action1.getLabelTo().isEmpty())
-        commitMsg += " to "+ action3.getTypeTo() +" "+ action3.getLabelTo();
+
+    // extend commitMsg
+    // make short circuit: package, class, method，interface
+    List<Integer> Indexes = get4IndexOfTypeFrom(actions, key);
+    if(!Indexes.isEmpty()) {
+      // maybe we can sort it one day
+      commitMsg = key;
+      Action action = null;
+      boolean theFirst = true;
+      for(int i = 0; i < 4 && Indexes.get(i) != -1; i++) {
+        action = actions.get(Indexes.get(i));
+        if(!theFirst) commitMsg += ", and ";
+        commitMsg = extendCommitMsg(commitMsg, action);
+        theFirst = false;
+      }
+    } else {
+      Indexes = getMax3IndexTypeFrom(actions, key);
+      Action action0 = actions.get(Indexes.get(0));
+      commitMsg = key;
+      commitMsg = extendCommitMsg(commitMsg, action0);
+      if(Indexes.get(1) != Indexes.get(0)) {
+        Action action1 = actions.get(Indexes.get(1));
+        commitMsg += ", and ";
+        commitMsg = extendCommitMsg(commitMsg, action1);
+      }
+      // Change takes top2, while the others takes top3
+      if(Indexes.get(2) != Indexes.get(1) && !key.equals("Change")) {
+        Action action2 = actions.get(Indexes.get(2));
+        commitMsg += ", and ";
+        commitMsg = extendCommitMsg(commitMsg, action2);
+      }
     }
 
     // read json to get templates
@@ -144,8 +158,8 @@ public class CommitMsgGenerator {
     return recommendedCommitMsgs;
   }
 
-  // get maxCount of Frequency in Actions using C-style :(
-  private List<Integer> getMaxIndexTypeFrom(List<Action> Actions, String key) {
+  // get max3Count of Frequency in Actions whose Operation equals key
+  private List<Integer> getMax3IndexTypeFrom(List<Action> Actions, String key) {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
     for(int i = 0; i < sizeActions; i ++){
@@ -184,5 +198,35 @@ public class CommitMsgGenerator {
     max3Indexes.add(max2);
     max3Indexes.add(max3);
     return max3Indexes;
+  }
+
+  // get max4Count of Frequency in Actions: package, class, method，interface
+  private List<Integer> get4IndexOfTypeFrom(List<Action> Actions, String key) {
+    int sizeActions = Actions.size();
+    int index1 = -1, index2 = -1, index3 = -1, index4 = -1;
+    for(int i = 0; i < sizeActions; i ++){
+      if(Actions.get(i).getOperation().label.equals(key)) continue;
+      String typeFrom = Actions.get(i).getTypeFrom();
+      if(typeFrom.equals("Package")) index1++;
+      if(typeFrom.equals("Class")) index2++;
+      if(typeFrom.equals("Method")) index3++;
+      if(typeFrom.equals("Interface")) index4++;
+    }
+    List<Integer> indexes = new ArrayList<>();
+    if(index1+index2+index3+index4 > -4) {
+      indexes.add(index1);
+      indexes.add(index2);
+      indexes.add(index3);
+      indexes.add(index4);
+    }
+    return indexes;
+  }
+
+  // extendCommitMsg by adding action type+label, from+to
+  private String extendCommitMsg(String commitMsg, Action action) {
+    commitMsg += " "+ action.getTypeFrom() +" "+ action.getLabelFrom();
+    if(!action.getLabelTo().isEmpty())
+      commitMsg += " to "+ action.getTypeTo() +" "+ action.getLabelTo();
+    return commitMsg;
   }
 }
