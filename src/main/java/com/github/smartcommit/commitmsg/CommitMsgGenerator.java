@@ -101,47 +101,43 @@ public class CommitMsgGenerator {
    */
   public List<String> generateDetailedMsgs(MsgClass msgClass, GroupLabel intentLabel) {
 
-    File file=new File("./src/MsgTemplate.json");
+    // Count Frequency of typeFrom in Actions whose Operation equals key
     String key = msgClass.label;
+    List<Action> actions = new ArrayList<>();
+    actions.addAll(astActions);
+    actions.addAll(refactorActions);
+    List<Integer> max3Indexes = getMaxIndexTypeFrom(actions, key);
+    Action action1 = actions.get(max3Indexes.get(0));
+    commitMsg = key +" "+ action1.getTypeFrom() +" "+ action1.getLabelFrom();
+    if(!action1.getLabelTo().isEmpty())
+      commitMsg += " to "+ action1.getTypeTo() +" "+ action1.getLabelTo();
+    // Change takes top2, while others takes top3
+    if(max3Indexes.get(1) != max3Indexes.get(0)) {
+      Action action2 = actions.get(max3Indexes.get(1));
+      commitMsg += ", and "+ action2.getTypeFrom() +" "+ action2.getLabelFrom();
+      if(!action1.getLabelTo().isEmpty())
+        commitMsg += " to "+ action2.getTypeTo() +" "+ action2.getLabelTo();
+    }
+    if(max3Indexes.get(2) != max3Indexes.get(1) && !key.equals("Change")) {
+      Action action3 = actions.get(max3Indexes.get(2));
+      commitMsg += ", and "+ action3.getTypeFrom() +" "+ action3.getLabelFrom();
+      if(!action1.getLabelTo().isEmpty())
+        commitMsg += " to "+ action3.getTypeTo() +" "+ action3.getLabelTo();
+    }
+
+    // read json to get templates
+    File file=new File("./src/MsgTemplate.json");
     String content= null;
     try {
       content = FileUtils.readFileToString(file,"UTF-8");
     } catch (IOException e) {
       e.printStackTrace();
     }
-
     JSONObject jsonObject=new JSONObject(content);
     JSONArray jsonArray = jsonObject.getJSONArray(key);
 
-    // Simply count Frequency of typeFrom in astActions
-    int maxIndex = getMaxIndexTypeFrom(astActions);
-    String typeFrom = astActions.get(maxIndex).getTypeFrom();
-    String labelFrom = astActions.get(maxIndex).getLabelFrom();
-    String typeTo = astActions.get(maxIndex).getTypeTo();
-    String labelTo = astActions.get(maxIndex).getLabelTo();
-
-    List<String> recommendedCommitMsgs = new ArrayList<>();
-    // Directly generate recommendedCommitMsg for chosen MsgClass
-    if(key.equals("Add") || key.equals("Create") || key.equals("implement") || key.equals("update") || key.equals("upgrade")
-            || key.equals("replace") || key.equals("change") || key.equals("rename")){
-      recommendedCommitMsgs.add("Intent: "+msgClass.label+" "+typeFrom+" to "+labelTo+" in "+labelFrom);
-      return recommendedCommitMsgs;
-    }
-    // fill the first blank using substring
-    // the first as the suggested
-    templateMsg = jsonArray.get(0).toString();
-    int chosenIndex = 0;
-    // the same type as the fittest
-    for(int i = 0; i < jsonArray.length(); i++){
-      if(jsonArray.get(i).toString().contains(typeFrom)){
-        templateMsg = jsonArray.get(i).toString();
-        chosenIndex = i;
-      }
-    }
-    int start = templateMsg.indexOf("(.+)");
-    commitMsg = templateMsg.substring(0, start)+labelFrom+templateMsg.substring(start+4);
-
     // generate and return recommendedCommitMsgs
+    List<String> recommendedCommitMsgs = new ArrayList<>();
     recommendedCommitMsgs.add(intentLabel+" : " + commitMsg);
     for(int i = 0; i < jsonArray.length(); i ++)
       recommendedCommitMsgs.add(jsonArray.get(i).toString());
@@ -149,11 +145,11 @@ public class CommitMsgGenerator {
   }
 
   // get maxCount of Frequency in Actions using C-style :(
-  private int getMaxIndexTypeFrom(List<Action> Actions) {
+  private List<Integer> getMaxIndexTypeFrom(List<Action> Actions, String key) {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
-    String types[] = new String[sizeActions];
     for(int i = 0; i < sizeActions; i ++){
+      if(Actions.get(i).getOperation().label.equals(key)) continue;
       String typeFrom = Actions.get(i).getTypeFrom();
       int j;
       for(j = 0; j < i; j ++){
@@ -164,14 +160,29 @@ public class CommitMsgGenerator {
       }
       if(j == i) count[j] = 1;
     }
-    int max = 0, maxIndex = 0;
+    // lazy to sort, simply cycle once
+    int max1 = 0, max2 = 0, max3 = 0;
+    int max1Index = 0, max2Index = 0, max3Index = 0;
     for(int i = 0; i < sizeActions; i ++){
-      if(count[i] == 0)break;
-      if(count[i] > max) {
-        max = count[i];
-        maxIndex = i;
+      if(count[i] > max1) {
+        max3 = max2; max2 = max1;
+        max1 = count[i];
+        max3Index = max2Index; max2Index = max1Index;
+        max1Index = i;
+      } else if (count[i] > max2) {
+        max3 = max2;
+        max2 = count[i];
+        max3Index = max2Index;
+        max2Index = i;
+      } else if(count[i] > max3) {
+        max3 = count[i];
+        max3Index = i;
       }
     }
-    return maxIndex;
+    List<Integer> max3Indexes = new ArrayList<>(3);
+    max3Indexes.add(max1);
+    max3Indexes.add(max2);
+    max3Indexes.add(max3);
+    return max3Indexes;
   }
 }
