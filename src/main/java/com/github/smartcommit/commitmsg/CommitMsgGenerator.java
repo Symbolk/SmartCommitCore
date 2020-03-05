@@ -141,11 +141,10 @@ public class CommitMsgGenerator {
     int start = templateMsg.indexOf("(.+)");
     commitMsg = templateMsg.substring(0, start)+labelFrom+templateMsg.substring(start+4);
 
-    // the most recommended at the first place
-    recommendedCommitMsgs.add("Intent: "+commitMsg);
-    // Leftover as the follows
+    // generate and return recommendedCommitMsgs
+    recommendedCommitMsgs.add(intentLabel+" : " + commitMsg);
     for(int i = 0; i < jsonArray.length(); i ++)
-      if(i != chosenIndex) recommendedCommitMsgs.add("Intent: "+jsonArray.get(i).toString());
+      recommendedCommitMsgs.add(jsonArray.get(i).toString());
     return recommendedCommitMsgs;
   }
 
