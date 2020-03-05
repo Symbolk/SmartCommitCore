@@ -159,7 +159,7 @@ public class CommitInfoHandler {
                 String des = id.label.toLowerCase();
                 int len = des.length();
                 for (int j = 0; j < len; j++) {
-                    if(commitMsg.charAt(i+j) != des.charAt(j))
+                    if(i+j < len && commitMsg.charAt(i+j) != des.charAt(j))
                         break;
                     if(j+1 == len){
                         IntentDescriptions.add(id);
