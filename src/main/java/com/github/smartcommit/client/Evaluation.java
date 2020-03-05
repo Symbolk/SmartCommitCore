@@ -105,7 +105,7 @@ public class Evaluation {
       MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
       MongoClient mongoClient = new MongoClient(connectionString);
       MongoDatabase db = mongoClient.getDatabase("smartcommit");
-      MongoCollection<Document> col = db.getCollection(repoName);
+      MongoCollection<Document> col = db.getCollection("commits");
       // !!! drop the last testing results
       col.drop();
 
