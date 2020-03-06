@@ -46,7 +46,7 @@ public class CommitMsgGenerator {
       if(indexOperation == AstOperationSum + RefOperationSum + 1)
         continue;
       // when DiffHunk Graph building fails, get "code" and contribute nothing to vector
-      else if(action.getTypeFrom().equals("code"))
+      else if(action.getTypeFrom().equals("Code"))
         continue;
       else {
         for(AstActionType astActionType: AstActionType.values()){
