@@ -348,12 +348,14 @@ public class GitServiceCGit implements GitService {
             isLastLineNeutral = true;
             continue;
           } else {
-            if (trailing) {
-              result.get(3).add(line.getContent());
-            } else {
-              result.get(0).add(line.getContent());
+            if (!line.getContent().trim().equals("\\ No newline at end of file")) {
+              if (trailing) {
+                result.get(3).add(line.getContent());
+              } else {
+                result.get(0).add(line.getContent());
+              }
+              isLastLineNeutral = true;
             }
-            isLastLineNeutral = true;
           }
           break;
         case FROM:
@@ -384,7 +386,7 @@ public class GitServiceCGit implements GitService {
     // git diff <start_commit> <end_commit>
     // on Windows the ~ character must be used instead of ^
     String diffOutput =
-        Utils.runSystemCommand(repoPath, "git", "diff", "-U0", commitID + "~", commitID);
+        Utils.runSystemCommand(repoPath, "git", "diff", "-U0", "-w", commitID + "~", commitID);
     DiffParser parser = new UnifiedDiffParser();
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
     return generateDiffHunks(diffs, diffFiles);
