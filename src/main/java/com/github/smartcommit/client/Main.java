@@ -1,9 +1,9 @@
 package com.github.smartcommit.client;
 
 import com.github.smartcommit.model.Group;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Level;
+import org.apache.log4j.PropertyConfigurator;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,9 +12,21 @@ import java.util.Map;
 public class Main {
   public static void main(String[] args) {
     // use basic configuration when packaging
-    BasicConfigurator.configure();
-    org.apache.log4j.Logger.getRootLogger().setLevel(Level.INFO);
-    //      PropertyConfigurator.configure("log4j.properties");
+    //    BasicConfigurator.configure();
+    //    org.apache.log4j.Logger.getRootLogger().setLevel(Level.INFO);
+    //    System.setProperty("logs.dir", Config.TEMP_DIR);
+    System.setProperty(
+        "logs.dir",
+        System.getProperty("user.home")
+            + File.separator
+            + ".mergebot"
+            + File.separator
+            + "repos"
+            + File.separator
+            + Config.REPO_NAME
+            + "_mergebot");
+    PropertyConfigurator.configure("log4j.properties");
+
     try {
       SmartCommit smartCommit =
           new SmartCommit(Config.REPO_ID, Config.REPO_NAME, Config.REPO_PATH, Config.TEMP_DIR);
