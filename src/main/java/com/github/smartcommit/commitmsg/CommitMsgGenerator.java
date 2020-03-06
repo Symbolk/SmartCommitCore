@@ -61,7 +61,8 @@ public class CommitMsgGenerator {
     }
 
     for(Action action : refactorActions){
-      indexOperation = action.getOperationIndex();
+      // Operation contains both ast and ref, while the index of Ref need to start from 0
+      indexOperation = action.getOperationIndex() - AstOperationSum;
       if (indexOperation == AstOperationSum + RefOperationSum + 1)
         continue;
       else {
