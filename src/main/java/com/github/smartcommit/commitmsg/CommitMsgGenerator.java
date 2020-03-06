@@ -216,13 +216,25 @@ public class CommitMsgGenerator {
   // extendCommitMsg by adding action type+label, from+to
   private String extendCommitMsg(String key, Action action) {
     String tempString = null;
-    if (key.equals("ShortCircuit")) {
-      tempString += " " + action.getTypeFrom() + " " + action.getLabelFrom();
-      if (!action.getLabelTo().isEmpty())
-        tempString += " to " + action.getTypeTo() + " " + action.getLabelTo();
+    // for MsgClass "Add", from-to should change into add(To)in(From)
+    if(action.getOperation().label.equals("Add")) {
+      if (key.equals("ShortCircuit")) {
+        tempString += " " + action.getTypeTo() + " " + action.getLabelTo();
+        if (!action.getLabelTo().isEmpty())
+          tempString += " in " + action.getTypeFrom() + " " + action.getLabelFrom();
+      } else {
+        tempString += " " + action.getTypeTo();
+        if (!action.getLabelTo().isEmpty()) tempString += " in " + action.getTypeFrom();
+      }
     } else {
+      if (key.equals("ShortCircuit")) {
+        tempString += " " + action.getTypeFrom() + " " + action.getLabelFrom();
+        if (!action.getLabelTo().isEmpty())
+          tempString += " to " + action.getTypeTo() + " " + action.getLabelTo();
+      } else {
         tempString += " " + action.getTypeFrom();
         if (!action.getLabelTo().isEmpty()) tempString += " to " + action.getTypeTo();
+      }
     }
     return tempString;
   }
