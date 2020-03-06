@@ -194,9 +194,9 @@ public class CommitMsgGenerator {
       }
     }
     List<Integer> max3Indexes = new ArrayList<>(3);
-    max3Indexes.add(max1);
-    max3Indexes.add(max2);
-    max3Indexes.add(max3);
+    max3Indexes.add(max1Index);
+    max3Indexes.add(max2Index);
+    max3Indexes.add(max3Index);
     return max3Indexes;
   }
 
