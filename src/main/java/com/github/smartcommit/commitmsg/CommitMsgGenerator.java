@@ -1,23 +1,17 @@
 package com.github.smartcommit.commitmsg;
 
-import com.github.smartcommit.intent.model.ASTOperation;
-import com.github.smartcommit.intent.model.Intent;
 import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.GroupLabel;
+import org.apache.commons.io.FileUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
-import java.util.regex.Pattern;
-
-import com.github.smartcommit.model.constant.Operation;
-import org.apache.commons.io.FileUtils;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONArray;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class CommitMsgGenerator {
   private List<Action> astActions;
@@ -117,25 +111,22 @@ public class CommitMsgGenerator {
       boolean theFirst = true;
       for(int i = 0; i < 4 && Indexes.get(i) != -1; i++) {
         action = actions.get(Indexes.get(i));
-        if(!theFirst) commitMsg += ", and ";
-        commitMsg = extendCommitMsg(commitMsg, action);
+        if(!theFirst) commitMsg += ", and";
+        commitMsg += extendCommitMsg("ShortCircuit", action);
         theFirst = false;
       }
     } else {
+      // one action takes two object, but we get top3 indexes currently
       Indexes = getMax3IndexTypeFrom(actions, key);
       Action action0 = actions.get(Indexes.get(0));
       commitMsg = key;
-      commitMsg = extendCommitMsg(commitMsg, action0);
+      commitMsg += extendCommitMsg("", action0);
       if(Indexes.get(1) != Indexes.get(0)) {
         Action action1 = actions.get(Indexes.get(1));
-        commitMsg += ", and ";
-        commitMsg = extendCommitMsg(commitMsg, action1);
-      }
-      // Change takes top2, while the others takes top3
-      if(Indexes.get(2) != Indexes.get(1) && !key.equals("Change")) {
-        Action action2 = actions.get(Indexes.get(2));
-        commitMsg += ", and ";
-        commitMsg = extendCommitMsg(commitMsg, action2);
+        if(!action1.getTypeFrom().equals(action0.getTypeFrom())) {
+          commitMsg += ", and";
+          commitMsg += extendCommitMsg("", action1);
+        }
       }
     }
 
@@ -223,10 +214,16 @@ public class CommitMsgGenerator {
   }
 
   // extendCommitMsg by adding action type+label, from+to
-  private String extendCommitMsg(String commitMsg, Action action) {
-    commitMsg += " "+ action.getTypeFrom() +" "+ action.getLabelFrom();
-    if(!action.getLabelTo().isEmpty())
-      commitMsg += " to "+ action.getTypeTo() +" "+ action.getLabelTo();
-    return commitMsg;
+  private String extendCommitMsg(String key, Action action) {
+    String tempString = null;
+    if (key.equals("ShortCircuit")) {
+      tempString += " " + action.getTypeFrom() + " " + action.getLabelFrom();
+      if (!action.getLabelTo().isEmpty())
+        tempString += " to " + action.getTypeTo() + " " + action.getLabelTo();
+    } else {
+        tempString += " " + action.getTypeFrom();
+        if (!action.getLabelTo().isEmpty()) tempString += " to " + action.getTypeTo();
+    }
+    return tempString;
   }
 }
