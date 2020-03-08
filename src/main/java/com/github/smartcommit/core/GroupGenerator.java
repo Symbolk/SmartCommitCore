@@ -24,9 +24,9 @@ import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.graph.builder.GraphTypeBuilder;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringMinerTimedOutException;
-import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -113,7 +113,8 @@ public class GroupGenerator {
   /**
    * Soft links:
    * <li>1. reformat-only diff hunks
-   * <li>2. systematic edits and similar edits
+   * <li>2. systematic edits and similar edits (TODO: to optimize)
+   * <li>3. cross-version: moving</>
    */
   public void analyzeSoftLinks() {
     Set<DiffHunk> formatOnlyDiffHunks = new TreeSet<>(ascendingByIndexComparator());
@@ -408,16 +409,8 @@ public class GroupGenerator {
       File rootFolder1 = new File(baseDir);
       File rootFolder2 = new File(currentDir);
 
-      List<String> filePaths1 = Utils.listAllJavaFilePaths(rootFolder1.getAbsolutePath());
-      List<String> filePaths2 = Utils.listAllJavaFilePaths(rootFolder2.getAbsolutePath());
-      GitHistoryRefactoringMinerImpl miner = new GitHistoryRefactoringMinerImpl();
-
-      UMLModel model1 =
-          new UMLModelASTReader(rootFolder1, filePaths1, miner.repositoryDirectories(rootFolder1))
-              .getUmlModel();
-      UMLModel model2 =
-          new UMLModelASTReader(rootFolder2, filePaths2, miner.repositoryDirectories(rootFolder2))
-              .getUmlModel();
+      UMLModel model1 = new UMLModelASTReader(rootFolder1).getUmlModel();
+      UMLModel model2 = new UMLModelASTReader(rootFolder2).getUmlModel();
       UMLModelDiff modelDiff = model1.diff(model2);
 
       List<Refactoring> refactorings = modelDiff.getRefactorings();
@@ -448,7 +441,7 @@ public class GroupGenerator {
         refDiffHunks.forEach(diffHunk -> diffHunkIDs.add(diffHunk.getUUID()));
         createGroup(diffHunkIDs, GroupLabel.REFACTOR);
       }
-    } catch (RefactoringMinerTimedOutException e) {
+    } catch (RefactoringMinerTimedOutException | IOException e) {
       e.printStackTrace();
     }
   }
