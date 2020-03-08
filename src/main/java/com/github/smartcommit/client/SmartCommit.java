@@ -4,7 +4,6 @@ import com.github.smartcommit.commitmsg.CommitMsgGenerator;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
-import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
@@ -18,6 +17,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.PropertyConfigurator;
 import org.jgrapht.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,14 +69,24 @@ public class SmartCommit {
   }
 
   /**
+   * Clear the temp dir and create the logs dir
+   *
+   * @param dir
+   */
+  private void prepareTempDir(String dir) {
+    Utils.clearDir(dir);
+    System.setProperty("logs.dir", dir);
+    PropertyConfigurator.configure("log4j.properties");
+  }
+
+  /**
    * Analyze the current working directory
    *
    * @return
    * @throws Exception
    */
   public Map<String, Group> analyzeWorkingTree() throws Exception {
-    Utils.clearDir(tempDir);
-
+    prepareTempDir(tempDir);
     // 1. analyze the repo
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
     List<DiffFile> diffFiles = repoAnalyzer.analyzeWorkingTree();
@@ -127,7 +137,7 @@ public class SmartCommit {
    */
   public Map<String, Group> analyzeCommit(String commitID) throws Exception {
     String resultsDir = tempDir + File.separator + commitID;
-    Utils.clearDir(resultsDir);
+    prepareTempDir(resultsDir);
 
     // 1. analyze the repo
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
