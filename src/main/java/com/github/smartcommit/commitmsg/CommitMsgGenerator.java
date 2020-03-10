@@ -155,7 +155,13 @@ public class CommitMsgGenerator {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
     for(int i = 0; i < sizeActions; i ++){
-      if(Actions.get(i).getOperation().label.equals(key)) continue;
+      String operation = Actions.get(i).getOperation().label;
+      if(!(operation.equals(key) ||
+        (key.equals("Refactor") &&
+        (operation.equals("Convert") || operation.equals("Extract") || operation.equals("Introduce") ||
+        operation.equals("Merge") || operation.equals("Parameterize") || operation.equals("Pull up") ||
+        operation.equals("Pull down") || operation.equals("Split")))))
+        continue;
       String typeFrom = Actions.get(i).getTypeFrom();
       int j;
       for(j = 0; j < i; j ++){
