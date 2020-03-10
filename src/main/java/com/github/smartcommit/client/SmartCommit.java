@@ -4,6 +4,7 @@ import com.github.smartcommit.commitmsg.CommitMsgGenerator;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
+import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
@@ -29,10 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /** API entry */
 public class SmartCommit {
@@ -173,7 +171,7 @@ public class SmartCommit {
    */
   private Map<String, Group> analyze(
       List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs)
-      throws ExecutionException, InterruptedException {
+          throws ExecutionException, InterruptedException, TimeoutException {
 
     // build the change semantic graph
     ExecutorService executorService = Executors.newFixedThreadPool(2);
@@ -181,8 +179,8 @@ public class SmartCommit {
         executorService.submit(new GraphBuilder(srcDirs.getLeft(), diffFiles));
     Future<Graph<Node, Edge>> currentBuilder =
         executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
-    Graph<Node, Edge> baseGraph = baseBuilder.get();
-    Graph<Node, Edge> currentGraph = currentBuilder.get();
+    Graph<Node, Edge> baseGraph = baseBuilder.get(60*10, TimeUnit.SECONDS);
+    Graph<Node, Edge> currentGraph = currentBuilder.get(60*10,TimeUnit.SECONDS);
     //    String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
     //    String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
     executorService.shutdown();
