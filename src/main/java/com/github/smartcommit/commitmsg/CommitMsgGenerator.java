@@ -3,6 +3,7 @@ package com.github.smartcommit.commitmsg;
 import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.GroupLabel;
+import com.github.smartcommit.model.constant.Operation;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.LoggerFactory;
@@ -158,45 +159,75 @@ public class CommitMsgGenerator {
     // Count Frequency of typeFrom in Actions whose q equals key currently
     String key = msgClass.label;
     List<Action> actions = new ArrayList<>();
+    String op = null;
     for(Action action : astActions)
       if(action.getOperation().label.equals(key)) actions.add(action);
-    for(Action action : refactorActions)
-      if(action.getOperation().label.equals(key)) actions.add(action);
+    for(Action action : refactorActions) {
+      op = action.getOperation().label;
+      if(action.getOperation().label.equals(key) ||
+              (key.equals("Refactor") &&
+                      (op.equals("Convert") || op.equals("Extract") || op.equals("Introduce") ||
+                              op.equals("Merge") || op.equals("Parameterize") || op.equals("Pull up") ||
+                              op.equals("Pull down") || op.equals("Split"))))
+      actions.add(action);
+    }
 
     // no actions matched
     if(actions.isEmpty()) {
       commitMsg = key;
-    } else {
+    }
+    else {
       // extend commitMsg
-      String tempExtend;
-      // make short circuit: package, class, method，interface
-      List<Integer> Indexes = get4IndexOfTypeFrom(actions, key);
+      String tempExtend = null;
+      // Special Cases: package, class, method，interface
+      List<Integer> Indexes = get4IndexOfTypeFrom(actions);
       if(!Indexes.isEmpty()) {
         // 1 operation + 4 cases(type + label)
-        commitMsg = key;
-        Action action = null;
-        boolean theFirst = true;
-        for(int i = 0; i < 4 && Indexes.get(i) != -1; i++) {
-          action = actions.get(Indexes.get(i));
-          if(!theFirst) commitMsg += ", and";
-          tempExtend = extendCommitMsg("Special4Cases", action);
-          if(!tempExtend.isEmpty()) commitMsg += tempExtend;
-          theFirst = false;
-        }
-      } else {
-        // 1 operation + 2 types(no label)
-        Indexes = getMax3IndexTypeFrom(actions, key);
-        Action action0 = actions.get(Indexes.get(0));
-        commitMsg = key;
-        tempExtend = extendCommitMsg("", action0);
-        if(!tempExtend.isEmpty()) commitMsg += tempExtend;
-        if(Indexes.get(1) != Indexes.get(0)) {
+        // Two object
+        if(Indexes.size() == 2) {
+          Action action0 = actions.get(Indexes.get(0));
           Action action1 = actions.get(Indexes.get(1));
-          if(!action1.getTypeFrom().equals(action0.getTypeFrom())) {
-            commitMsg += ", and";
-            tempExtend = extendCommitMsg("", action1);
-            if(!tempExtend.isEmpty()) commitMsg += tempExtend;
+          // suppose both LabelFrom is not null
+          if(action0.getTypeFrom().equals(action1.getTypeFrom())) {
+            if(action0.getOperation().equals(action1.getOperation())) {
+              if(action0.getOperation().equals(Operation.ADD)) {
+                commitMsg = "Add "+action0.getTypeFrom()+" "+
+                        action0.getLabelFrom()+" and "+action0.getLabelFrom();
+              } } else {
+              commitMsg = "Modify "+action0.getTypeFrom()+" "+
+                      action0.getLabelFrom()+" and "+action0.getLabelFrom();
+            } } else {
+            if(action0.getOperation().equals(Operation.ADD) && action1.getOperation().equals(Operation.ADD)) {
+              commitMsg = "Add "+action0.getTypeFrom()+" "+action0.getLabelFrom()+
+                      " and "+action0.getTypeFrom()+" "+action0.getLabelFrom();
+            } else {
+              commitMsg = "Modify "+action0.getTypeFrom()+" "+action0.getLabelFrom()+
+                      " and "+action0.getTypeFrom()+" "+action0.getLabelFrom();
+            } }
+        }
+        // One object
+        else {
+          Action action0 = actions.get(Indexes.get(0));
+          if(action0.getOperation().equals(Operation.ADD)) {
+            commitMsg = "Add "+action0.getTypeFrom()+" "+action0.getLabelFrom();
+          } else {
+            commitMsg = "Modify"+action0.getTypeFrom()+" "+action0.getLabelFrom();
           }
+        }
+        }
+      else {
+        // 1 operation + 2 types(no label)
+        Indexes = getMax2IndexTypeFrom(actions);
+        Action action0 = actions.get(Indexes.get(0));
+        Action action1 = actions.get(Indexes.get(1));
+        commitMsg = key + " ";
+        // suppose both LabelFrom is not null
+        if(action0.getTypeFrom().equals(action1.getTypeFrom())) {
+          commitMsg += action0.getTypeFrom()+" "+action0.getLabelFrom()+" and "+action1.getLabelFrom();
+        }
+        else {
+          commitMsg += action0.getTypeFrom()+" "+action0.getLabelFrom()+" and "+
+                  action0.getTypeFrom()+" "+action0.getLabelFrom();
         }
       }
     }
@@ -208,7 +239,11 @@ public class CommitMsgGenerator {
     // generate and return recommendedCommitMsgs
     List<String> recommendedCommitMsgs = new ArrayList<>();
     String iLabel = "";
-    if(intentLabel.label.equals("Others")) iLabel = key.toUpperCase();
+    if(intentLabel.label.equals("Others")) {
+      if(key.equals("Fix") || key.equals("Refactor"))
+        iLabel = key.toUpperCase();
+      else iLabel = "FUNCTIONCHANGE";
+    }
     else iLabel = intentLabel.toString();
     recommendedCommitMsgs.add(iLabel+" : " + commitMsg);
     for(int i = 0; i < jsonArray.length(); i ++)
@@ -216,18 +251,11 @@ public class CommitMsgGenerator {
     return recommendedCommitMsgs;
   }
 
-  // get max3Count of Frequency in Actions whose Operation equals key
-  private List<Integer> getMax3IndexTypeFrom(List<Action> Actions, String key) {
+  // get max2Count of Frequency in Actions
+  private List<Integer> getMax2IndexTypeFrom(List<Action> Actions) {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
     for(int i = 0; i < sizeActions; i ++){
-      String operation = Actions.get(i).getOperation().label;
-      if(!(operation.equals(key) ||
-        (key.equals("Refactor") &&
-        (operation.equals("Convert") || operation.equals("Extract") || operation.equals("Introduce") ||
-        operation.equals("Merge") || operation.equals("Parameterize") || operation.equals("Pull up") ||
-        operation.equals("Pull down") || operation.equals("Split")))))
-        continue;
       String typeFrom = Actions.get(i).getTypeFrom();
       int j;
       for(j = 0; j < i; j ++){
@@ -239,72 +267,63 @@ public class CommitMsgGenerator {
       if(j == i) count[j] = 1;
     }
     // lazy to sort, simply cycle once
-    int max1 = 0, max2 = 0, max3 = 0;
-    int max1Index = 0, max2Index = 0, max3Index = 0;
+    int max1 = 0, max2 = 0;
+    int max1Index = 0, max2Index = 0;
     for(int i = 0; i < sizeActions; i ++){
       if(count[i] > max1) {
-        max3 = max2; max2 = max1;
+        max2 = max1;
         max1 = count[i];
-        max3Index = max2Index; max2Index = max1Index;
+        max2Index = max1Index;
         max1Index = i;
       } else if (count[i] > max2) {
-        max3 = max2;
         max2 = count[i];
-        max3Index = max2Index;
         max2Index = i;
-      } else if(count[i] > max3) {
-        max3 = count[i];
-        max3Index = i;
       }
     }
-    List<Integer> max3Indexes = new ArrayList<>(3);
-    max3Indexes.add(max1Index);
-    max3Indexes.add(max2Index);
-    max3Indexes.add(max3Index);
-    return max3Indexes;
+    List<Integer> max2Indexes = new ArrayList<>(3);
+    max2Indexes.add(max1Index);
+    max2Indexes.add(max2Index);
+    return max2Indexes;
   }
 
-  // get max4Count of Frequency in Actions: package, class, method，interface
-  private List<Integer> get4IndexOfTypeFrom(List<Action> Actions, String key) {
+  // get 4Indexes(appear for the first time) in Actions: package, class, method，interface
+  private List<Integer> get4IndexOfTypeFrom(List<Action> Actions) {
     int sizeActions = Actions.size();
-    int index1 = -1, index2 = -1, index3 = -1, index4 = -1;
+    List<Integer> Indexes = new ArrayList<>();
+    int sizeIndexes = 0;
+
     for(int i = 0; i < sizeActions; i ++){
-      if(!Actions.get(i).getOperation().label.equals(key)) continue;
       String typeFrom = Actions.get(i).getTypeFrom();
-      if(typeFrom.equals("Package")) index1 = i;
-      if(typeFrom.equals("Class")) index2 = i;
-      if(typeFrom.equals("Method")) index3 = i;
-      if(typeFrom.equals("Interface")) index4 = i;
+      if(typeFrom.equals("PackageDeclaration")) {
+        Indexes.add(i);
+        sizeIndexes ++;
+        if(sizeActions == 2) return Indexes;
+      }
+      else if(typeFrom.equals("ClassInstanceCreation") || typeFrom.equals("AnonymousClassDeclaration")
+              || typeFrom.equals("Class") || typeFrom.equals("Subclass") || typeFrom.equals("Superclass")) {
+        Indexes.add(i);
+        sizeIndexes ++;
+        if(sizeActions == 2) return Indexes;
+      }
+      else if(typeFrom.equals("Interface")) {
+        Indexes.add(i);
+        sizeIndexes ++;
+        if(sizeActions == 2) return Indexes;
+      }
+      else if(typeFrom.equals("MethodDeclaration") || typeFrom.equals("MethodInvocation")
+        || typeFrom.equals("SuperMethodInvocation") || typeFrom.equals("MethodRef")
+      || typeFrom.equals("MethodRefParameter") || typeFrom.equals("ExpressionMethodReference")
+      || typeFrom.equals("SuperMethodReference") || typeFrom.equals("TypeMethodReference")){
+        Indexes.add(i);
+        sizeIndexes ++;
+        if(sizeActions == 2) return Indexes;
+      }
     }
-    List<Integer> indexes = new ArrayList<>();
-    if(index1+index2+index3+index4 > -4) {
-      indexes.add(index1);
-      indexes.add(index2);
-      indexes.add(index3);
-      indexes.add(index4);
-    }
-    return indexes;
+    return Indexes;
   }
 
-  // extendCommitMsg by adding action type+label, from+to
-  private String extendCommitMsg(String key, Action action) {
-    String tempString = "";
-    // Only TypeFrom is a must
-    if (key.equals("Special4Cases")) {
-      tempString += " " + action.getTypeFrom();
-      if (!action.getLabelTo().isEmpty()) tempString += " " + action.getLabelFrom();
-      if (!action.getTypeTo().isEmpty() && !action.getLabelTo().isEmpty())
-        tempString += " to " + action.getTypeTo() + " " + action.getLabelTo();
-    } else {
-      tempString += " " + action.getTypeFrom();
-      if (!action.getLabelTo().isEmpty())
-        tempString += " to " + action.getTypeTo();
-    }
-    return tempString;
-  }
-
+  // read json to get template
   public String getTemplate() {
-    // read json to get template
     String pathName = getClass().getClassLoader().getResource("MsgTemplate.json").getPath();
     System.out.println("testPath: " +pathName);
     BufferedReader in =
