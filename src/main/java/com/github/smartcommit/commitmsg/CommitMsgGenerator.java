@@ -3,17 +3,19 @@ package com.github.smartcommit.commitmsg;
 import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.GroupLabel;
-import org.apache.commons.io.FileUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.LoggerFactory;
 
-import java.io.File;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class CommitMsgGenerator {
+  private static final org.slf4j.Logger Logger = LoggerFactory.getLogger(CommitMsgGenerator.class);
   private List<Action> astActions;
   private List<Action> refactorActions;
   private String commitMsg;
@@ -151,7 +153,7 @@ public class CommitMsgGenerator {
    *
    * @return
    */
-  public  List<String> generateDetailedMsgs(MsgClass msgClass, GroupLabel intentLabel) {
+  public List<String> generateDetailedMsgs(MsgClass msgClass, GroupLabel intentLabel) {
 
     // Count Frequency of typeFrom in Actions whose q equals key currently
     String key = msgClass.label;
@@ -200,14 +202,7 @@ public class CommitMsgGenerator {
     }
 
     // read json to get templates
-    File file=new File("./src/MsgTemplate.json");
-    String content= null;
-    try {
-      content = FileUtils.readFileToString(file,"UTF-8");
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    JSONObject jsonObject=new JSONObject(content);
+    JSONObject jsonObject=new JSONObject(getTemplate());
     JSONArray jsonArray = jsonObject.getJSONArray(key);
 
     // generate and return recommendedCommitMsgs
@@ -222,7 +217,7 @@ public class CommitMsgGenerator {
   }
 
   // get max3Count of Frequency in Actions whose Operation equals key
-  private static List<Integer> getMax3IndexTypeFrom(List<Action> Actions, String key) {
+  private List<Integer> getMax3IndexTypeFrom(List<Action> Actions, String key) {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
     for(int i = 0; i < sizeActions; i ++){
@@ -270,7 +265,7 @@ public class CommitMsgGenerator {
   }
 
   // get max4Count of Frequency in Actions: package, class, method，interface
-  private static List<Integer> get4IndexOfTypeFrom(List<Action> Actions, String key) {
+  private List<Integer> get4IndexOfTypeFrom(List<Action> Actions, String key) {
     int sizeActions = Actions.size();
     int index1 = -1, index2 = -1, index3 = -1, index4 = -1;
     for(int i = 0; i < sizeActions; i ++){
@@ -292,7 +287,7 @@ public class CommitMsgGenerator {
   }
 
   // extendCommitMsg by adding action type+label, from+to
-  private static String extendCommitMsg(String key, Action action) {
+  private String extendCommitMsg(String key, Action action) {
     String tempString = "";
     // Only TypeFrom is a must
     if (key.equals("Special4Cases")) {
@@ -306,5 +301,28 @@ public class CommitMsgGenerator {
         tempString += " to " + action.getTypeTo();
     }
     return tempString;
+  }
+
+  public String getTemplate() {
+    // read json to get template
+    String pathName = getClass().getClassLoader().getResource("MsgTemplate.json").getPath();
+    System.out.println("testPath: " +pathName);
+    BufferedReader in =
+            new BufferedReader(
+                    new InputStreamReader(
+                            this.getClass().getClassLoader().getResourceAsStream("MsgTemplate.json")));
+    StringBuffer buffer = new StringBuffer();
+    String line = "";
+    String content = null;
+    try {
+      while ((line = in.readLine()) != null) {
+        buffer.append(line);
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    content = buffer.toString();
+    Logger.info("Get template from template json file");
+    return content;
   }
 }
