@@ -42,40 +42,51 @@ public class CommitMsgGenerator {
     int vectorSize = AstSum + RefSum;
 
     List<Integer> vectors = new ArrayList<>(Collections.nCopies(vectorSize, 0));
-    int indexOperation = 0, indexType = 0, indexFinal = 0;
-
-    for (Action action : astActions) {
-      indexOperation = action.getOperationIndex();
-      if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
-      // when DiffHunk Graph building fails, get "code" and contribute nothing to vector
-      else if (action.getTypeFrom().equals("Code")) continue;
-      else {
-        for (AstActionType astActionType : AstActionType.values()) {
-          if (action.getTypeFrom().equals(astActionType.label)) {
-            indexType = astActionType.index;
-            break;
+    int indexOperation, indexType, indexFinal;
+    try {
+      for (Action action : astActions) {
+        indexType = 0;
+        indexOperation = action.getOperationIndex();
+        if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
+        // when DiffHunk Graph building fails, get "code" and contribute nothing to vector
+        else if (action.getTypeFrom().equals("Code")) continue;
+        else {
+          for (AstActionType astActionType : AstActionType.values()) {
+            if (action.getTypeFrom().equals(astActionType.label)) {
+              indexType = astActionType.index;
+              break;
+            }
           }
         }
-        indexFinal = (indexOperation - 1) * AstTypeSum + indexType - 1;
+        if (indexType != 0) {
+          indexFinal = (indexOperation - 1) * AstTypeSum + indexType - 1;
+          vectors.set(indexFinal, vectors.get(indexFinal) + 1);
+        }
       }
-      vectors.set(indexFinal, vectors.get(indexFinal) + 1);
-    }
 
-    for (Action action : refactorActions) {
-      // Operation contains both ast and ref, while the index of Ref need to start from 0
-      indexOperation = action.getOperationIndex() - AstOperationSum;
-      if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
-      else {
-        for (RefActionType refActionType : RefActionType.values()) {
-          if (action.getTypeFrom().equals(refActionType.label)) {
-            indexType = refActionType.index;
-            break;
+      for (Action action : refactorActions) {
+        indexType = 0;
+        // Operation contains both ast and ref, while the index of Ref need to start from 0
+        indexOperation = action.getOperationIndex() - AstOperationSum;
+        if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
+        else {
+          for (RefActionType refActionType : RefActionType.values()) {
+            if (action.getTypeFrom().equals(refActionType.label)) {
+              indexType = refActionType.index;
+              break;
+            }
           }
         }
-        indexFinal = AstSum + (indexOperation - 1) * RefTypeSum + indexType - 1;
+        if (indexType != 0) {
+          indexFinal = AstSum + (indexOperation - 1) * RefTypeSum + indexType - 1;
+          vectors.set(indexFinal, vectors.get(indexFinal) + 1);
+        }
       }
-      vectors.set(indexFinal, vectors.get(indexFinal) + 1);
+    } catch (Exception e) {
+      e.printStackTrace();
+      Logger.info("fail to generate Group Vector");
     }
+
     return vectors;
   }
 
