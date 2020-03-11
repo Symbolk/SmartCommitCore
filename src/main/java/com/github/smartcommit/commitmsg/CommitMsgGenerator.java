@@ -20,6 +20,7 @@ public class CommitMsgGenerator {
   private List<Action> astActions;
   private List<Action> refactorActions;
   private String commitMsg;
+
   public CommitMsgGenerator(List<Action> astActions, List<Action> refactorActions) {
     this.astActions = astActions;
     this.refactorActions = refactorActions;
@@ -36,37 +37,34 @@ public class CommitMsgGenerator {
     int RefOperationSum = 13;
     int AstTypeSum = 99;
     int RefTypeSum = 18;
-    int AstSum = AstOperationSum*AstTypeSum;
-    int RefSum = RefOperationSum*RefTypeSum;
+    int AstSum = AstOperationSum * AstTypeSum;
+    int RefSum = RefOperationSum * RefTypeSum;
     int vectorSize = AstSum + RefSum;
 
-    List<Integer> vectors = new ArrayList<>(Collections.nCopies(vectorSize,0));
+    List<Integer> vectors = new ArrayList<>(Collections.nCopies(vectorSize, 0));
     int indexOperation = 0, indexType = 0, indexFinal = 0;
 
-    for(Action action : astActions){
+    for (Action action : astActions) {
       indexOperation = action.getOperationIndex();
-      if(indexOperation == AstOperationSum + RefOperationSum + 1)
-        continue;
+      if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
       // when DiffHunk Graph building fails, get "code" and contribute nothing to vector
-      else if(action.getTypeFrom().equals("Code"))
-        continue;
+      else if (action.getTypeFrom().equals("Code")) continue;
       else {
-        for(AstActionType astActionType: AstActionType.values()){
-          if(action.getTypeFrom().equals(astActionType.label)){
+        for (AstActionType astActionType : AstActionType.values()) {
+          if (action.getTypeFrom().equals(astActionType.label)) {
             indexType = astActionType.index;
             break;
           }
         }
-        indexFinal = (indexOperation-1)*AstTypeSum + indexType-1;
+        indexFinal = (indexOperation - 1) * AstTypeSum + indexType - 1;
       }
-      vectors.set(indexFinal, vectors.get(indexFinal)+1);
+      vectors.set(indexFinal, vectors.get(indexFinal) + 1);
     }
 
-    for(Action action : refactorActions){
+    for (Action action : refactorActions) {
       // Operation contains both ast and ref, while the index of Ref need to start from 0
       indexOperation = action.getOperationIndex() - AstOperationSum;
-      if (indexOperation == AstOperationSum + RefOperationSum + 1)
-        continue;
+      if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
       else {
         for (RefActionType refActionType : RefActionType.values()) {
           if (action.getTypeFrom().equals(refActionType.label)) {
@@ -76,7 +74,7 @@ public class CommitMsgGenerator {
         }
         indexFinal = AstSum + (indexOperation - 1) * RefTypeSum + indexType - 1;
       }
-      vectors.set(indexFinal, vectors.get(indexFinal)+1);
+      vectors.set(indexFinal, vectors.get(indexFinal) + 1);
     }
     return vectors;
   }
@@ -86,44 +84,41 @@ public class CommitMsgGenerator {
     // Type: 99(astAction) 18(refAction)
     int AstOperationSum = 4;
     int AstTypeSum = 99;
-    int AstSum = AstOperationSum*AstTypeSum;
+    int AstSum = AstOperationSum * AstTypeSum;
 
     int RefOperationSum = 13;
     int RefTypeSum = 18;
-    int RefSum = RefOperationSum*RefTypeSum;
+    int RefSum = RefOperationSum * RefTypeSum;
 
-    if(refactorActions.isEmpty()) {
-      List<Integer> vectors = new ArrayList<>(Collections.nCopies(AstSum,0));
+    if (refactorActions.isEmpty()) {
+      List<Integer> vectors = new ArrayList<>(Collections.nCopies(AstSum, 0));
       int indexOperation = 0, indexType = 0, indexFinal = 0;
-      for(Action action : astActions){
+      for (Action action : astActions) {
         indexOperation = action.getOperationIndex();
         // Operation "Unknown" contributes nothing to vector
-        if(indexOperation == AstOperationSum + RefOperationSum + 1)
-          continue;
+        if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
         // When DiffHunk Graph building failed, TypeFrom "Code" contributes nothing to vector
-        if(action.getTypeFrom().equals("Code"))
-          continue;
+        if (action.getTypeFrom().equals("Code")) continue;
         else {
-          for(AstActionType astActionType: AstActionType.values()){
-            if(action.getTypeFrom().equals(astActionType.label)){
+          for (AstActionType astActionType : AstActionType.values()) {
+            if (action.getTypeFrom().equals(astActionType.label)) {
               indexType = astActionType.index;
               break;
             }
           }
-          indexFinal = (indexOperation-1)*AstTypeSum + indexType-1;
+          indexFinal = (indexOperation - 1) * AstTypeSum + indexType - 1;
         }
-        vectors.set(indexFinal, vectors.get(indexFinal)+1);
+        vectors.set(indexFinal, vectors.get(indexFinal) + 1);
       }
       return vectors;
     } else {
-      List<Integer> vectors = new ArrayList<>(Collections.nCopies(RefSum,0));
+      List<Integer> vectors = new ArrayList<>(Collections.nCopies(RefSum, 0));
       int indexOperation = 0, indexType = 0, indexFinal = 0;
-      for(Action action : refactorActions){
+      for (Action action : refactorActions) {
         // Operation contains both ast and ref, while the index of Ref need to start from 0
         indexOperation = action.getOperationIndex() - AstOperationSum;
         // Operation "Unknown" contributes nothing to vector
-        if (indexOperation == AstOperationSum + RefOperationSum + 1)
-          continue;
+        if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
         else {
           for (RefActionType refActionType : RefActionType.values()) {
             if (action.getTypeFrom().equals(refActionType.label)) {
@@ -131,9 +126,9 @@ public class CommitMsgGenerator {
               break;
             }
           }
-          indexFinal = (indexOperation - 1)*RefTypeSum + indexType-1;
+          indexFinal = (indexOperation - 1) * RefTypeSum + indexType - 1;
         }
-        vectors.set(indexFinal, vectors.get(indexFinal)+1);
+        vectors.set(indexFinal, vectors.get(indexFinal) + 1);
       }
       return vectors;
     }
@@ -160,93 +155,131 @@ public class CommitMsgGenerator {
     String key = msgClass.label;
     List<Action> actions = new ArrayList<>();
     String op = null;
-    for(Action action : astActions)
-      if(action.getOperation().label.equals(key)) actions.add(action);
-    for(Action action : refactorActions) {
+    for (Action action : astActions)
+      if (action.getOperation().label.equals(key)) actions.add(action);
+    for (Action action : refactorActions) {
       op = action.getOperation().label;
-      if(action.getOperation().label.equals(key) ||
-              (key.equals("Refactor") &&
-                      (op.equals("Convert") || op.equals("Extract") || op.equals("Introduce") ||
-                              op.equals("Merge") || op.equals("Parameterize") || op.equals("Pull up") ||
-                              op.equals("Pull down") || op.equals("Split"))))
-      actions.add(action);
+      if (action.getOperation().label.equals(key)
+          || (key.equals("Refactor")
+              && (op.equals("Convert")
+                  || op.equals("Extract")
+                  || op.equals("Introduce")
+                  || op.equals("Merge")
+                  || op.equals("Parameterize")
+                  || op.equals("Pull up")
+                  || op.equals("Pull down")
+                  || op.equals("Split")))) actions.add(action);
     }
 
     // no actions matched
-    if(actions.isEmpty()) {
+    if (actions.isEmpty()) {
       commitMsg = key;
-    }
-    else {
+    } else {
       // extend commitMsg
       String tempExtend = null;
       // Special Cases: package, class, method，interface
       List<Integer> Indexes = get4IndexOfTypeFrom(actions);
-      if(!Indexes.isEmpty()) {
+      if (!Indexes.isEmpty()) {
         // 1 operation + 4 cases(type + label)
         // Two object
-        if(Indexes.size() == 2) {
+        if (Indexes.size() == 2) {
           Action action0 = actions.get(Indexes.get(0));
           Action action1 = actions.get(Indexes.get(1));
           // suppose both LabelFrom is not null
-          if(action0.getTypeFrom().equals(action1.getTypeFrom())) {
-            if(action0.getOperation().equals(action1.getOperation())) {
-              if(action0.getOperation().equals(Operation.ADD)) {
-                commitMsg = "Add "+action0.getTypeFrom()+" "+
-                        action0.getLabelFrom()+" and "+action0.getLabelFrom();
-              } } else {
-              commitMsg = "Modify "+action0.getTypeFrom()+" "+
-                      action0.getLabelFrom()+" and "+action0.getLabelFrom();
-            } } else {
-            if(action0.getOperation().equals(Operation.ADD) && action1.getOperation().equals(Operation.ADD)) {
-              commitMsg = "Add "+action0.getTypeFrom()+" "+action0.getLabelFrom()+
-                      " and "+action0.getTypeFrom()+" "+action0.getLabelFrom();
+          if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
+            if (action0.getOperation().equals(action1.getOperation())) {
+              if (action0.getOperation().equals(Operation.ADD)) {
+                commitMsg =
+                    "Add "
+                        + action0.getTypeFrom()
+                        + " "
+                        + action0.getLabelFrom()
+                        + " and "
+                        + action0.getLabelFrom();
+              }
             } else {
-              commitMsg = "Modify "+action0.getTypeFrom()+" "+action0.getLabelFrom()+
-                      " and "+action0.getTypeFrom()+" "+action0.getLabelFrom();
-            } }
+              commitMsg =
+                  "Modify "
+                      + action0.getTypeFrom()
+                      + " "
+                      + action0.getLabelFrom()
+                      + " and "
+                      + action0.getLabelFrom();
+            }
+          } else {
+            if (action0.getOperation().equals(Operation.ADD)
+                && action1.getOperation().equals(Operation.ADD)) {
+              commitMsg =
+                  "Add "
+                      + action0.getTypeFrom()
+                      + " "
+                      + action0.getLabelFrom()
+                      + " and "
+                      + action0.getTypeFrom()
+                      + " "
+                      + action0.getLabelFrom();
+            } else {
+              commitMsg =
+                  "Modify "
+                      + action0.getTypeFrom()
+                      + " "
+                      + action0.getLabelFrom()
+                      + " and "
+                      + action0.getTypeFrom()
+                      + " "
+                      + action0.getLabelFrom();
+            }
+          }
         }
         // One object
         else {
           Action action0 = actions.get(Indexes.get(0));
-          if(action0.getOperation().equals(Operation.ADD)) {
-            commitMsg = "Add "+action0.getTypeFrom()+" "+action0.getLabelFrom();
+          if (action0.getOperation().equals(Operation.ADD)) {
+            commitMsg = "Add " + action0.getTypeFrom() + " " + action0.getLabelFrom();
           } else {
-            commitMsg = "Modify"+action0.getTypeFrom()+" "+action0.getLabelFrom();
+            commitMsg = "Modify" + action0.getTypeFrom() + " " + action0.getLabelFrom();
           }
         }
-        }
-      else {
+      } else {
         // 1 operation + 2 types(no label)
         Indexes = getMax2IndexTypeFrom(actions);
         Action action0 = actions.get(Indexes.get(0));
         Action action1 = actions.get(Indexes.get(1));
         commitMsg = key + " ";
         // suppose both LabelFrom is not null
-        if(action0.getTypeFrom().equals(action1.getTypeFrom())) {
-          commitMsg += action0.getTypeFrom()+" "+action0.getLabelFrom()+" and "+action1.getLabelFrom();
-        }
-        else {
-          commitMsg += action0.getTypeFrom()+" "+action0.getLabelFrom()+" and "+
-                  action0.getTypeFrom()+" "+action0.getLabelFrom();
+        if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
+          commitMsg +=
+              action0.getTypeFrom()
+                  + " "
+                  + action0.getLabelFrom()
+                  + " and "
+                  + action1.getLabelFrom();
+        } else {
+          commitMsg +=
+              action0.getTypeFrom()
+                  + " "
+                  + action0.getLabelFrom()
+                  + " and "
+                  + action0.getTypeFrom()
+                  + " "
+                  + action0.getLabelFrom();
         }
       }
     }
 
     // read json to get templates
-    JSONObject jsonObject=new JSONObject(getTemplate());
+    JSONObject jsonObject = new JSONObject(getTemplate());
     JSONArray jsonArray = jsonObject.getJSONArray(key);
 
     // generate and return recommendedCommitMsgs
     List<String> recommendedCommitMsgs = new ArrayList<>();
     String iLabel = "";
-    if(intentLabel.label.equals("Others")) {
-      if(key.equals("Fix") || key.equals("Refactor"))
-        iLabel = key.toUpperCase();
+    if (intentLabel.label.equals("Others")) {
+      if (key.equals("Fix") || key.equals("Refactor")) iLabel = key.toUpperCase();
       else iLabel = "FUNCTIONCHANGE";
-    }
-    else iLabel = intentLabel.toString();
-    recommendedCommitMsgs.add(iLabel+" : " + commitMsg);
-    for(int i = 0; i < jsonArray.length(); i ++)
+    } else iLabel = intentLabel.toString();
+    recommendedCommitMsgs.add(iLabel + " : " + commitMsg);
+    for (int i = 0; i < jsonArray.length(); i++)
       recommendedCommitMsgs.add(jsonArray.get(i).toString());
     return recommendedCommitMsgs;
   }
@@ -255,22 +288,22 @@ public class CommitMsgGenerator {
   private List<Integer> getMax2IndexTypeFrom(List<Action> Actions) {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
-    for(int i = 0; i < sizeActions; i ++){
+    for (int i = 0; i < sizeActions; i++) {
       String typeFrom = Actions.get(i).getTypeFrom();
       int j;
-      for(j = 0; j < i; j ++){
-        if(Actions.get(j).getTypeFrom().equals(typeFrom)) {
-          count[j] = count[j]+1;
+      for (j = 0; j < i; j++) {
+        if (Actions.get(j).getTypeFrom().equals(typeFrom)) {
+          count[j] = count[j] + 1;
           break;
         }
       }
-      if(j == i) count[j] = 1;
+      if (j == i) count[j] = 1;
     }
     // lazy to sort, simply cycle once
     int max1 = 0, max2 = 0;
     int max1Index = 0, max2Index = 0;
-    for(int i = 0; i < sizeActions; i ++){
-      if(count[i] > max1) {
+    for (int i = 0; i < sizeActions; i++) {
+      if (count[i] > max1) {
         max2 = max1;
         max1 = count[i];
         max2Index = max1Index;
@@ -292,31 +325,35 @@ public class CommitMsgGenerator {
     List<Integer> Indexes = new ArrayList<>();
     int sizeIndexes = 0;
 
-    for(int i = 0; i < sizeActions; i ++){
+    for (int i = 0; i < sizeActions; i++) {
       String typeFrom = Actions.get(i).getTypeFrom();
-      if(typeFrom.equals("PackageDeclaration")) {
+      if (typeFrom.equals("PackageDeclaration")) {
         Indexes.add(i);
-        sizeIndexes ++;
-        if(sizeActions == 2) return Indexes;
-      }
-      else if(typeFrom.equals("ClassInstanceCreation") || typeFrom.equals("AnonymousClassDeclaration")
-              || typeFrom.equals("Class") || typeFrom.equals("Subclass") || typeFrom.equals("Superclass")) {
+        sizeIndexes++;
+        if (sizeActions == 2) return Indexes;
+      } else if (typeFrom.equals("ClassInstanceCreation")
+          || typeFrom.equals("AnonymousClassDeclaration")
+          || typeFrom.equals("Class")
+          || typeFrom.equals("Subclass")
+          || typeFrom.equals("Superclass")) {
         Indexes.add(i);
-        sizeIndexes ++;
-        if(sizeActions == 2) return Indexes;
-      }
-      else if(typeFrom.equals("Interface")) {
+        sizeIndexes++;
+        if (sizeActions == 2) return Indexes;
+      } else if (typeFrom.equals("Interface")) {
         Indexes.add(i);
-        sizeIndexes ++;
-        if(sizeActions == 2) return Indexes;
-      }
-      else if(typeFrom.equals("MethodDeclaration") || typeFrom.equals("MethodInvocation")
-        || typeFrom.equals("SuperMethodInvocation") || typeFrom.equals("MethodRef")
-      || typeFrom.equals("MethodRefParameter") || typeFrom.equals("ExpressionMethodReference")
-      || typeFrom.equals("SuperMethodReference") || typeFrom.equals("TypeMethodReference")){
+        sizeIndexes++;
+        if (sizeActions == 2) return Indexes;
+      } else if (typeFrom.equals("MethodDeclaration")
+          || typeFrom.equals("MethodInvocation")
+          || typeFrom.equals("SuperMethodInvocation")
+          || typeFrom.equals("MethodRef")
+          || typeFrom.equals("MethodRefParameter")
+          || typeFrom.equals("ExpressionMethodReference")
+          || typeFrom.equals("SuperMethodReference")
+          || typeFrom.equals("TypeMethodReference")) {
         Indexes.add(i);
-        sizeIndexes ++;
-        if(sizeActions == 2) return Indexes;
+        sizeIndexes++;
+        if (sizeActions == 2) return Indexes;
       }
     }
     return Indexes;
@@ -325,11 +362,11 @@ public class CommitMsgGenerator {
   // read json to get template
   public String getTemplate() {
     String pathName = getClass().getClassLoader().getResource("MsgTemplate.json").getPath();
-    System.out.println("testPath: " +pathName);
+    System.out.println("testPath: " + pathName);
     BufferedReader in =
-            new BufferedReader(
-                    new InputStreamReader(
-                            this.getClass().getClassLoader().getResourceAsStream("MsgTemplate.json")));
+        new BufferedReader(
+            new InputStreamReader(
+                this.getClass().getClassLoader().getResourceAsStream("MsgTemplate.json")));
     StringBuffer buffer = new StringBuffer();
     String line = "";
     String content = null;
