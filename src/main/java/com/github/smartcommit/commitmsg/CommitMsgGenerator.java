@@ -79,6 +79,64 @@ public class CommitMsgGenerator {
     return vectors;
   }
 
+  public List<Integer> generateSeparatedGroupVector() {
+    // Operation: 4(astAction) 13(refAction)
+    // Type: 99(astAction) 18(refAction)
+    int AstOperationSum = 4;
+    int AstTypeSum = 99;
+    int AstSum = AstOperationSum*AstTypeSum;
+
+    int RefOperationSum = 13;
+    int RefTypeSum = 18;
+    int RefSum = RefOperationSum*RefTypeSum;
+
+    if(refactorActions.isEmpty()) {
+      List<Integer> vectors = new ArrayList<>(Collections.nCopies(AstSum,0));
+      int indexOperation = 0, indexType = 0, indexFinal = 0;
+      for(Action action : astActions){
+        indexOperation = action.getOperationIndex();
+        // Operation "Unknown" contributes nothing to vector
+        if(indexOperation == AstOperationSum + RefOperationSum + 1)
+          continue;
+        // When DiffHunk Graph building failed, TypeFrom "Code" contributes nothing to vector
+        if(action.getTypeFrom().equals("Code"))
+          continue;
+        else {
+          for(AstActionType astActionType: AstActionType.values()){
+            if(action.getTypeFrom().equals(astActionType.label)){
+              indexType = astActionType.index;
+              break;
+            }
+          }
+          indexFinal = (indexOperation-1)*AstTypeSum + indexType-1;
+        }
+        vectors.set(indexFinal, vectors.get(indexFinal)+1);
+      }
+      return vectors;
+    } else {
+      List<Integer> vectors = new ArrayList<>(Collections.nCopies(RefSum,0));
+      int indexOperation = 0, indexType = 0, indexFinal = 0;
+      for(Action action : refactorActions){
+        // Operation contains both ast and ref, while the index of Ref need to start from 0
+        indexOperation = action.getOperationIndex() - AstOperationSum;
+        // Operation "Unknown" contributes nothing to vector
+        if (indexOperation == AstOperationSum + RefOperationSum + 1)
+          continue;
+        else {
+          for (RefActionType refActionType : RefActionType.values()) {
+            if (action.getTypeFrom().equals(refActionType.label)) {
+              indexType = refActionType.index;
+              break;
+            }
+          }
+          indexFinal = (indexOperation - 1)*RefTypeSum + indexType-1;
+        }
+        vectors.set(indexFinal, vectors.get(indexFinal)+1);
+      }
+      return vectors;
+    }
+  }
+
   /**
    * Invoke the AI model to generate template commit msg
    *
