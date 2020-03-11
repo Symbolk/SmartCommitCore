@@ -55,7 +55,7 @@ public class CommitMsgGenerator {
             break;
           }
         }
-        indexFinal = (indexOperation-1)*AstOperationSum + indexType-1;
+        indexFinal = (indexOperation-1)*AstTypeSum + indexType-1;
       }
       vectors.set(indexFinal, vectors.get(indexFinal)+1);
     }
@@ -72,7 +72,7 @@ public class CommitMsgGenerator {
             break;
           }
         }
-        indexFinal = AstSum + (indexOperation - 1) * RefOperationSum + indexType - 1;
+        indexFinal = AstSum + (indexOperation - 1) * RefTypeSum + indexType - 1;
       }
       vectors.set(indexFinal, vectors.get(indexFinal)+1);
     }
@@ -144,7 +144,10 @@ public class CommitMsgGenerator {
 
     // generate and return recommendedCommitMsgs
     List<String> recommendedCommitMsgs = new ArrayList<>();
-    recommendedCommitMsgs.add(intentLabel+" : " + commitMsg);
+    String iLabel = "";
+    if(intentLabel.label.equals("Others")) iLabel = key.toUpperCase();
+    else iLabel = intentLabel.toString();
+    recommendedCommitMsgs.add(iLabel+" : " + commitMsg);
     for(int i = 0; i < jsonArray.length(); i ++)
       recommendedCommitMsgs.add(jsonArray.get(i).toString());
     return recommendedCommitMsgs;
@@ -222,7 +225,7 @@ public class CommitMsgGenerator {
 
   // extendCommitMsg by adding action type+label, from+to
   private String extendCommitMsg(String key, Action action) {
-    String tempString = null;
+    String tempString = "";
     // for MsgClass "Add", from-to should change into add(To)in(From)
     if(action.getOperation().label.equals("Add")) {
       if (key.equals("ShortCircuit")) {
