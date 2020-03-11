@@ -16,7 +16,6 @@ import java.util.List;
 public class CommitMsgGenerator {
   private List<Action> astActions;
   private List<Action> refactorActions;
-  private String templateMsg;
   private String commitMsg;
   public CommitMsgGenerator(List<Action> astActions, List<Action> refactorActions) {
     this.astActions = astActions;
@@ -152,39 +151,50 @@ public class CommitMsgGenerator {
    *
    * @return
    */
-  public List<String> generateDetailedMsgs(MsgClass msgClass, GroupLabel intentLabel) {
+  public  List<String> generateDetailedMsgs(MsgClass msgClass, GroupLabel intentLabel) {
 
-    // Count Frequency of typeFrom in Actions whose Operation equals key
+    // Count Frequency of typeFrom in Actions whose q equals key currently
     String key = msgClass.label;
     List<Action> actions = new ArrayList<>();
-    actions.addAll(astActions);
-    actions.addAll(refactorActions);
+    for(Action action : astActions)
+      if(action.getOperation().label.equals(key)) actions.add(action);
+    for(Action action : refactorActions)
+      if(action.getOperation().label.equals(key)) actions.add(action);
 
-    // extend commitMsg
-    // make short circuit: package, class, method，interface
-    List<Integer> Indexes = get4IndexOfTypeFrom(actions, key);
-    if(!Indexes.isEmpty()) {
-      // maybe we can sort it one day
+    // no actions matched
+    if(actions.isEmpty()) {
       commitMsg = key;
-      Action action = null;
-      boolean theFirst = true;
-      for(int i = 0; i < 4 && Indexes.get(i) != -1; i++) {
-        action = actions.get(Indexes.get(i));
-        if(!theFirst) commitMsg += ", and";
-        commitMsg += extendCommitMsg("ShortCircuit", action);
-        theFirst = false;
-      }
     } else {
-      // one action takes two object, but we get top3 indexes currently
-      Indexes = getMax3IndexTypeFrom(actions, key);
-      Action action0 = actions.get(Indexes.get(0));
-      commitMsg = key;
-      commitMsg += extendCommitMsg("", action0);
-      if(Indexes.get(1) != Indexes.get(0)) {
-        Action action1 = actions.get(Indexes.get(1));
-        if(!action1.getTypeFrom().equals(action0.getTypeFrom())) {
-          commitMsg += ", and";
-          commitMsg += extendCommitMsg("", action1);
+      // extend commitMsg
+      String tempExtend;
+      // make short circuit: package, class, method，interface
+      List<Integer> Indexes = get4IndexOfTypeFrom(actions, key);
+      if(!Indexes.isEmpty()) {
+        // 1 operation + 4 cases(type + label)
+        commitMsg = key;
+        Action action = null;
+        boolean theFirst = true;
+        for(int i = 0; i < 4 && Indexes.get(i) != -1; i++) {
+          action = actions.get(Indexes.get(i));
+          if(!theFirst) commitMsg += ", and";
+          tempExtend = extendCommitMsg("Special4Cases", action);
+          if(!tempExtend.isEmpty()) commitMsg += tempExtend;
+          theFirst = false;
+        }
+      } else {
+        // 1 operation + 2 types(no label)
+        Indexes = getMax3IndexTypeFrom(actions, key);
+        Action action0 = actions.get(Indexes.get(0));
+        commitMsg = key;
+        tempExtend = extendCommitMsg("", action0);
+        if(!tempExtend.isEmpty()) commitMsg += tempExtend;
+        if(Indexes.get(1) != Indexes.get(0)) {
+          Action action1 = actions.get(Indexes.get(1));
+          if(!action1.getTypeFrom().equals(action0.getTypeFrom())) {
+            commitMsg += ", and";
+            tempExtend = extendCommitMsg("", action1);
+            if(!tempExtend.isEmpty()) commitMsg += tempExtend;
+          }
         }
       }
     }
@@ -212,7 +222,7 @@ public class CommitMsgGenerator {
   }
 
   // get max3Count of Frequency in Actions whose Operation equals key
-  private List<Integer> getMax3IndexTypeFrom(List<Action> Actions, String key) {
+  private static List<Integer> getMax3IndexTypeFrom(List<Action> Actions, String key) {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
     for(int i = 0; i < sizeActions; i ++){
@@ -260,16 +270,16 @@ public class CommitMsgGenerator {
   }
 
   // get max4Count of Frequency in Actions: package, class, method，interface
-  private List<Integer> get4IndexOfTypeFrom(List<Action> Actions, String key) {
+  private static List<Integer> get4IndexOfTypeFrom(List<Action> Actions, String key) {
     int sizeActions = Actions.size();
     int index1 = -1, index2 = -1, index3 = -1, index4 = -1;
     for(int i = 0; i < sizeActions; i ++){
-      if(Actions.get(i).getOperation().label.equals(key)) continue;
+      if(!Actions.get(i).getOperation().label.equals(key)) continue;
       String typeFrom = Actions.get(i).getTypeFrom();
-      if(typeFrom.equals("Package")) index1++;
-      if(typeFrom.equals("Class")) index2++;
-      if(typeFrom.equals("Method")) index3++;
-      if(typeFrom.equals("Interface")) index4++;
+      if(typeFrom.equals("Package")) index1 = i;
+      if(typeFrom.equals("Class")) index2 = i;
+      if(typeFrom.equals("Method")) index3 = i;
+      if(typeFrom.equals("Interface")) index4 = i;
     }
     List<Integer> indexes = new ArrayList<>();
     if(index1+index2+index3+index4 > -4) {
@@ -282,27 +292,18 @@ public class CommitMsgGenerator {
   }
 
   // extendCommitMsg by adding action type+label, from+to
-  private String extendCommitMsg(String key, Action action) {
+  private static String extendCommitMsg(String key, Action action) {
     String tempString = "";
-    // for MsgClass "Add", from-to should change into add(To)in(From)
-    if(action.getOperation().label.equals("Add")) {
-      if (key.equals("ShortCircuit")) {
-        tempString += " " + action.getTypeTo() + " " + action.getLabelTo();
-        if (!action.getLabelTo().isEmpty())
-          tempString += " in " + action.getTypeFrom() + " " + action.getLabelFrom();
-      } else {
-        tempString += " " + action.getTypeTo();
-        if (!action.getLabelTo().isEmpty()) tempString += " in " + action.getTypeFrom();
-      }
+    // Only TypeFrom is a must
+    if (key.equals("Special4Cases")) {
+      tempString += " " + action.getTypeFrom();
+      if (!action.getLabelTo().isEmpty()) tempString += " " + action.getLabelFrom();
+      if (!action.getTypeTo().isEmpty() && !action.getLabelTo().isEmpty())
+        tempString += " to " + action.getTypeTo() + " " + action.getLabelTo();
     } else {
-      if (key.equals("ShortCircuit")) {
-        tempString += " " + action.getTypeFrom() + " " + action.getLabelFrom();
-        if (!action.getLabelTo().isEmpty())
-          tempString += " to " + action.getTypeTo() + " " + action.getLabelTo();
-      } else {
-        tempString += " " + action.getTypeFrom();
-        if (!action.getLabelTo().isEmpty()) tempString += " to " + action.getTypeTo();
-      }
+      tempString += " " + action.getTypeFrom();
+      if (!action.getLabelTo().isEmpty())
+        tempString += " to " + action.getTypeTo();
     }
     return tempString;
   }
