@@ -26,6 +26,24 @@ public class CommitMsgGenerator {
     this.astActions = astActions;
     this.refactorActions = refactorActions;
   }
+  /*
+  public static void main(String[] args) {
+    List<Action> astActions = new ArrayList<>();
+    astActions.add(new Action(Operation.ADD, "SingleVariableDeclaration", "VarA"));
+    astActions.add(new Action(Operation.ADD, "SimpleName", "VarB"));
+    List<Action> refActions = new ArrayList<>();
+    refActions.add(new Action(Operation.EXTRACT, "Field Type", "C"));
+    refActions.add(new Action(Operation.DEL, "Interface", "D"));
+    refActions.add(new Action(Operation.EXTRACT, "Interface", "E"));
+    refActions.add(new Action(Operation.EXTRACT, "Interface", "F"));
+    refActions.add(new Action(Operation.EXTRACT, "Interface", "G"));
+    refActions.add(new Action(Operation.EXTRACT, "Interface", "H"));
+    refActions.add(new Action(Operation.EXTRACT, "Interface", "i"));
+
+    CommitMsgGenerator commitMsgGenerator = new CommitMsgGenerator(astActions, refActions);
+    System.out.println(commitMsgGenerator.generateDetailedMsgs(MsgClass.DOC, GroupLabel.FEATURE));
+  }
+   */
   /**
    * Vectorize the group features
    *
@@ -303,8 +321,7 @@ public class CommitMsgGenerator {
       else iLabel = "FUNCTIONCHANGE";
     } else {
       // avoid "NON-JAVA : Add ..."
-      if(intentLabel.label.equals("Non-Java"))
-        commitMsg = "Document";
+      if (intentLabel.label.equals("Non-Java")) commitMsg = "Document";
       iLabel = intentLabel.toString();
     }
     recommendedCommitMsgs.add(iLabel + " : " + commitMsg);
