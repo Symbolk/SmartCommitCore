@@ -1,8 +1,10 @@
 package com.github.smartcommit.client;
 
+import com.github.smartcommit.commitmsg.CommitMsgGenerator;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
+import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;

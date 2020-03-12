@@ -1,12 +1,13 @@
 package com.github.smartcommit.commitmsg;
 
+import com.github.smartcommit.client.SmartCommit;
 import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.GroupLabel;
 import com.github.smartcommit.model.constant.Operation;
+import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,7 +17,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class CommitMsgGenerator {
-  private static final org.slf4j.Logger Logger = LoggerFactory.getLogger(CommitMsgGenerator.class);
+  private static final Logger Logger = org.apache.log4j.Logger.getLogger(SmartCommit.class);
   private List<Action> astActions;
   private List<Action> refactorActions;
   private String commitMsg;
@@ -167,10 +168,12 @@ public class CommitMsgGenerator {
     List<Action> actions = new ArrayList<>();
     String op = null;
     for (Action action : astActions)
-      if (action.getOperation().label.equals(key)) actions.add(action);
+      if (action.getOperation().label.equals(key)
+          || (action.getOperation().label.equals("Delete") && key.equals("Remove")))
+        actions.add(action);
     for (Action action : refactorActions) {
       op = action.getOperation().label;
-      if (action.getOperation().label.equals(key)
+      if (op.equals(key)
           || (key.equals("Refactor")
               && (op.equals("Convert")
                   || op.equals("Extract")
@@ -179,12 +182,13 @@ public class CommitMsgGenerator {
                   || op.equals("Parameterize")
                   || op.equals("Pull up")
                   || op.equals("Pull down")
-                  || op.equals("Split")))) actions.add(action);
+                  || op.equals("Split")))
+          || (key.equals("Remove") && op.equals("Delete"))) actions.add(action);
     }
 
     // no actions matched
     if (actions.isEmpty()) {
-      commitMsg = key;
+      commitMsg = key + "  No matched action";
     } else {
       // extend commitMsg
       String tempExtend = null;
@@ -198,7 +202,9 @@ public class CommitMsgGenerator {
           Action action1 = actions.get(Indexes.get(1));
           // suppose both LabelFrom is not null
           if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
+            // the same type
             if (action0.getOperation().equals(action1.getOperation())) {
+              // the same operation
               if (action0.getOperation().equals(Operation.ADD)) {
                 commitMsg =
                     "Add "
@@ -218,6 +224,7 @@ public class CommitMsgGenerator {
                       + action0.getLabelFrom();
             }
           } else {
+            // not the same operation
             if (action0.getOperation().equals(Operation.ADD)
                 && action1.getOperation().equals(Operation.ADD)) {
               commitMsg =
@@ -248,32 +255,40 @@ public class CommitMsgGenerator {
           if (action0.getOperation().equals(Operation.ADD)) {
             commitMsg = "Add " + action0.getTypeFrom() + " " + action0.getLabelFrom();
           } else {
-            commitMsg = "Modify" + action0.getTypeFrom() + " " + action0.getLabelFrom();
+            commitMsg = "Modify " + action0.getTypeFrom() + " " + action0.getLabelFrom();
           }
         }
       } else {
         // 1 operation + 2 types(no label)
         Indexes = getMax2IndexTypeFrom(actions);
-        Action action0 = actions.get(Indexes.get(0));
-        Action action1 = actions.get(Indexes.get(1));
-        commitMsg = key + " ";
-        // suppose both LabelFrom is not null
-        if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
-          commitMsg +=
-              action0.getTypeFrom()
-                  + " "
-                  + action0.getLabelFrom()
-                  + " and "
-                  + action1.getLabelFrom();
+        if (Indexes.size() == 2) {
+          Action action0 = actions.get(Indexes.get(0));
+          Action action1 = actions.get(Indexes.get(1));
+          commitMsg = key + " ";
+          if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
+            commitMsg +=
+                action0.getTypeFrom()
+                    + " "
+                    + action0.getLabelFrom()
+                    + " and "
+                    + action1.getLabelFrom();
+          } else {
+            commitMsg +=
+                action0.getTypeFrom()
+                    + " "
+                    + action0.getLabelFrom()
+                    + " and "
+                    + action1.getTypeFrom()
+                    + " "
+                    + action1.getLabelFrom();
+          }
         } else {
-          commitMsg +=
-              action0.getTypeFrom()
-                  + " "
-                  + action0.getLabelFrom()
-                  + " and "
-                  + action0.getTypeFrom()
-                  + " "
-                  + action0.getLabelFrom();
+          // the final case, no matter what type/label it is
+          Action action0 = actions.get(Indexes.get(0));
+          if (action0.getLabelFrom().isEmpty()) commitMsg = key + " " + action0.getTypeFrom();
+          else {
+            commitMsg = key + " " + action0.getTypeFrom() + " " + action0.getLabelFrom();
+          }
         }
       }
     }
@@ -301,14 +316,14 @@ public class CommitMsgGenerator {
     int count[] = new int[sizeActions];
     for (int i = 0; i < sizeActions; i++) {
       String typeFrom = Actions.get(i).getTypeFrom();
-      int j;
-      for (j = 0; j < i; j++) {
+      if (typeFrom.equals("Code")) continue;
+      for (int j = 0; j < i; j++) {
         if (Actions.get(j).getTypeFrom().equals(typeFrom)) {
-          count[j] = count[j] + 1;
+          count[j]++;
           break;
         }
       }
-      if (j == i) count[j] = 1;
+      count[i] = 0;
     }
     // lazy to sort, simply cycle once
     int max1 = 0, max2 = 0;
@@ -324,10 +339,10 @@ public class CommitMsgGenerator {
         max2Index = i;
       }
     }
-    List<Integer> max2Indexes = new ArrayList<>(3);
-    max2Indexes.add(max1Index);
-    max2Indexes.add(max2Index);
-    return max2Indexes;
+    List<Integer> maxIndexes = new ArrayList<>();
+    maxIndexes.add(max1Index);
+    if (max2 != max1) maxIndexes.add(max2Index);
+    return maxIndexes;
   }
 
   // get 4Indexes(appear for the first time) in Actions: package, class, method，interface
@@ -338,6 +353,8 @@ public class CommitMsgGenerator {
 
     for (int i = 0; i < sizeActions; i++) {
       String typeFrom = Actions.get(i).getTypeFrom();
+      if (Actions.get(i).getLabelFrom().isEmpty()) continue;
+      if (Actions.get(i).getTypeFrom().equals("Code")) continue;
       if (typeFrom.equals("PackageDeclaration")) {
         Indexes.add(i);
         sizeIndexes++;
