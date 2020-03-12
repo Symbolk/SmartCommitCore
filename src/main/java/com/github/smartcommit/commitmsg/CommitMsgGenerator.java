@@ -166,13 +166,12 @@ public class CommitMsgGenerator {
     // Count Frequency of typeFrom in Actions whose q equals key currently
     String key = msgClass.label;
     List<Action> actions = new ArrayList<>();
-    String op = null;
     for (Action action : astActions)
       if (action.getOperation().label.equals(key)
           || (action.getOperation().label.equals("Delete") && key.equals("Remove")))
         actions.add(action);
     for (Action action : refactorActions) {
-      op = action.getOperation().label;
+      String op = action.getOperation().label;
       if (op.equals(key)
           || (key.equals("Refactor")
               && (op.equals("Convert")
@@ -203,28 +202,27 @@ public class CommitMsgGenerator {
           // suppose both LabelFrom is not null
           if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
             // the same type
-            if (action0.getOperation().equals(action1.getOperation())) {
-              // the same operation
-              if (action0.getOperation().equals(Operation.ADD)) {
-                commitMsg =
-                    "Add "
-                        + action0.getTypeFrom()
-                        + " "
-                        + action0.getLabelFrom()
-                        + " and "
-                        + action0.getLabelFrom();
-              }
+            if (action0.getOperation().equals(Operation.ADD)) {
+              // the same operation: ADD
+              commitMsg =
+                  "Add "
+                      + action0.getTypeFrom()
+                      + " "
+                      + action0.getLabelFrom()
+                      + " and "
+                      + action1.getLabelFrom();
             } else {
+              // not the same operation
               commitMsg =
                   "Modify "
                       + action0.getTypeFrom()
                       + " "
                       + action0.getLabelFrom()
                       + " and "
-                      + action0.getLabelFrom();
+                      + action1.getLabelFrom();
             }
           } else {
-            // not the same operation
+            // not the same type
             if (action0.getOperation().equals(Operation.ADD)
                 && action1.getOperation().equals(Operation.ADD)) {
               commitMsg =
@@ -233,9 +231,9 @@ public class CommitMsgGenerator {
                       + " "
                       + action0.getLabelFrom()
                       + " and "
-                      + action0.getTypeFrom()
+                      + action1.getTypeFrom()
                       + " "
-                      + action0.getLabelFrom();
+                      + action1.getLabelFrom();
             } else {
               commitMsg =
                   "Modify "
@@ -243,9 +241,9 @@ public class CommitMsgGenerator {
                       + " "
                       + action0.getLabelFrom()
                       + " and "
-                      + action0.getTypeFrom()
+                      + action1.getTypeFrom()
                       + " "
-                      + action0.getLabelFrom();
+                      + action1.getLabelFrom();
             }
           }
         }
@@ -358,7 +356,7 @@ public class CommitMsgGenerator {
       if (typeFrom.equals("PackageDeclaration")) {
         Indexes.add(i);
         sizeIndexes++;
-        if (sizeActions == 2) return Indexes;
+        if (sizeIndexes == 2) return Indexes;
       } else if (typeFrom.equals("ClassInstanceCreation")
           || typeFrom.equals("AnonymousClassDeclaration")
           || typeFrom.equals("Class")
@@ -366,11 +364,11 @@ public class CommitMsgGenerator {
           || typeFrom.equals("Superclass")) {
         Indexes.add(i);
         sizeIndexes++;
-        if (sizeActions == 2) return Indexes;
+        if (sizeIndexes == 2) return Indexes;
       } else if (typeFrom.equals("Interface")) {
         Indexes.add(i);
         sizeIndexes++;
-        if (sizeActions == 2) return Indexes;
+        if (sizeIndexes == 2) return Indexes;
       } else if (typeFrom.equals("MethodDeclaration")
           || typeFrom.equals("MethodInvocation")
           || typeFrom.equals("SuperMethodInvocation")
@@ -381,7 +379,7 @@ public class CommitMsgGenerator {
           || typeFrom.equals("TypeMethodReference")) {
         Indexes.add(i);
         sizeIndexes++;
-        if (sizeActions == 2) return Indexes;
+        if (sizeIndexes == 2) return Indexes;
       }
     }
     return Indexes;
