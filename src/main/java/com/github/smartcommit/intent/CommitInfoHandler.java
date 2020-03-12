@@ -154,12 +154,13 @@ public class CommitInfoHandler {
     private static List<IntentDescription> getIntentDescriptionFromMsg(String commitMsg) {
         int msgSize = commitMsg.length();
         List<IntentDescription> IntentDescriptions = new ArrayList<>();
+        // use C-style char by char, since it can tell "remove" and "move" apart easily
         for (int i = 0; i < msgSize; i++) {
             for (IntentDescription id : IntentDescription.values()) {
                 String des = id.label.toLowerCase();
                 int len = des.length();
                 for (int j = 0; j < len; j++) {
-                    if(i+j < len && commitMsg.charAt(i+j) != des.charAt(j))
+                    if(i+j < msgSize && commitMsg.charAt(i+j) != des.charAt(j))
                         break;
                     if(j+1 == len){
                         IntentDescriptions.add(id);
