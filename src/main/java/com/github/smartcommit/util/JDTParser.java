@@ -2,16 +2,15 @@ package com.github.smartcommit.util;
 
 import com.github.smartcommit.model.DiffFile;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.Logger;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
 public class JDTParser {
-  private static final Logger logger = LoggerFactory.getLogger(JDTParser.class);
+  private static final Logger logger = Logger.getLogger(JDTParser.class);
   private String repoPath;
   private String jrePath;
 
@@ -33,7 +32,7 @@ public class JDTParser {
     parser.setSource(diffFile.getBaseContent().toCharArray());
     CompilationUnit oldCU = (CompilationUnit) parser.createAST(null);
     if (!oldCU.getAST().hasBindingsRecovery()) {
-      logger.error("Binding not enabled: {}", diffFile.getBaseRelativePath());
+      logger.error("Binding not enabled: " + diffFile.getBaseRelativePath());
     }
 
     parser = initASTParser();
@@ -41,7 +40,7 @@ public class JDTParser {
     parser.setSource(diffFile.getCurrentContent().toCharArray());
     CompilationUnit newCU = (CompilationUnit) parser.createAST(null);
     if (!newCU.getAST().hasBindingsRecovery()) {
-      logger.error("Binding not enabled: {}", diffFile.getCurrentRelativePath());
+      logger.error("Binding not enabled: " + diffFile.getCurrentRelativePath());
     }
     return Pair.of(oldCU, newCU);
   }

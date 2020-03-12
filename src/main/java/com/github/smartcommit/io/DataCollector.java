@@ -11,9 +11,8 @@ import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.Logger;
 import org.eclipse.jdt.core.dom.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
@@ -21,7 +20,7 @@ import java.util.*;
 import static org.eclipse.jdt.core.dom.ASTNode.*;
 
 public class DataCollector {
-  private static final Logger logger = LoggerFactory.getLogger(DataCollector.class);
+  private static final Logger logger = Logger.getLogger(DataCollector.class);
 
   private String repoName;
   private String tempDir;

@@ -1,10 +1,8 @@
 package com.github.smartcommit.client;
 
-import com.github.smartcommit.commitmsg.CommitMsgGenerator;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
-import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
@@ -18,10 +16,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.jgrapht.Graph;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -34,7 +31,7 @@ import java.util.concurrent.*;
 
 /** API entry */
 public class SmartCommit {
-  private static final Logger logger = LoggerFactory.getLogger(SmartCommit.class);
+  private static final Logger logger = Logger.getLogger(SmartCommit.class);
   private String repoID;
   private String repoName;
   private String repoPath;
@@ -171,7 +168,7 @@ public class SmartCommit {
    */
   private Map<String, Group> analyze(
       List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs)
-          throws ExecutionException, InterruptedException, TimeoutException {
+      throws ExecutionException, InterruptedException, TimeoutException {
 
     // build the change semantic graph
     ExecutorService executorService = Executors.newFixedThreadPool(2);
@@ -179,8 +176,8 @@ public class SmartCommit {
         executorService.submit(new GraphBuilder(srcDirs.getLeft(), diffFiles));
     Future<Graph<Node, Edge>> currentBuilder =
         executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
-    Graph<Node, Edge> baseGraph = baseBuilder.get(60*10, TimeUnit.SECONDS);
-    Graph<Node, Edge> currentGraph = currentBuilder.get(60*10,TimeUnit.SECONDS);
+    Graph<Node, Edge> baseGraph = baseBuilder.get(60 * 10, TimeUnit.SECONDS);
+    Graph<Node, Edge> currentGraph = currentBuilder.get(60 * 10, TimeUnit.SECONDS);
     //    String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
     //    String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
     executorService.shutdown();

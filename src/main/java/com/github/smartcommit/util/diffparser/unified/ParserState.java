@@ -13,8 +13,7 @@
  */
 package com.github.smartcommit.util.diffparser.unified;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 
 import static com.github.smartcommit.util.diffparser.api.UnifiedDiffParser.LINE_RANGE_PATTERN;
 
@@ -229,7 +228,7 @@ public enum ParserState {
     }
   };
 
-  protected static Logger logger = LoggerFactory.getLogger(ParserState.class);
+  protected static Logger logger = Logger.getLogger(ParserState.class);
 
   /**
    * Returns the next state of the state machine depending on the current state and the content of a

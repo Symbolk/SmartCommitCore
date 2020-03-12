@@ -18,12 +18,11 @@ import com.github.smartcommit.util.NameResolver;
 import com.github.smartcommit.util.Utils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.Logger;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.builder.GraphTypeBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
@@ -33,7 +32,7 @@ import java.util.stream.Collectors;
 /** Build the semantic context graph of DiffHunks in Java files. */
 public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
-  private static final Logger logger = LoggerFactory.getLogger(GraphBuilder.class);
+  private static final Logger logger = Logger.getLogger(GraphBuilder.class);
   private static final String JRE_PATH =
       System.getProperty("java.home") + File.separator + "lib/rt.jar";
   //  private static final String[] CLASS_PATH =

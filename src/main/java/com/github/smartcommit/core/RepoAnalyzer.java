@@ -6,8 +6,7 @@ import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,7 +17,7 @@ import java.util.Map;
 
 public class RepoAnalyzer {
 
-  private static final Logger logger = LoggerFactory.getLogger(RepoAnalyzer.class);
+  private static final Logger logger = Logger.getLogger(RepoAnalyzer.class);
 
   private String repoID;
   private String repoName;
