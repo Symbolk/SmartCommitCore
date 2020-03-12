@@ -1,12 +1,13 @@
 package com.github.smartcommit.commitmsg;
 
+import com.github.smartcommit.client.SmartCommit;
 import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.GroupLabel;
 import com.github.smartcommit.model.constant.Operation;
+import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,7 +17,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class CommitMsgGenerator {
-  private static final org.slf4j.Logger Logger = LoggerFactory.getLogger(CommitMsgGenerator.class);
+  private static final Logger Logger = org.apache.log4j.Logger.getLogger(SmartCommit.class);
   private List<Action> astActions;
   private List<Action> refactorActions;
   private String commitMsg;
