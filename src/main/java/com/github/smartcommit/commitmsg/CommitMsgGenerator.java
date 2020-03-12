@@ -187,7 +187,7 @@ public class CommitMsgGenerator {
 
     // no actions matched
     if (actions.isEmpty()) {
-      commitMsg = key + "  No matched action";
+      commitMsg = key + "Warning: No matched action";
     } else {
       // extend commitMsg
       String tempExtend = null;
@@ -301,7 +301,12 @@ public class CommitMsgGenerator {
     if (intentLabel.label.equals("Others")) {
       if (key.equals("Fix") || key.equals("Refactor")) iLabel = key.toUpperCase();
       else iLabel = "FUNCTIONCHANGE";
-    } else iLabel = intentLabel.toString();
+    } else {
+      // avoid "NON-JAVA : Add ..."
+      if(intentLabel.label.equals("Non-Java"))
+        commitMsg = "Document";
+      iLabel = intentLabel.toString();
+    }
     recommendedCommitMsgs.add(iLabel + " : " + commitMsg);
     for (int i = 0; i < jsonArray.length(); i++)
       recommendedCommitMsgs.add(jsonArray.get(i).toString());
