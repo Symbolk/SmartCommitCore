@@ -255,7 +255,7 @@ public class CommitMsgGenerator {
           if (action0.getOperation().equals(Operation.ADD)) {
             commitMsg = "Add " + action0.getTypeFrom() + " " + action0.getLabelFrom();
           } else {
-            commitMsg = "Modify" + action0.getTypeFrom() + " " + action0.getLabelFrom();
+            commitMsg = "Modify " + action0.getTypeFrom() + " " + action0.getLabelFrom();
           }
         }
       } else {
@@ -283,6 +283,7 @@ public class CommitMsgGenerator {
                     + action0.getLabelFrom();
           }
         } else {
+          // the final case, no matter what type/label it is
           Action action0 = actions.get(Indexes.get(0));
           if (action0.getLabelFrom().isEmpty()) commitMsg = key + " " + action0.getTypeFrom();
           else {
@@ -315,6 +316,7 @@ public class CommitMsgGenerator {
     int count[] = new int[sizeActions];
     for (int i = 0; i < sizeActions; i++) {
       String typeFrom = Actions.get(i).getTypeFrom();
+      if(typeFrom.equals("Code")) continue;
       for (int j = 0; j < i; j++) {
         if (Actions.get(j).getTypeFrom().equals(typeFrom)) {
           count[j]++;
@@ -352,6 +354,7 @@ public class CommitMsgGenerator {
     for (int i = 0; i < sizeActions; i++) {
       String typeFrom = Actions.get(i).getTypeFrom();
       if (Actions.get(i).getLabelFrom().isEmpty()) continue;
+      if (Actions.get(i).getTypeFrom().equals("Code")) continue;
       if (typeFrom.equals("PackageDeclaration")) {
         Indexes.add(i);
         sizeIndexes++;
