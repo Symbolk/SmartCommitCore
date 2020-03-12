@@ -278,9 +278,9 @@ public class CommitMsgGenerator {
                     + " "
                     + action0.getLabelFrom()
                     + " and "
-                    + action0.getTypeFrom()
+                    + action1.getTypeFrom()
                     + " "
-                    + action0.getLabelFrom();
+                    + action1.getLabelFrom();
           }
         } else {
           // the final case, no matter what type/label it is
@@ -316,7 +316,7 @@ public class CommitMsgGenerator {
     int count[] = new int[sizeActions];
     for (int i = 0; i < sizeActions; i++) {
       String typeFrom = Actions.get(i).getTypeFrom();
-      if(typeFrom.equals("Code")) continue;
+      if (typeFrom.equals("Code")) continue;
       for (int j = 0; j < i; j++) {
         if (Actions.get(j).getTypeFrom().equals(typeFrom)) {
           count[j]++;
