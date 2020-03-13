@@ -19,6 +19,7 @@ import gr.uom.java.xmi.UMLModelASTReader;
 import gr.uom.java.xmi.diff.CodeRange;
 import gr.uom.java.xmi.diff.UMLModelDiff;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.Logger;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.graph.builder.GraphTypeBuilder;
@@ -31,6 +32,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class GroupGenerator {
+  private static final Logger logger = Logger.getLogger(GroupGenerator.class);
 
   private String repoID;
   private String repoName;
@@ -101,10 +103,19 @@ public class GroupGenerator {
       for (String target : entry.getValue()) {
         String id2 = getDiffHunkIDFromIndex(diffFiles, target);
         if (!id1.equals(id2) && !checkIfGrouped(id1) && !checkIfGrouped(id2)) {
-          diffHunkGraph.addEdge(
-              findNodeByIndex(entry.getKey()),
-              findNodeByIndex(target),
-              new DiffEdge(generateEdgeID(), DiffEdgeType.HARD, 1.0));
+          boolean success =
+              diffHunkGraph.addEdge(
+                  findNodeByIndex(entry.getKey()),
+                  findNodeByIndex(target),
+                  new DiffEdge(generateEdgeID(), DiffEdgeType.HARD, 1.0));
+          if (!success) {
+            logger.error(
+                "Error when adding edge: "
+                    + findNodeByIndex(entry.getKey())
+                    + "->"
+                    + findNodeByIndex(target)
+                    + "to diffHunkGraph.");
+          }
         }
       }
     }
@@ -141,6 +152,12 @@ public class GroupGenerator {
                       new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, new Double(0 - distance)));
               if (!success) {
                 // in case of failure
+                logger.error(
+                    "Error when adding edge: "
+                        + findNodeByIndex(diffHunk2.getUniqueIndex())
+                        + "->"
+                        + findNodeByIndex(diffHunk1.getUniqueIndex())
+                        + "to diffHunkGraph.");
               }
             }
           }
@@ -161,6 +178,12 @@ public class GroupGenerator {
                       new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, similarity));
               if (!success) {
                 // in case of failure
+                logger.error(
+                    "Error when adding edge: "
+                        + findNodeByIndex(diffHunk2.getUniqueIndex())
+                        + "->"
+                        + findNodeByIndex(diffHunk1.getUniqueIndex())
+                        + "to diffHunkGraph.");
               }
             }
           }
