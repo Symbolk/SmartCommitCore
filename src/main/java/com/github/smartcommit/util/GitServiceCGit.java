@@ -25,7 +25,8 @@ public class GitServiceCGit implements GitService {
   @Override
   public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoPath) {
     // unstage the staged files first
-    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
+//    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
+    Utils.runSystemCommand(repoPath, "git", "reset", "HEAD", ".");
 
     ArrayList<DiffFile> diffFileList = new ArrayList<>();
     // run git status --porcelain to get changeset
