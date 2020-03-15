@@ -9,6 +9,10 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.refactoringminer.api.GitService;
 import org.refactoringminer.util.GitServiceImpl;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -66,8 +70,9 @@ public class DataMiner {
               if (numbers.size() == 1) {
                 atomicCommits.add(commit);
               } else if (numbers.size() > 1
-                  && (msg.contains("and")
+                  && (msg.contains("and ")
                       || msg.contains("also ")
+                      || msg.contains("&")
                       || msg.contains("plus ")
                       || msg.contains("other ")
                       || msg.contains("too "))) {
@@ -77,15 +82,32 @@ public class DataMiner {
           }
         }
       }
-      System.out.println(atomicCommits.get(6).getFullMessage());
-      System.out.println(compositeCommits.get(1).getFullMessage());
-      // write results into csv file
 
+      // write results into csv file
+      saveResults(atomicCommits, resultsDir + repoName + "_atomic.csv");
+      saveResults(compositeCommits, resultsDir + repoName + "_composite.csv");
     } catch (Exception e) {
       e.printStackTrace();
     }
   }
 
+  private static void saveResults(List<RevCommit> commits, String resultFilePath)
+      throws IOException {
+    File file = new File(resultFilePath);
+
+    if (!file.exists() && !file.isDirectory()) {
+      //      file.mkdirs();
+      file.createNewFile();
+    }
+
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+      for (RevCommit commit : commits) {
+        bw.write(commit.getName() + "," + commit.getFullMessage().trim().replaceAll("\n", ""));
+        bw.newLine();
+        bw.flush();
+      }
+    }
+  }
   /**
    * Yet another way to list all commits
    *
