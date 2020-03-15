@@ -963,10 +963,13 @@ public class JDTService {
       FieldAccess fieldAccess = (FieldAccess) expression;
       // support this. field access
       if (fieldAccess.getExpression().getNodeType() == ASTNode.THIS_EXPRESSION) {
-        entityInfo.fieldUses.add(
-            fieldAccess.resolveFieldBinding().getDeclaringClass().getQualifiedName()
-                + ":"
-                + fieldAccess.getName());
+        if (fieldAccess.resolveFieldBinding() != null) {
+          entityInfo.fieldUses.add(
+              fieldAccess.resolveFieldBinding().getDeclaringClass().getQualifiedName()
+                  + ":"
+                  + fieldAccess.getName());
+        }
+
       } else {
         parseExpression(entityInfo, ((FieldAccess) expression).getExpression());
       }
