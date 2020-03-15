@@ -12,6 +12,7 @@ import com.github.smartcommit.util.Utils;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -37,10 +38,8 @@ public class Evaluation {
 
     String repoName = "jruby";
     String repoPath = repoDir + repoName;
-    String atomicCsvPath = resultsDir + repoName + "_atomic.csv";
-    String compositeCsvPath = resultsDir + repoName + "_composite.csv";
     //    runRQ1(repoPath, csvPath);
-    runRQ2(repoName, repoPath, compositeCsvPath, tempDir + repoName);
+    runRQ2(repoName, repoPath, tempDir + repoName);
   }
 
   /**
@@ -95,29 +94,32 @@ public class Evaluation {
    * RQ2: acceptance rate/comment from the original author
    *
    * @param repoPath
-   * @param csvPath
    */
-  private static void runRQ2(String repoName, String repoPath, String csvPath, String tempDir) {
+  private static void runRQ2(String repoName, String repoPath, String tempDir) {
     // read tangled commit list from csv file
-    List<String[]> lines = Utils.readCSV(csvPath, "~~");
+    //    List<String[]> lines = Utils.readCSV(csvPath, "~~");
+    // read samples from db
+    MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
+    MongoClient mongoClient = new MongoClient(connectionString);
     // combine consecutive 5 commits changesets
     GitService gitService = new GitServiceCGit();
     SmartCommit smartCommit =
         new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
 
-    // analyze each commit
     try {
-      MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
-      MongoClient mongoClient = new MongoClient(connectionString);
-      MongoDatabase db = mongoClient.getDatabase("smartcommit");
-      MongoCollection<Document> col = db.getCollection("commits");
+      MongoDatabase samplesDB = mongoClient.getDatabase("composite");
+      MongoCollection<Document> samplesCol = samplesDB.getCollection(repoName);
+      MongoDatabase resultsDB = mongoClient.getDatabase("smartcommit");
+      MongoCollection<Document> resultsCol = resultsDB.getCollection("results");
       // !!! drop the last testing results
-      col.drop();
+      resultsCol.drop();
 
-      for (int i = 0; i < lines.size(); i++) {
-        if (lines.get(i).length == 2) {
-          String commitID = lines.get(i)[0];
-          String commitMsg = lines.get(i)[1];
+      try (MongoCursor<Document> cursor = samplesCol.find().iterator()) {
+        while (cursor.hasNext()) {
+          Document sampleDoc = cursor.next();
+
+          String commitID = sampleDoc.get("commit_id").toString();
+          String commitMsg = sampleDoc.get("commit_msg").toString();
           if (!commitID.isEmpty()) {
             // get committer name and email
             String committerName = gitService.getCommitterName(repoPath, commitID);
@@ -127,9 +129,9 @@ public class Evaluation {
             Map<String, Group> results = smartCommit.analyzeCommit(commitID);
             Map<String, DiffHunk> id2DiffHunkMap = smartCommit.getId2DiffHunkMap();
             // save results in mongodb (for committers to review online)
-            Document commitDoc = new Document("repo_name", repoName);
-            commitDoc.append("commit_id", commitID).append("commit_msg", commitMsg);
-            commitDoc
+            Document resultDoc = new Document("repo_name", repoName);
+            resultDoc.append("commit_id", commitID).append("commit_msg", commitMsg);
+            resultDoc
                 .append("committer_name", committerName)
                 .append("committer_email", committerEmail);
             List<Document> groupDocs = new ArrayList<>();
@@ -173,11 +175,9 @@ public class Evaluation {
               }
               groupDocs.add(groupDoc);
             }
-            commitDoc.append("groups", groupDocs);
-            col.insertOne(commitDoc);
+            resultDoc.append("groups", groupDocs);
+            resultsCol.insertOne(resultDoc);
           }
-        } else {
-          logger.error("Invalid line: " + lines.get(i));
         }
       }
       mongoClient.close();
