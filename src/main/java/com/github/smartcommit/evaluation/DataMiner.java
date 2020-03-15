@@ -1,7 +1,13 @@
 package com.github.smartcommit.evaluation;
 
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.bson.Document;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -25,6 +31,7 @@ public class DataMiner {
 
   public static void main(String[] args) {
     BasicConfigurator.configure();
+    org.apache.log4j.Logger.getRootLogger().setLevel(Level.WARN);
 
     String repoDir = "/Users/symbolk/coding/data/repos/";
     String resultsDir = "/Users/symbolk/coding/data/results/";
@@ -83,15 +90,48 @@ public class DataMiner {
         }
       }
 
+      saveSamplesInDB(repoName, "atomic", atomicCommits);
+      saveSamplesInDB(repoName, "composite", compositeCommits);
       // write results into csv file
-      saveResults(atomicCommits, resultsDir + repoName + "_atomic.csv");
-      saveResults(compositeCommits, resultsDir + repoName + "_composite.csv");
+      //      saveSamplesInCSV(atomicCommits, resultsDir + repoName + "_atomic.csv");
+      //      saveSamplesInCSV(compositeCommits, resultsDir + repoName + "_composite.csv");
     } catch (Exception e) {
       e.printStackTrace();
     }
   }
 
-  private static void saveResults(List<RevCommit> commits, String resultFilePath)
+  /**
+   * Save samples in mongodb
+   *
+   * @param repoName
+   * @param dbName
+   * @param commits
+   */
+  private static void saveSamplesInDB(String repoName, String dbName, List<RevCommit> commits) {
+    MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
+    MongoClient mongoClient = new MongoClient(connectionString);
+    MongoDatabase db = mongoClient.getDatabase(dbName);
+    MongoCollection<Document> col = db.getCollection(repoName);
+    // !!! drop the last testing results
+//    col.drop();
+
+    for (RevCommit commit : commits) {
+      Document commitDoc = new Document("repo_name", repoName);
+      commitDoc.append("commit_id", commit.getName()).append("commit_msg", commit.getFullMessage());
+
+      col.insertOne(commitDoc);
+    }
+    mongoClient.close();
+  }
+
+  /**
+   * Save samples in csv files
+   *
+   * @param commits
+   * @param resultFilePath
+   * @throws IOException
+   */
+  private static void saveSamplesInCSV(List<RevCommit> commits, String resultFilePath)
       throws IOException {
     File file = new File(resultFilePath);
 
@@ -102,7 +142,7 @@ public class DataMiner {
 
     try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
       for (RevCommit commit : commits) {
-        bw.write(commit.getName() + "," + commit.getFullMessage().trim().replaceAll("\n", ""));
+        bw.write(commit.getName() + "~~" + commit.getFullMessage().trim().replaceAll("\n", ""));
         bw.newLine();
         bw.flush();
       }
