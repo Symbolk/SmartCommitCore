@@ -59,6 +59,16 @@ public class CommitInfoHandler {
     } catch (Exception e) {
       e.printStackTrace();
     }
+
+    /*
+    String string =
+        "\n 你好"
+            + "    Merge pull request #3011 from testfixer/com.alibaba.json.bvt.jsonp.JSONPParseTest3\n"
+            + "    \n"
+            + "    Enable SerializeFeature.MapSortField for deterministic order";
+    System.out.println(getIntentDescriptionFromMsg(string.toLowerCase()));
+
+      */
   }
 
   // Split "git commit"
@@ -157,17 +167,23 @@ public class CommitInfoHandler {
   private static List<IntentDescription> getIntentDescriptionFromMsg(String commitMsg) {
     int msgSize = commitMsg.length();
     List<IntentDescription> IntentDescriptions = new ArrayList<>();
-    // use C-style char by char, since it can tell "remove" and "move" apart easily
+    List<IntentDescription> ids = new ArrayList<>();
+    List<Integer> indexes = new ArrayList<>();
+    // record contains and indexes
+    for (IntentDescription id : IntentDescription.values()) {
+      String des = id.label.toLowerCase();
+      Integer index = commitMsg.indexOf(des);
+      if (index > -1) {
+        ids.add(id);
+        indexes.add(index);
+      }
+    }
+    // get ids in index order
     for (int i = 0; i < msgSize; i++) {
-      for (IntentDescription id : IntentDescription.values()) {
-        String des = id.label.toLowerCase();
-        int len = des.length();
-        for (int j = 0; j < len; j++) {
-          if (i + j < msgSize && commitMsg.charAt(i + j) != des.charAt(j)) break;
-          if (j + 1 == len) {
-            IntentDescriptions.add(id);
-            i += len;
-          }
+      for (int j = 0; j < indexes.size(); j++) {
+        if (i == indexes.get(j)) {
+          IntentDescriptions.add(ids.get(j));
+          i += ids.get(j).label.length() - 1;
         }
       }
     }
