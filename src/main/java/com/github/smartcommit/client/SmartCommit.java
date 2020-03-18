@@ -77,6 +77,24 @@ public class SmartCommit {
   }
 
   /**
+   * Analyze the changes and group changed files
+   *
+   * @return
+   * @throws Exception
+   */
+  public Map<String, Group> analyzeWorkingFiles() throws Exception {
+    return null;
+  }
+
+  /**
+   * Try to compile the intermediate version generated from manual groups
+   * @return GroupID:compilation output
+   */
+  public Map<String, String> checkCompilation(){
+    return null;
+  }
+
+  /**
    * Analyze the current working directory
    *
    * @return
