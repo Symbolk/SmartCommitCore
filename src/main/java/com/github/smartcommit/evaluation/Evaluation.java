@@ -52,9 +52,12 @@ public class Evaluation {
     // read csv file for atomic commits (that links to one ticket id)
     // (from the latest to the oldest, sample 100 for each project)
     List<String[]> lines = Utils.readCSV(csvPath, ",");
-    // combine consecutive 5 commits changesets
+    // read samples from db
+    MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
+    MongoClient mongoClient = new MongoClient(connectionString);
     GitService gitService = new GitServiceCGit();
 
+    // combine consecutive 5 commits changesets
     for (int i = 0; i < lines.size(); i += 5) {
       Map<String, List<DiffHunk>> map = new HashMap<>();
       for (int j = 0; j < 5; j++) {
@@ -99,17 +102,19 @@ public class Evaluation {
     // read tangled commit list from csv file
     //    List<String[]> lines = Utils.readCSV(csvPath, "~~");
     // read samples from db
-    MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
-    MongoClient mongoClient = new MongoClient(connectionString);
+    MongoClientURI local = new MongoClientURI("mongodb://localhost:27017");
+    MongoClientURI server = new MongoClientURI("mongodb://SERVER_IP:27017/smartcommit");
+    MongoClient localClient = new MongoClient(local);
+    MongoClient serverClient = new MongoClient(server);
     // combine consecutive 5 commits changesets
     GitService gitService = new GitServiceCGit();
     SmartCommit smartCommit =
         new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
 
     try {
-      MongoDatabase samplesDB = mongoClient.getDatabase("composite");
+      MongoDatabase samplesDB = localClient.getDatabase("composite");
       MongoCollection<Document> samplesCol = samplesDB.getCollection(repoName);
-      MongoDatabase resultsDB = mongoClient.getDatabase("smartcommit");
+      MongoDatabase resultsDB = serverClient.getDatabase("smartcommit");
       MongoCollection<Document> resultsCol = resultsDB.getCollection("results");
       // !!! drop the last testing results
       resultsCol.drop();
@@ -149,11 +154,12 @@ public class Evaluation {
                   diffHunkDoc.append("diff_hunk_index", diffHunk.getIndex());
                   diffHunkDoc.append("change_type", diffHunk.getChangeType().label);
                   diffHunkDoc.append("description", diffHunk.getDescription());
+                  String serverDir = "/root/data/temp/jruby";
                   diffHunkDoc.append(
                       "a_hunk",
                       convertHunkToDoc(
                           diffHunk.getBaseHunk(),
-                          tempDir
+                              serverDir
                               + File.separator
                               + commitID
                               + File.separator
@@ -163,7 +169,7 @@ public class Evaluation {
                       "b_hunk",
                       convertHunkToDoc(
                           diffHunk.getCurrentHunk(),
-                          tempDir
+                              serverDir
                               + File.separator
                               + commitID
                               + File.separator
@@ -180,7 +186,8 @@ public class Evaluation {
           }
         }
       }
-      mongoClient.close();
+      serverClient.close();
+      localClient.close();
     } catch (Exception e) {
       e.printStackTrace();
     }

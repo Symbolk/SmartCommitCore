@@ -67,8 +67,9 @@ public class DataMiner {
             if (msg.contains("fix ")
                 || msg.contains("close ")
                 || msg.contains("resolve ")
+                || msg.contains("solve ")
                 || msg.contains("issue ")
-                || msg.contains("#")) {
+                || msg.contains("#")) { // Other format: JRUBY-XXX XSTR-XXX
               Matcher matcher = pattern.matcher(msg);
               Set<String> numbers = new HashSet<>();
               while (matcher.find()) {
