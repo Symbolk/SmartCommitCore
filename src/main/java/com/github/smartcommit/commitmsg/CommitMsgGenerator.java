@@ -237,7 +237,7 @@ public class CommitMsgGenerator {
         }
         // 0 normal case: no
         else {
-          commitMsg = key + " : No action";
+          commitMsg = key + " ...";
         }
       }
     }
