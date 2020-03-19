@@ -319,9 +319,7 @@ public class CommitInfoHandler {
     List<RefactorMinerAction> refactorMinerActions = new ArrayList<>();
     try {
       Repository repo =
-          gitService.cloneIfNotExists(
-              repoPath, // "/Users/Chuncen/Downloads/"+repoName
-              "https://github.com/danilofes/refactoring-toy-example.git");
+          gitService.openRepository(repoPath);
       miner.detectAtCommit(
           repo,
           commitID,
