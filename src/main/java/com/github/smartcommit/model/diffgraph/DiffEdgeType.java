@@ -3,12 +3,13 @@ package com.github.smartcommit.model.diffgraph;
 public enum DiffEdgeType {
   DEPEND(true, "dependency"),
   REFACTOR(true, "refactor"),
+  SIMILAR(false, "similar"),
+  CLOSE(false, "close"),
+
   MOVING(true, "moving"),
   REFORMAT(true, "reformat"),
   DOC(false, "doc"),
   CONFIG(false, "config"),
-  SIMILAR(false,"similar"),
-  CLOSE(false, "close"),
   OTHERS(false, "others");
 
   Boolean fixed;
