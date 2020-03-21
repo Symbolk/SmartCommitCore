@@ -465,4 +465,53 @@ public class Utils {
           codeChangeTo.getCodeElement());
     }
   }
+
+  private static boolean checkSuffix(String str, String[] suffixes) {
+    return Arrays.stream(suffixes).parallel().anyMatch(str::contains);
+    //      for(String s : suffixes){
+    //          if(str.endsWith(s)){
+    //              return true;
+    //          }
+    //      }
+    //      return  false;
+  }
+
+  public static boolean isDocFile(String fileName) {
+    if (fileName.lastIndexOf(".") != -1) {
+      return checkSuffix(fileName, new String[] {".md", ".txt", ".html"});
+    } else {
+      return true;
+    }
+  }
+
+  public static boolean isConfigFile(String fileName) {
+    if (fileName.lastIndexOf(".") != -1) {
+      return checkSuffix(
+          fileName, new String[] {".xml", ".yml", ".gitignore", ".gradle", ".properties"});
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Merge two maps into one
+   *
+   * @param map1
+   * @param map2
+   * @return
+   */
+  public static Map<String, Set<String>> mergeTwoMaps(
+      Map<String, Set<String>> map1, Map<String, Set<String>> map2) {
+    map2.forEach(
+        (key, value) ->
+            map1.merge(
+                key,
+                value,
+                (v1, v2) -> {
+                  v1.addAll(v2);
+                  return v1;
+                }));
+
+    return map1;
+  }
 }
