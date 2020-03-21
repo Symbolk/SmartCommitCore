@@ -107,7 +107,7 @@ public class GroupGenerator {
               diffHunkGraph.addEdge(
                   findNodeByIndex(entry.getKey()),
                   findNodeByIndex(target),
-                  new DiffEdge(generateEdgeID(), DiffEdgeType.HARD, 1.0));
+                  new DiffEdge(generateEdgeID(), DiffEdgeType.DEPEND, 1.0));
           if (!success) {
             logger.error(
                 "Error when adding edge: "
@@ -149,7 +149,7 @@ public class GroupGenerator {
                   diffHunkGraph.addEdge(
                       findNodeByIndex(diffHunk2.getUniqueIndex()),
                       findNodeByIndex(diffHunk1.getUniqueIndex()),
-                      new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, new Double(0 - distance)));
+                      new DiffEdge(generateEdgeID(), DiffEdgeType.CLOSE, new Double(0 - distance)));
               if (!success) {
                 // in case of failure
                 logger.error(
@@ -175,7 +175,7 @@ public class GroupGenerator {
                   diffHunkGraph.addEdge(
                       findNodeByIndex(diffHunk2.getUniqueIndex()),
                       findNodeByIndex(diffHunk1.getUniqueIndex()),
-                      new DiffEdge(generateEdgeID(), DiffEdgeType.SOFT, similarity));
+                      new DiffEdge(generateEdgeID(), DiffEdgeType.SIMILAR, similarity));
               if (!success) {
                 // in case of failure
                 logger.error(
