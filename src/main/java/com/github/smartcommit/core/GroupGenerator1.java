@@ -198,15 +198,15 @@ public class GroupGenerator1 {
                 DiffEdgeType.SIMILAR,
                 similarity);
           }
-          // distance (1/n)
-          int distance = estimateDistance(diffHunk, diffHunk1);
-          if (distance > 0) {
-            createEdge(
-                diffHunk.getUniqueIndex(),
-                diffHunk1.getUniqueIndex(),
-                DiffEdgeType.CLOSE,
-                (double) Math.round((double) 1 / distance * 100) / 100);
-          }
+          //          // distance (1/n)
+          //          int distance = estimateDistance(diffHunk, diffHunk1);
+          //          if (distance > 0) {
+          //            createEdge(
+          //                diffHunk.getUniqueIndex(),
+          //                diffHunk1.getUniqueIndex(),
+          //                DiffEdgeType.CLOSE,
+          //                (double) Math.round((double) 1 / distance * 100) / 100);
+          //          }
           // moving
           // if removed content equals added content, and in the same parent, it should be a moving
 
@@ -236,7 +236,6 @@ public class GroupGenerator1 {
       }
     }
     String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
-    //    System.out.println(diffGraphString);
     // generate group results from connections (order diff hunks topologically)
     // union-find/disjoint set to generate group
     ConnectivityInspector inspector = new ConnectivityInspector(diffGraph);
@@ -257,10 +256,15 @@ public class GroupGenerator1 {
                     Comparator.comparing(DiffNode::getFileIndex)
                         .thenComparing(DiffNode::getDiffHunkIndex))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        List<DiffEdgeType> edgeTypes = new ArrayList<>();
         for (DiffNode diffNode : diffNodesSet) {
           diffHunkIDs.add(diffNode.getUUID());
+          diffGraph.outgoingEdgesOf(diffNode).stream()
+              .forEach(diffEdge -> edgeTypes.add(diffEdge.getType()));
         }
-        createGroup(generatedGroups, diffHunkIDs, GroupLabel.FEATURE);
+        // get the most frequent edge type as the feature
+        createGroup(generatedGroups, diffHunkIDs, getIntentFromEdges(edgeTypes));
       }
     }
 
@@ -269,6 +273,28 @@ public class GroupGenerator1 {
     return generatedGroups;
   }
 
+  private GroupLabel getIntentFromEdges(List<DiffEdgeType> edgeTypes) {
+    DiffEdgeType edgeType = Utils.mostCommon(edgeTypes);
+    switch (edgeType) {
+      case DEPEND:
+        return GroupLabel.FEATURE;
+      case REFACTOR:
+        return GroupLabel.REFACTOR;
+      case SIMILAR:
+        return GroupLabel.FIX;
+      case MOVING:
+        return GroupLabel.MOVING;
+      case REFORMAT:
+        return GroupLabel.REFORMAT;
+      case DOC:
+        return GroupLabel.DOC;
+      case CONFIG:
+        return GroupLabel.CONFIG;
+      case CLOSE:
+      default:
+        return GroupLabel.OTHER;
+    }
+  }
   /**
    * Create new group by appending after the current generateGroups
    *
