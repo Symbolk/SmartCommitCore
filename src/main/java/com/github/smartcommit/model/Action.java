@@ -22,11 +22,11 @@ public class Action {
 
   public Action(
       Operation operation, String typeFrom, String labelFrom, String typeTo, String labelTo) {
-    this.operation = operation;
-    this.typeFrom = typeFrom;
-    this.labelFrom = labelFrom;
-    this.typeTo = typeTo;
-    this.labelTo = labelTo;
+    this.operation = operation == null ? Operation.UKN : operation;
+    this.typeFrom = typeFrom == null ? "" : typeFrom;
+    this.labelFrom = labelFrom == null ? "" : labelFrom;
+    this.typeTo = typeTo == null ? "" : typeTo;
+    this.labelTo = labelTo == null ? "" : labelTo;
   }
 
   @Override
@@ -83,6 +83,6 @@ public class Action {
   }
 
   public String getLabelTo() {
-    return  labelTo;
+    return labelTo;
   }
 }
