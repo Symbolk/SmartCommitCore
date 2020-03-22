@@ -38,7 +38,7 @@ public class GroupGenerator1 {
   // meta data
   private String repoID;
   private String repoName;
-  private String tempDir;
+  private Pair<String, String> srcDirs; // dirs to store the collected files
   private List<DiffFile> diffFiles;
   private List<DiffHunk> diffHunks;
   private Graph<Node, Edge> baseGraph;
@@ -53,14 +53,14 @@ public class GroupGenerator1 {
   public GroupGenerator1(
       String repoID,
       String repoName,
-      String tempDir,
+      Pair<String, String> srcDirs,
       List<DiffFile> diffFiles,
       List<DiffHunk> diffHunks,
       Graph<Node, Edge> baseGraph,
       Graph<Node, Edge> currentGraph) {
     this.repoID = repoID;
     this.repoName = repoName;
-    this.tempDir = tempDir;
+    this.srcDirs = srcDirs;
     this.diffFiles = diffFiles;
     this.diffHunks = diffHunks;
     this.baseGraph = baseGraph;
@@ -166,7 +166,7 @@ public class GroupGenerator1 {
     for (int i = 0; i < diffHunks.size(); ++i) {
       DiffHunk diffHunk = diffHunks.get(i);
       // changes that does not actually change code and remove
-      // format only
+      // reformat
       if (Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet())
           .equals(Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()))) {
         reformat.add(diffHunk);
@@ -394,11 +394,8 @@ public class GroupGenerator1 {
     Set<DiffHunk> refDiffHunks = new TreeSet<>(ascendingByIndexComparator());
 
     try {
-      String baseDir = tempDir + File.separator + Version.BASE.asString() + File.separator;
-      String currentDir = tempDir + File.separator + Version.CURRENT.asString() + File.separator;
-
-      File rootFolder1 = new File(baseDir);
-      File rootFolder2 = new File(currentDir);
+      File rootFolder1 = new File(srcDirs.getLeft());
+      File rootFolder2 = new File(srcDirs.getRight());
 
       UMLModel model1 = new UMLModelASTReader(rootFolder1).getUmlModel();
       UMLModel model2 = new UMLModelASTReader(rootFolder2).getUmlModel();
@@ -406,7 +403,7 @@ public class GroupGenerator1 {
 
       List<Refactoring> refactorings = modelDiff.getRefactorings();
 
-      // for each refactoring, find the corresponding diff hunk (TODO: create edges?)
+      // for each refactoring, find the corresponding diff hunk
       for (Refactoring refactoring : refactorings) {
         // greedy style: put all refactorings into one group
         for (CodeRange range : refactoring.leftSide()) {
