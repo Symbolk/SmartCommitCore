@@ -305,8 +305,8 @@ public class GitServiceCGit implements GitService {
 
       // bidirectional binding
       for (DiffFile diffFile : diffFiles) {
-        if (baseFilePath.contains(diffFile.getBaseRelativePath())
-            && currentFilePath.contains(diffFile.getCurrentRelativePath())) {
+        if (removeVersionLabel(baseFilePath).equals(diffFile.getBaseRelativePath())
+            && removeVersionLabel(currentFilePath).equals(diffFile.getCurrentRelativePath())) {
           diffHunksInFile.forEach(diffHunk -> diffHunk.setFileIndex(diffFile.getIndex()));
           diffFile.setDiffHunks(diffHunksInFile);
           diffFile.setRawHeaders(headers);
