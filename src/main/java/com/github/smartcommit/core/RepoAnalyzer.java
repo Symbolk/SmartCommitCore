@@ -102,13 +102,13 @@ public class RepoAnalyzer {
             || diffFile.getStatus().equals(FileStatus.DELETED)) {
           diffHunkID = fileID;
         }
-        diffHunksMap.put(diffHunkID, diffHunk);
-        this.idToDiffHunkMap.put(diffHunkID, diffHunk);
-
         diffHunk.setRepoID(repoID);
         diffHunk.setRepoName(repoName);
         diffHunk.setFileID(fileID);
         diffHunk.setDiffHunkID(diffHunkID);
+
+        diffHunksMap.put(diffHunkID, diffHunk);
+        this.idToDiffHunkMap.put(diffHunkID, diffHunk);
       }
       diffFile.setDiffHunksMap(diffHunksMap);
     }
