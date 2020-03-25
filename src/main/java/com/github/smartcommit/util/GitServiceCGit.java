@@ -25,7 +25,7 @@ public class GitServiceCGit implements GitService {
   @Override
   public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoPath) {
     // unstage the staged files first
-//    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
+    //    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
     Utils.runSystemCommand(repoPath, "git", "reset", "HEAD", ".");
 
     ArrayList<DiffFile> diffFileList = new ArrayList<>();
@@ -187,7 +187,7 @@ public class GitServiceCGit implements GitService {
   public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath, List<DiffFile> diffFiles) {
     // unstage the staged files first
     //    Utils.runSystemCommand(repoPath, "git", "reset", "--mixed");
-    Utils.runSystemCommand(repoPath, "git", "restorre", "--staged", ".");
+    Utils.runSystemCommand(repoPath, "git", "reset", "HEAD", ".");
     // git diff + git diff --cached/staged == git diff HEAD (show all the changes since last commit
     String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
     // with -U0 (no context lines), the generated patch cannot be applied successfully
