@@ -430,11 +430,15 @@ public class GitServiceCGit implements GitService {
    * @return
    */
   private String removeVersionLabel(String gitFilePath) {
-    if (gitFilePath.trim().startsWith("a/")) {
+    String trimmedPath = gitFilePath.trim();
+    if (trimmedPath.startsWith("a/")) {
       return gitFilePath.replaceFirst("a/", "");
     }
-    if (gitFilePath.trim().startsWith("b/")) {
+    if (trimmedPath.startsWith("b/")) {
       return gitFilePath.replaceFirst("b/", "");
+    }
+    if (trimmedPath.equals("/dev/null")) {
+      return "";
     }
     return gitFilePath;
   }
