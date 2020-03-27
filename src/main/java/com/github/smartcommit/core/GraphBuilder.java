@@ -358,8 +358,10 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         for (ASTNode node : nodeFinder.getCoveredNodes()) {
           while (node != null
               && !(node instanceof ImportDeclaration
+                  || node instanceof BodyDeclaration
                   || node instanceof Statement
-                  || node instanceof BodyDeclaration)) {
+                  || node instanceof Comment
+                  || (node instanceof Expression && !(node instanceof Name)))) {
             node = node.getParent();
           }
           coveredNodes.add(node);
@@ -381,7 +383,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       // save covered nodes also in hunks
       Pair<Integer, Integer> indices = Utils.parseIndices(index);
       DiffHunk diffHunk = null;
-      if(fileIndex < diffFiles.size())
+      if (fileIndex < diffFiles.size())
         diffHunk = diffFiles.get(fileIndex).getDiffHunks().get(indices.getRight());
       if (diffHunk != null) {
         if (version.equals(Version.BASE)) {
