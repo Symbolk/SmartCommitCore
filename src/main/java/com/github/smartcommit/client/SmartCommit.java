@@ -1,6 +1,7 @@
 package com.github.smartcommit.client;
 
 import com.github.smartcommit.commitmsg.CommitMsgGenerator;
+import com.github.smartcommit.compilation.MavenError;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
@@ -83,14 +84,6 @@ public class SmartCommit {
    * @throws Exception
    */
   public Map<String, Group> analyzeWorkingFiles() throws Exception {
-    return null;
-  }
-
-  /**
-   * Try to compile the intermediate version generated from manual groups
-   * @return GroupID:compilation output
-   */
-  public Map<String, String> checkCompilation(){
     return null;
   }
 
@@ -417,5 +410,34 @@ public class SmartCommit {
 
   public Map<String, DiffHunk> getId2DiffHunkMap() {
     return id2DiffHunkMap;
+  }
+
+  /**
+   * Invoke maven to compile the version group by group, and return the error message
+   *
+   * @return groupID:compilation output
+   */
+  public Map<String, String> compileWithMaven() {
+    return new HashMap<>();
+  }
+
+  /**
+   * Parse errors from maven output
+   *
+   * @return
+   */
+  public List<MavenError> parseMavenErrors(String groupID) {
+    return new ArrayList<>();
+  }
+
+  /**
+   * Adjust the diff hunks in groupX to resolve errors * @return
+   *
+   * @param groupID
+   * @param errors the existing errors
+   * @return the remaining errors
+   */
+  public List<MavenError> fixMavenErrors(String groupID, List<MavenError> errors) {
+    return new ArrayList<>();
   }
 }
