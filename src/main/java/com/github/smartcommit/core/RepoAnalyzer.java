@@ -54,9 +54,8 @@ public class RepoAnalyzer {
     // analyze the diff files and hunks
     GitService gitService = new GitServiceCGit();
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesInWorkingTree(this.repoPath);
-    List<DiffHunk> allDiffHunks = gitService.getDiffHunksInWorkingTree(this.repoPath, diffFiles);
+    gitService.getDiffHunksInWorkingTree(this.repoPath, diffFiles);
     this.diffFiles = diffFiles;
-    this.diffHunks = allDiffHunks;
     this.idToDiffFileMap = generateIDToDiffFileMap();
     return diffFiles;
   }
@@ -70,10 +69,8 @@ public class RepoAnalyzer {
     // analyze the diff files and hunks
     GitService gitService = new GitServiceCGit();
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(this.repoPath, commitID);
-    List<DiffHunk> allDiffHunks =
-        gitService.getDiffHunksAtCommit(this.repoPath, commitID, diffFiles);
+    gitService.getDiffHunksAtCommit(this.repoPath, commitID, diffFiles);
     this.diffFiles = diffFiles;
-    this.diffHunks = allDiffHunks;
     this.idToDiffFileMap = generateIDToDiffFileMap();
     return diffFiles;
   }
@@ -102,13 +99,13 @@ public class RepoAnalyzer {
             || diffFile.getStatus().equals(FileStatus.DELETED)) {
           diffHunkID = fileID;
         }
-        diffHunksMap.put(diffHunkID, diffHunk);
-        this.idToDiffHunkMap.put(diffHunkID, diffHunk);
-
         diffHunk.setRepoID(repoID);
         diffHunk.setRepoName(repoName);
         diffHunk.setFileID(fileID);
         diffHunk.setDiffHunkID(diffHunkID);
+        this.diffHunks.add(diffHunk);
+        diffHunksMap.put(diffHunkID, diffHunk);
+        this.idToDiffHunkMap.put(diffHunkID, diffHunk);
       }
       diffFile.setDiffHunksMap(diffHunksMap);
     }

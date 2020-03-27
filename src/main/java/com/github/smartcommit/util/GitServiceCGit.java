@@ -25,7 +25,7 @@ public class GitServiceCGit implements GitService {
   @Override
   public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoPath) {
     // unstage the staged files first
-//    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
+    //    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
     Utils.runSystemCommand(repoPath, "git", "reset", "HEAD", ".");
 
     ArrayList<DiffFile> diffFileList = new ArrayList<>();
@@ -186,7 +186,7 @@ public class GitServiceCGit implements GitService {
   @Override
   public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath, List<DiffFile> diffFiles) {
     // unstage the staged files first
-    //    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
+    //    Utils.runSystemCommand(repoPath, "git", "reset", "--mixed");
     Utils.runSystemCommand(repoPath, "git", "reset", "HEAD", ".");
     // git diff + git diff --cached/staged == git diff HEAD (show all the changes since last commit
     String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
@@ -305,8 +305,8 @@ public class GitServiceCGit implements GitService {
 
       // bidirectional binding
       for (DiffFile diffFile : diffFiles) {
-        if (baseFilePath.contains(diffFile.getBaseRelativePath())
-            && currentFilePath.contains(diffFile.getCurrentRelativePath())) {
+        if (removeVersionLabel(baseFilePath).equals(diffFile.getBaseRelativePath())
+            && removeVersionLabel(currentFilePath).equals(diffFile.getCurrentRelativePath())) {
           diffHunksInFile.forEach(diffHunk -> diffHunk.setFileIndex(diffFile.getIndex()));
           diffFile.setDiffHunks(diffHunksInFile);
           diffFile.setRawHeaders(headers);
@@ -430,11 +430,15 @@ public class GitServiceCGit implements GitService {
    * @return
    */
   private String removeVersionLabel(String gitFilePath) {
-    if (gitFilePath.trim().startsWith("a/")) {
+    String trimmedPath = gitFilePath.trim();
+    if (trimmedPath.startsWith("a/")) {
       return gitFilePath.replaceFirst("a/", "");
     }
-    if (gitFilePath.trim().startsWith("b/")) {
+    if (trimmedPath.startsWith("b/")) {
       return gitFilePath.replaceFirst("b/", "");
+    }
+    if (trimmedPath.equals("/dev/null")) {
+      return "";
     }
     return gitFilePath;
   }
