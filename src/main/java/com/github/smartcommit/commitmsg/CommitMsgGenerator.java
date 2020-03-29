@@ -4,15 +4,13 @@ import com.github.smartcommit.client.SmartCommit;
 import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.GroupLabel;
-import com.github.smartcommit.model.constant.Operation;
 import org.apache.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -27,19 +25,21 @@ public class CommitMsgGenerator {
     this.refactorActions = refactorActions;
   }
   /*
-  public static void main(String[] args) {
-    List<Action> astActions = new ArrayList<>();
-    astActions.add(new Action(Operation.EXTRACT, "SingleVariableDeclaration", "VarA"));
-    astActions.add(new Action(Operation.EXTRACT, "SimpleName", "VarB"));
-    astActions.add(new Action(Operation.EXTRACT, "SimpleName", "VarC"));
-    List<Action> refActions = new ArrayList<>();
-    refActions.add(new Action(Operation.DEL, "Class", "E"));
-    refActions.add(new Action(Operation.EXTRACT, "SingleVariableDeclaration", "G"));
+   public static void main(String[] args) {
+     List<Action> astActions = new ArrayList<>();
+     astActions.add(new Action(Operation.ADD, "SingleVariableDeclaration", "VarA"));
+     astActions.add(new Action(Operation.ADD, "SimpleName", "VarB"));
+     astActions.add(new Action(Operation.ADD, "SimpleName", "VarC"));
+     List<Action> refActions = new ArrayList<>();
+     refActions.add(new Action(Operation.DEL, "Class", "E"));
+     refActions.add(new Action(Operation.ADD, "SingleVariableDeclaration", "G"));
+     refActions.add(new Action(Operation.ADD, "SingleVariableDeclration", "G"));
+     refActions.add(new Action(Operation.EXTRACT, "SingleVariableDeclaration", "G"));
+     CommitMsgGenerator commitMsgGenerator = new CommitMsgGenerator(astActions, refActions);
+     System.out.println(commitMsgGenerator.generateDetailedMsgs(MsgClass.ADD, GroupLabel.FEATURE));
+   }
+  */
 
-    CommitMsgGenerator commitMsgGenerator = new CommitMsgGenerator(astActions, refActions);
-    System.out.println(commitMsgGenerator.generateDetailedMsgs(MsgClass.ADD, GroupLabel.FEATURE));
-  }
-   */
   /**
    * Vectorize the group features
    *
@@ -176,100 +176,24 @@ public class CommitMsgGenerator {
    * @return
    */
   public List<String> generateDetailedMsgs(MsgClass msgClass, GroupLabel intentLabel) {
-
-    // Count Frequency of typeFrom in Actions whose q equals key currently
     String key = msgClass.label;
-
-    List<Action> actions = new ArrayList<>();
-    actions.addAll(astActions);
-    actions.addAll(refactorActions);
-
-    // Matched Cases: count by frequency
-    List<Integer> IndexesUnlabeledMatched = getTop2IndexTypeFrom(actions, key);
-    // Special Cases: package, class, method，interface
-    List<Integer> IndexesLabeled = get4IndexOfTypeFrom(actions);
-
-    // 2 matches between MsgClass and AstAction
-    if (IndexesUnlabeledMatched.size() > 1) {
-      Action action0 = actions.get(IndexesUnlabeledMatched.get(0));
-      Action action1 = actions.get(IndexesUnlabeledMatched.get(1));
-      commitMsg = generateObjectMsgFromActions(action0, false, action1, false);
-    }
-    // 1 matches between MsgClass and AstAction
-    else if (IndexesUnlabeledMatched.size() == 1) {
-      if (IndexesLabeled.size() > 0) {
-        Action action0 = actions.get(IndexesUnlabeledMatched.get(0));
-        Action action1 = actions.get(IndexesLabeled.get(0));
-        commitMsg = generateObjectMsgFromActions(action0, false, action1, true);
-      } else {
-        Action action0 = actions.get(IndexesUnlabeledMatched.get(0));
-        commitMsg = generateObjectMsgFromActions(action0, false);
-      }
-
-    }
-    // 0 match between MsgClass and AstAction
-    else {
-      // Unmatched Cases: count by frequency
-      List<Integer> IndexesUnlabeledUnmatched = getTop2IndexTypeFrom(actions, "");
-      // 2 special cases: package, class, method，interface
-      if (IndexesLabeled.size() > 1) {
-        Action action0 = actions.get(IndexesLabeled.get(0));
-        Action action1 = actions.get(IndexesLabeled.get(1));
-        commitMsg = generateObjectMsgFromActions(action0, true, action1, true);
-      }
-      // 1 special cases: package, class, method，interface
-      else if (IndexesLabeled.size() == 1) {
-        Action action0 = actions.get(IndexesLabeled.get(0));
-        commitMsg = generateObjectMsgFromActions(action0, true);
-      }
-      // 0 special case: package, class, method，interface
-      else {
-        // 2 normal cases: top2
-        if (IndexesUnlabeledUnmatched.size() > 1) {
-          Action action0 = actions.get(IndexesUnlabeledUnmatched.get(0));
-          Action action1 = actions.get(IndexesUnlabeledUnmatched.get(1));
-          commitMsg = generateObjectMsgFromActions(action0, false, action1, false);
-        }
-        // 1 normal cases: only1
-        else if (IndexesUnlabeledUnmatched.size() == 1) {
-          Action action0 = actions.get(IndexesUnlabeledUnmatched.get(0));
-          commitMsg = generateObjectMsgFromActions(action0, false);
-        }
-        // 0 normal case: no
-        else {
-          commitMsg = key + " ...";
-        }
-      }
-    }
+    String commitMsg = getFirstRecommendedMsgFromActions(key, intentLabel);
 
     // generate recommendedCommitMsg
     List<String> recommendedCommitMsgs = new ArrayList<>();
-    String iLabel = "";
-    if (intentLabel.label.equals("Others")) {
-      if (key.equals("Fix")
-          || key.equals(" Test")
-          || key.equals("Reformat")
-          || key.equals("Document")
-          || key.equals("Revert")
-          || key.equals("Refactor")) iLabel = key.toUpperCase();
-      else iLabel = "FUNCTIONCHANGE";
-    } else if (!intentLabel.label.equals(key) && key.equals("Fix")) {
-      iLabel = key.toUpperCase();
-    } else iLabel = intentLabel.toString();
-    if(intentLabel.label.equals("Non-Java"))
-      commitMsg = key + " code or files";
-    recommendedCommitMsgs.add(iLabel + " - " + commitMsg);
-
-    // read json to get templates
-    JSONObject jsonObject = new JSONObject(getTemplate());
-    JSONArray jsonArray = jsonObject.getJSONArray(key);
-    for (int i = 0; i < jsonArray.length(); i++)
-      recommendedCommitMsgs.add(jsonArray.get(i).toString());
-
+    recommendedCommitMsgs.add(commitMsg);
+    /*
+       // read json to get templates
+       JSONObject jsonObject = new JSONObject(getTemplate());
+       JSONArray jsonArray = jsonObject.getJSONArray(key);
+       for (int i = 0; i < jsonArray.length(); i++)
+         recommendedCommitMsgs.add(jsonArray.get(i).toString());
+    */
     return recommendedCommitMsgs;
   }
 
   // get max2Count of Frequency in Actions
+  // 1 in, 1 out; 2+ in, 2 out
   private List<Integer> getTop2IndexTypeFrom(List<Action> Actions, String key) {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
@@ -277,7 +201,7 @@ public class CommitMsgGenerator {
       String typeFrom = Actions.get(i).getTypeFrom();
       if (typeFrom.equals("Code")) continue;
       if (Actions.get(i).getTypeFrom().isEmpty()) continue;
-      if (!key.equals("") && !Actions.get(i).getOperation().label.equals(key)) continue;
+      if (!key.equals("") && !matched(Actions.get(i).getOperation().label, key)) continue;
       for (int j = 0; j < i; j++) {
         if (Actions.get(j).getTypeFrom().equals(typeFrom)) {
           count[j]++;
@@ -307,6 +231,7 @@ public class CommitMsgGenerator {
   }
 
   // get 4Indexes(appear for the first time) in Actions: package, class, method，interface
+  // actions in, top2 out
   private List<Integer> get4IndexOfTypeFrom(List<Action> Actions) {
     int sizeActions = Actions.size();
     List<Integer> Indexes = new ArrayList<>();
@@ -319,6 +244,24 @@ public class CommitMsgGenerator {
     for (int i = 0; i < sizeActions && Indexes.size() < 2; i++)
       if (Actions.get(i).getTypeFrom().toLowerCase().contains("method")) Indexes.add(i);
     return Indexes;
+  }
+
+  // count the frequency of 4 special cases:
+  // actions in, 4 indexes out
+  private List<Integer> countNumOf4SpecialCases(List<Action> Actions) {
+    int sizeActions = Actions.size();
+    List<Integer> counts = Arrays.asList(0, 0, 0, 0);
+    for (int i = 0; i < sizeActions; i++) {
+      if (Actions.get(i).getTypeFrom().toLowerCase().contains("package"))
+        counts.set(0, counts.get(0) + 1);
+      else if (Actions.get(i).getTypeFrom().toLowerCase().contains("class"))
+        counts.set(1, counts.get(1) + 1);
+      else if (Actions.get(i).getTypeFrom().toLowerCase().contains("interface"))
+        counts.set(2, counts.get(2) + 1);
+      else if (Actions.get(i).getTypeFrom().toLowerCase().contains("method"))
+        counts.set(3, counts.get(3) + 1);
+    }
+    return counts;
   }
 
   // read json to get template
@@ -344,11 +287,9 @@ public class CommitMsgGenerator {
     return content;
   }
 
-  // only for label is needed
-  private String generateObjectMsgFromActions(Action action0, boolean needLabel) {
-    String objectMsg = null;
-    if (action0.getOperation().equals(Operation.ADD)) objectMsg = "Add ";
-    else objectMsg = "Modify ";
+  // as its name suggests
+  private String generateObjectMsgFromActions(String msg, Action action0, boolean needLabel) {
+    String objectMsg = msg + " ";
     if (needLabel) {
       if (action0.getLabelFrom().isEmpty()) objectMsg += action0.getTypeFrom();
       else objectMsg += action0.getTypeFrom() + " " + action0.getLabelFrom();
@@ -358,13 +299,10 @@ public class CommitMsgGenerator {
     return objectMsg;
   }
 
+  // as its name suggests
   private String generateObjectMsgFromActions(
-      Action action0, boolean needLabel0, Action action1, boolean needLabel1) {
-    String objectMsg;
-    // Operation
-    if (action0.getOperation().equals(Operation.ADD)
-        && action1.getOperation().equals(Operation.ADD)) objectMsg = "Add ";
-    else objectMsg = "Modify ";
+      String msg, Action action0, boolean needLabel0, Action action1, boolean needLabel1) {
+    String objectMsg = msg + " ";
     // Type + label
     boolean Label0 = !action0.getLabelFrom().isEmpty() && needLabel0;
     boolean Label1 = !action1.getLabelFrom().isEmpty() && needLabel1;
@@ -394,5 +332,148 @@ public class CommitMsgGenerator {
                 + action1.getLabelFrom();
     }
     return objectMsg;
+  }
+
+  // whether op matches msgClass, especially for ASTOperation
+  private boolean matched(String op, String msgClass) {
+    if (op.equals(msgClass)) return true;
+    if (op.equals("Add")) {
+      if (msgClass.equals("Add")
+          || msgClass.equals("Create")
+          || msgClass.equals("Implement")
+          || msgClass.equals("Make")) return true;
+    }
+    if (op.equals("Change") || op.equals("Move")) {
+      if (msgClass.equals("Update")
+          || msgClass.equals("Use")
+          || msgClass.equals("Improve")
+          || msgClass.equals("Upgrade")
+          || msgClass.equals("Modify")
+          || msgClass.equals("Fix")) return true;
+    }
+    if (op.equals("Delete")) {
+      if (msgClass.equals("Remove")) return true;
+    }
+    return false;
+  }
+
+  // get first msg based on the heuristic rules
+  private String getFirstRecommendedMsgFromActions(String key, GroupLabel intentLabel) {
+    // get iLabel
+    String iLabel = "";
+    // Rule 1.1 & 1.2
+    if (intentLabel.label.equals("Others")) {
+      if (key.equals("Fix")
+          || key.equals(" Test")
+          || key.equals("Reformat")
+          || key.equals("Document")
+          || key.equals("Revert")
+          || key.equals("Refactor")) iLabel = key.toUpperCase();
+      else iLabel = "FUNCTIONCHANGE";
+    }
+    // Rule 1.3
+    else if (!intentLabel.label.equals(key)
+        && !intentLabel.label.equals("Feature")
+        && key.equals("Fix")) {
+      iLabel = key.toUpperCase();
+    } else iLabel = intentLabel.toString();
+
+    // Rule 2.1
+    if (intentLabel.label.equals("Reformat")) {
+      commitMsg = "Code reformat";
+    }
+    // Rule 2.2
+    else if (intentLabel.label.equals("Non-Java")) {
+      commitMsg = "File Change";
+    }
+    // Rule 2.3
+    else if (!refactorActions.isEmpty()) {
+      List<Integer> IndexesTop2Matched = getTop2IndexTypeFrom(refactorActions, key);
+      // Rule 2.3a
+      if (IndexesTop2Matched.size() > 1) {
+        Action action0 = refactorActions.get(IndexesTop2Matched.get(0));
+        Action action1 = refactorActions.get(IndexesTop2Matched.get(1));
+        commitMsg = generateObjectMsgFromActions(key, action0, false, action1, false);
+      }
+      // Rule 2.3b
+      else if (IndexesTop2Matched.size() == 1) {
+        Action action0 = refactorActions.get(IndexesTop2Matched.get(0));
+        commitMsg = generateObjectMsgFromActions(key, action0, false);
+      } else {
+        List<Integer> Count4Cases = countNumOf4SpecialCases(refactorActions);
+        // Rule 2.3c
+        commitMsg = "";
+        if (Count4Cases.get(0) > 0) commitMsg = "Modify " + Count4Cases.get(0) + " Package(s)";
+        if (Count4Cases.get(1) > 0) {
+          if (commitMsg.isEmpty()) commitMsg = "Modify " + Count4Cases.get(1) + " Classe(s)";
+          else commitMsg += " and " + Count4Cases.get(1) + " Class(es)";
+        }
+        if (Count4Cases.get(2) > 0) {
+          if (commitMsg.isEmpty()) commitMsg = "Modify " + Count4Cases.get(2) + " Interface(s)";
+          else commitMsg += " and " + Count4Cases.get(2) + " Interface(s)";
+        }
+        if (Count4Cases.get(3) > 0) {
+          if (commitMsg.isEmpty()) commitMsg = "Modify " + Count4Cases.get(3) + " Method(s)";
+          else commitMsg += " and " + Count4Cases.get(3) + " Method(s)";
+        }
+        // Rule 2.3d
+        if (commitMsg.isEmpty()) {
+          Action action0 = refactorActions.get(IndexesTop2Matched.get(0));
+          commitMsg = generateObjectMsgFromActions(key, action0, false);
+        }
+      }
+    }
+    // Rule 2.4
+    else if (!astActions.isEmpty()) {
+      // Rule 2.4 Case1
+      if (key.equals("Fix")) {
+        iLabel = "FIX";
+        commitMsg = "fixed bugs";
+      } else if (key.equals("Test")) {
+        iLabel = "TEST";
+        commitMsg = "test code";
+      } else {
+        // Rule 2.4 Case2
+        List<Integer> IndexesTop2Matched = getTop2IndexTypeFrom(astActions, key);
+        // Rule 2.4a
+        if (IndexesTop2Matched.size() > 1) {
+          Action action0 = astActions.get(IndexesTop2Matched.get(0));
+          Action action1 = astActions.get(IndexesTop2Matched.get(1));
+          commitMsg = generateObjectMsgFromActions(key, action0, false, action1, false);
+        }
+        // Rule 2.4b
+        else if (IndexesTop2Matched.size() == 1) {
+          Action action0 = astActions.get(IndexesTop2Matched.get(0));
+          commitMsg = generateObjectMsgFromActions(key, action0, false);
+        } else {
+          List<Integer> Count4Cases = countNumOf4SpecialCases(astActions);
+          // Rule 2.4c
+          commitMsg = "";
+          if (Count4Cases.get(0) > 0) commitMsg = "Modify " + Count4Cases.get(0) + " Package(s)";
+          if (Count4Cases.get(1) > 0) {
+            if (commitMsg.isEmpty()) commitMsg = "Modify " + Count4Cases.get(1) + " Class(es)";
+            else commitMsg += " and " + Count4Cases.get(1) + " Class(es)";
+          }
+          if (Count4Cases.get(2) > 0) {
+            if (commitMsg.isEmpty()) commitMsg = "Modify " + Count4Cases.get(2) + " Interface(s)";
+            else commitMsg += " and " + Count4Cases.get(2) + " Interface(s)";
+          }
+          if (Count4Cases.get(3) > 0) {
+            if (commitMsg.isEmpty()) commitMsg = "Modify " + Count4Cases.get(3) + " Method(s)";
+            else commitMsg += " and " + Count4Cases.get(3) + " Method(s)";
+          }
+          // Rule 2.4d
+          if (commitMsg.isEmpty()) {
+            Action action0 = astActions.get(IndexesTop2Matched.get(0));
+            commitMsg = generateObjectMsgFromActions(key, action0, false);
+          }
+        }
+      }
+    }
+    // Rule 2.5
+    else {
+      commitMsg = "Modify code";
+    }
+    return iLabel + " - " + commitMsg;
   }
 }
