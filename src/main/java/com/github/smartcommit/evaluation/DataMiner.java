@@ -21,6 +21,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.BreakIterator;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,56 +42,60 @@ public class DataMiner {
     String repoPath = repoDir + repoName;
 
     // !merge && fix/close/resolve/issue && #issueid/number
-    // atomic: # == 1
-    // composite: & > 1 || (# == 1 && and/also/plus/too/other)
+    // atomic: # == 1 && !bullet list <= 1
+    // composite: (# > 1 || and/also/plus/too/other || bullet list))
 
     GitService gitService = new GitServiceImpl();
     List<RevCommit> atomicCommits = new ArrayList<>();
     List<RevCommit> compositeCommits = new ArrayList<>();
-    String regex = "#[0-9]+?\\s+";
-    Pattern pattern = Pattern.compile(regex);
+    Pattern issuePattern = Pattern.compile("#[0-9]+?\\s+");
+    Pattern bulletPattern = Pattern.compile("\\*|-\\s+");
     try (Repository repository = gitService.openRepository(repoPath)) {
       // iterate commits from master:HEAD
       try (RevWalk walk = gitService.createAllRevsWalk(repository, repository.getBranch())) {
         for (RevCommit commit : walk) {
+          // no merge commits
           if (commit.getParentCount() == 1) {
-            // for each:
-            // get commit msg
-            // check if linked with issue
-            // check if atomic or composite
-            // add commit id and msg to results
-            // stop if collected 100 composite commits and 100 atomic commits
             String msg = commit.getFullMessage().toLowerCase();
-            if (msg.contains("merge ")) {
+            if (msg.contains("merge") || msg.contains("merging")) {
               continue;
             }
-            if (msg.contains("fix ")
-                || msg.contains("close ")
-                || msg.contains("resolve ")
-                || msg.contains("solve ")
-                || msg.contains("issue ")
-                || msg.contains("#")) { // Other format: JRUBY-XXX XSTR-XXX
-              Matcher matcher = pattern.matcher(msg);
-              Set<String> numbers = new HashSet<>();
-              while (matcher.find()) {
-                numbers.add(matcher.group());
+            if (anyMatch(
+                msg,
+                new String[] {
+                  "issue", "#", "fix", "close", "resolve", "solve"
+                })) { // Other format: JRUBY-XXX XSTR-XXX
+
+              // extract issue ids
+              Set<String> issueIDs = new HashSet<>();
+              Matcher issueMatcher = issuePattern.matcher(msg);
+              while (issueMatcher.find()) {
+                issueIDs.add(issueMatcher.group());
               }
-              if (numbers.size() == 1) {
-                atomicCommits.add(commit);
-              } else if (numbers.size() > 1
-                  && (msg.contains("and ")
-                      || msg.contains("also ")
-                      || msg.contains("&")
-                      || msg.contains("plus ")
-                      || msg.contains("other ")
-                      || msg.contains("too "))) {
+
+              Matcher bulletMatcher = bulletPattern.matcher(msg);
+              int bulletNum = 0;
+              while (bulletMatcher.find()) {
+                bulletNum++;
+              }
+
+              if (bulletNum > 1
+                  || containsMultipleVerbs(commit.getFullMessage())
+                  || issueIDs.size() > 1) {
                 compositeCommits.add(commit);
+                System.out.println("[C]" + commit.getName());
+              } else if (issueIDs.size() == 1) {
+                atomicCommits.add(commit);
+                System.out.println("[A]" + commit.getName());
               }
             }
           }
         }
       }
 
+      System.out.println("[C]: " + compositeCommits.size());
+      System.out.println("[A]: " + atomicCommits.size());
+      // save results into mongodb
       saveSamplesInDB(repoName, "atomic", atomicCommits);
       saveSamplesInDB(repoName, "composite", compositeCommits);
       // write results into csv file
@@ -99,6 +104,73 @@ public class DataMiner {
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  private static boolean containsMultipleVerbs1(String msg) {
+    String[] verbs =
+        new String[] {
+          "add",
+          "fix",
+          "change",
+          "modif",
+          "remove",
+          "delete",
+          "refactor",
+          "format",
+          "rename",
+          "reformat",
+          "patch"
+        };
+    //    String[] words = msg.split("\\s+");
+    int num = 0;
+    for (String v : verbs) {
+      if (msg.contains(v)) {
+        num += 1;
+        if (num > 1) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static boolean containsMultipleVerbs(String msg) {
+    List<String> sentences = new ArrayList<>();
+    BreakIterator iterator = BreakIterator.getSentenceInstance(Locale.US);
+    iterator.setText(msg);
+    int start = iterator.first();
+    for (int end = iterator.next(); end != BreakIterator.DONE; start = end, end = iterator.next()) {
+      sentences.add(msg.substring(start, end).toLowerCase());
+    }
+    String[] verbs =
+        new String[] {
+          "add",
+          "fix",
+          "change",
+          "modif",
+          "remove",
+          "delete",
+          "refactor",
+          "format",
+          "rename",
+          "reformat",
+          "patch"
+        };
+    //    String[] words = msg.split("\\s+");
+    int num = 0;
+    for (String sentence : sentences) {
+      if (anyMatch(sentence, verbs)) {
+        num += 1;
+        if (num > 1) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static boolean anyMatch(String str, String[] keywords) {
+    return Arrays.stream(keywords).parallel().anyMatch(str::contains);
   }
 
   /**
@@ -114,11 +186,16 @@ public class DataMiner {
     MongoDatabase db = mongoClient.getDatabase(dbName);
     MongoCollection<Document> col = db.getCollection(repoName);
     // !!! drop the last testing results
-//    col.drop();
+    col.drop();
 
     for (RevCommit commit : commits) {
       Document commitDoc = new Document("repo_name", repoName);
-      commitDoc.append("commit_id", commit.getName()).append("commit_msg", commit.getFullMessage());
+      commitDoc
+          .append("commit_id", commit.getName())
+          .append("commit_time", commit.getAuthorIdent().getWhen())
+          .append("committer_name", commit.getAuthorIdent().getName())
+          .append("committer_email", commit.getAuthorIdent().getEmailAddress())
+          .append("commit_msg", commit.getFullMessage());
 
       col.insertOne(commitDoc);
     }
