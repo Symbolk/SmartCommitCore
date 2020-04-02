@@ -121,6 +121,7 @@ public class GroupGenerator1 {
     // use tree set to keep unique and ordered
     Set<DiffHunk> doc = new TreeSet<>(ascendingByIndexComparator());
     Set<DiffHunk> config = new TreeSet<>(ascendingByIndexComparator());
+    Set<DiffHunk> resource = new TreeSet<>(ascendingByIndexComparator());
     Set<DiffHunk> reformat = new TreeSet<>(ascendingByIndexComparator());
     Set<DiffHunk> others = new TreeSet<>(ascendingByIndexComparator());
     Set<DiffHunk> moving = new TreeSet<>(ascendingByIndexComparator());
@@ -134,7 +135,7 @@ public class GroupGenerator1 {
     for (DiffFile diffFile : diffFiles) {
       if (!diffFile.getFileType().equals(FileType.JAVA)) {
         String filePath =
-            diffFile.getBaseRelativePath().contains("/dev/null")
+            diffFile.getBaseRelativePath().isEmpty()
                 ? diffFile.getCurrentRelativePath()
                 : diffFile.getBaseRelativePath();
         if (Utils.isDocFile(filePath)) {
@@ -144,6 +145,10 @@ public class GroupGenerator1 {
         } else if (Utils.isConfigFile(filePath)) {
           for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
             config.add(diffHunk);
+          }
+        } else if (Utils.isResourceFile(filePath)) {
+          for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
+            resource.add(diffHunk);
           }
         } else {
           for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
@@ -247,7 +252,7 @@ public class GroupGenerator1 {
             diffNode -> {
               individuals.add(diffNode.getUUID());
             });
-      } else if (connectedSets.size() > 1) {
+      } else if (diffNodesSet.size() > 1) {
         Set<String> diffHunkIDs = new LinkedHashSet<>();
         // topo sort
         diffNodesSet =
@@ -447,21 +452,22 @@ public class GroupGenerator1 {
    */
   private double estimateSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
     // ignore special cases: imports, empty, blank_lines
-    if (diffHunk.getBaseHunk().getContentType().equals(ContentType.CODE)
-        || diffHunk.getCurrentHunk().getContentType().equals(ContentType.CODE)) {
-      // TODO check length to avoid low similarity computation
-      double baseSimi =
-          Utils.computeStringSimilarity(
-              Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet()),
-              Utils.convertListToStringNoFormat(diffHunk1.getBaseHunk().getCodeSnippet()));
-      double currentSimi =
-          Utils.computeStringSimilarity(
-              Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()),
-              Utils.convertListToStringNoFormat(diffHunk1.getCurrentHunk().getCodeSnippet()));
-      return (double) Math.round((baseSimi + currentSimi) / 2 * 100) / 100;
-    } else {
-      return 0D;
+    if (diffHunk.getFileType().equals(FileType.JAVA)) {
+      if (diffHunk.getBaseHunk().getContentType().equals(ContentType.CODE)
+          || diffHunk.getCurrentHunk().getContentType().equals(ContentType.CODE)) {
+        // TODO check length to avoid low similarity computation
+        double baseSimi =
+            Utils.computeStringSimilarity(
+                Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet()),
+                Utils.convertListToStringNoFormat(diffHunk1.getBaseHunk().getCodeSnippet()));
+        double currentSimi =
+            Utils.computeStringSimilarity(
+                Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()),
+                Utils.convertListToStringNoFormat(diffHunk1.getCurrentHunk().getCodeSnippet()));
+        return (double) Math.round((baseSimi + currentSimi) / 2 * 100) / 100;
+      }
     }
+    return 0D;
   }
 
   /**

@@ -478,7 +478,15 @@ public class Utils {
 
   public static boolean isDocFile(String fileName) {
     if (fileName.lastIndexOf(".") != -1) {
-      return checkSuffix(fileName, new String[] {".md", ".txt", ".html"});
+      return checkSuffix(fileName, new String[] {".md", ".txt"});
+    } else {
+      return true;
+    }
+  }
+
+  public static boolean isResourceFile(String fileName) {
+    if (fileName.lastIndexOf(".") != -1) {
+      return checkSuffix(fileName, new String[] {".json", ".css", ".html"});
     } else {
       return true;
     }
