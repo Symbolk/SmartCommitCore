@@ -1,10 +1,8 @@
 package com.github.smartcommit.client;
 
-import com.github.smartcommit.commitmsg.CommitMsgGenerator;
 import com.github.smartcommit.core.GraphBuilder;
-import com.github.smartcommit.core.GroupGenerator;
+import com.github.smartcommit.core.GroupGenerator1;
 import com.github.smartcommit.core.RepoAnalyzer;
-import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
@@ -108,7 +106,7 @@ public class SmartCommit {
 
     Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
 
-    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
+    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunks(diffFiles, tempDir);
 
     // generate commit message
     if (results != null) {
@@ -154,6 +152,8 @@ public class SmartCommit {
     Pair<String, String> srcDirs = dataCollector.collectDiffFilesAtCommit(commitID, diffFiles);
 
     Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
+
+    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunks(diffFiles, resultsDir);
 
     exportGroupResults(results, resultsDir);
 

@@ -125,8 +125,8 @@ public class DataCollector {
    * @param diffFiles
    * @return fileID : filePath (base if status!=ADDED else current)
    */
-  public Map<String, String> collectDiffHunksWorking(List<DiffFile> diffFiles) {
-    String diffDir = tempDir + File.separator + "diffs";
+  public Map<String, String> collectDiffHunks(List<DiffFile> diffFiles, String resultsDir) {
+    String diffDir = resultsDir + File.separator + "diffs";
     Map<String, String> fileIDToPathMap = new HashMap<>();
     for (DiffFile diffFile : diffFiles) {
       // generate description for each diff hunk
@@ -150,7 +150,7 @@ public class DataCollector {
     // save the fileID to path map
     Gson gson = new Gson();
     String str = gson.toJson(fileIDToPathMap);
-    Utils.writeStringToFile(str, tempDir + File.separator + "file_ids.json");
+    Utils.writeStringToFile(str, resultsDir + File.separator + "file_ids.json");
     return fileIDToPathMap;
   }
 
@@ -232,9 +232,8 @@ public class DataCollector {
       case DELETED:
         return Operation.DEL;
       case MODIFIED:
-        return Operation.UPD;
       default:
-        return Operation.UPD;
+        return Operation.CHANGE;
     }
   }
   /**
@@ -244,7 +243,8 @@ public class DataCollector {
    * @param coveredNodes
    * @return
    */
-  private static List<Action> analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
+  private static List<Action> analyzeCoveredNodes(
+      ChangeType changeType, List<ASTNode> coveredNodes) {
     List<Action> actions = new ArrayList<>();
     Operation operation = convertChangeTypeToOperation(changeType);
 
