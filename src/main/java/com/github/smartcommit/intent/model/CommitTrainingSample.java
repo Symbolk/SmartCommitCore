@@ -1,6 +1,7 @@
 package com.github.smartcommit.intent.model;
 
 import com.github.smartcommit.model.Action;
+import com.github.smartcommit.model.DiffFile;
 
 import java.util.List;
 
@@ -20,6 +21,7 @@ public class CommitTrainingSample {
   private List<AstAction> gumtreeActions;
   private List<Action> diffHunksActions;
   private List<RefactorMinerAction> refactorMinerActions;
+  private List<DiffFile> diffFiles;
 
   public String getCommitID() {
     return commitID;
@@ -124,6 +126,14 @@ public class CommitTrainingSample {
 
   public void addRefactorCodeChange(RefactorMinerAction refactorMinerAction) {
     this.refactorMinerActions.add(refactorMinerAction);
+  }
+
+  public void setDiffFiles(List<DiffFile> diffFiles) {
+    this.diffFiles = diffFiles;
+  }
+
+  public List<DiffFile> getDiffFiles() {
+    return this.diffFiles;
   }
 
   public void setRepoID(String repoID) {
