@@ -21,15 +21,13 @@ import com.google.gson.stream.JsonReader;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.apache.maven.shared.invoker.*;
 import org.jgrapht.Graph;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 
 /** API entry */
@@ -417,8 +415,44 @@ public class SmartCommit {
    *
    * @return groupID:compilation output
    */
-  public Map<String, String> compileWithMaven() {
-    return new HashMap<>();
+  public static Map<String, String> compileWithMaven() throws MavenInvocationException {
+    Map<String, String> result = new HashMap<>();
+    Map<String, DiffHunk> id2DiffHunkMap;
+    String repoName = "SmartCommitMaven";
+    String repoPath = "../SmartCommitMaven/";
+    String repoID = String.valueOf(repoName.hashCode());
+    String commitID = "7c48b811f31dba78b769662ec515a06b32265919";
+    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
+    List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
+    List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
+    if (diffFiles.isEmpty() || allDiffHunks.isEmpty()) {
+      logger.info("Files are unchanged at commit: " + commitID);
+      return null;
+    }
+    id2DiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();
+    System.out.println(id2DiffHunkMap.size());
+
+    for(Map.Entry<String, DiffHunk> entry : id2DiffHunkMap.entrySet()) {
+      String groupId = entry.getKey();
+      DiffHunk diffHunk = entry.getValue();
+
+      InvocationRequest request = new DefaultInvocationRequest();
+      // from SmartCommit  File
+      // submodule
+      request.setPomFile( new File( "../SmartCommitMaven/pom.xml" ) );
+      request.setGoals( Collections.singletonList( "compile" ) );
+      Invoker invoker = new DefaultInvoker();
+
+      String compileOut = null;
+      if(invoker.execute( request ).getExitCode()==0){
+        System.err.println("Request Execution success");
+      }else{
+        System.err.println("Request Execution error");
+      }
+      result.put(groupId, compileOut);
+      break;
+    }
+    return result;
   }
 
   /**
@@ -426,8 +460,46 @@ public class SmartCommit {
    *
    * @return
    */
-  public List<MavenError> parseMavenErrors(String groupID) {
-    return new ArrayList<>();
+  public List<MavenError> parseMavenErrors(String groupID) throws MavenInvocationException {
+    List<MavenError> result = new ArrayList<>();
+    //String compileOut = compileWithMaven().get(groupID);
+    String compileOut =
+            "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[3,36] package com.github.smartcommit.model does not exist\n" +
+            "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[5,24] package org.apache.log4j does not exist\n" +
+            "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[13,24] cannot find symbol\n" +
+            "  symbol:   class Logger\n" +
+            "  location: class com.github.smartcommit.util.JDTParser\n" +
+            "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[28,64] cannot find symbol\n" +
+            "  symbol:   class DiffFile\n" +
+            "  location: class com.github.smartcommit.util.JDTParser";
+    String[] rows = compileOut.split("\\n");
+    for(int i = 0; i < rows.length; i++) {
+      String row = rows[i];
+      if(row.contains("[ERROR]")) {
+        String[] parts = row.split("\\[ERROR] |:\\[|,|] ");
+        String type = null;
+        String filePath = parts[1];
+        Integer line = Integer.parseInt(parts[2]);
+        Integer column = Integer.parseInt(parts[3]);
+        String symbol = null;
+        String location = null;
+        String msg = parts[4];
+        if(row.contains("does not exist"))
+          type = "package does not exist";
+        else if(row.contains("cannot find symbol"))
+          type = "cannot find symbol";
+
+        if(i+1 < rows.length &&  rows[i+1].contains("  symbol:   "))
+          symbol = row.substring("  symbol:   ".length());
+        if(i+2 < rows.length &&  rows[i+2].contains("  location: "))
+          location = row.substring("  location: ".length());
+
+        MavenError mavenError = new MavenError(type, filePath, line, column, symbol, msg);
+        System.out.println(mavenError.getLine());
+        result.add(mavenError);
+      }
+    }
+    return result;
   }
 
   /**
