@@ -15,18 +15,18 @@ public class Action {
   public Action(Operation operation, String typeFrom, String labelFrom) {
     this.operation = operation;
     this.typeFrom = typeFrom;
-    this.labelFrom = labelFrom;
+    this.labelFrom = labelFrom.trim();
     this.typeTo = "";
     this.labelTo = "";
   }
 
   public Action(
       Operation operation, String typeFrom, String labelFrom, String typeTo, String labelTo) {
-    this.operation = operation;
-    this.typeFrom = typeFrom;
-    this.labelFrom = labelFrom;
-    this.typeTo = typeTo;
-    this.labelTo = labelTo;
+    this.operation = operation == null ? Operation.UKN : operation;
+    this.typeFrom = typeFrom == null ? "" : typeFrom;
+    this.labelFrom = labelFrom == null ? "" : labelFrom.trim();
+    this.typeTo = typeTo == null ? "" : typeTo;
+    this.labelTo = labelTo == null ? "" : labelTo.trim();
   }
 
   @Override
@@ -36,9 +36,17 @@ public class Action {
     builder
         .append(typeFrom.isEmpty() ? "" : " " + typeFrom)
         .append(labelFrom.isEmpty() ? "" : ": " + labelFrom);
-    builder
-        .append(typeTo.isEmpty() ? "" : " To: " + typeTo)
-        .append(labelTo.isEmpty() ? "" : ": " + labelTo);
+    if (!typeFrom.equals(typeTo)) {
+      builder.append(typeTo.isEmpty() ? "" : " To: " + typeTo + ":");
+      if (!labelFrom.equals(labelTo)) {
+        builder.append(labelTo.isEmpty() ? "" : " " + labelTo);
+      }
+    } else {
+      if (!labelFrom.equals(labelTo)) {
+        builder.append(labelTo.isEmpty() ? "" : " To: " + labelTo);
+      }
+    }
+
     builder.append(".");
 
     return builder.toString();
@@ -83,6 +91,6 @@ public class Action {
   }
 
   public String getLabelTo() {
-    return  labelTo;
+    return labelTo;
   }
 }
