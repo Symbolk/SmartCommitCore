@@ -131,6 +131,11 @@ public class CommitInfoHandler {
       tempCommitTrainingSample.setIntentDescription(intentList);
 
       RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
+
+      // add DiffFiles, though the same as DiffHunks
+      List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
+      tempCommitTrainingSample.setDiffFiles(diffFiles);
+
       DataCollector dataCollector = new DataCollector(repoName, tempDir);
       // add astActionList using gumtree
       tempCommitTrainingSample =
@@ -376,6 +381,31 @@ public class CommitInfoHandler {
       doc1.put("GumtreeCountDocChange", commitTrainingSample.getGumtreeCountDocChange());
 
       {
+        // add DiffFile to DB
+        List<DiffFile> diffFiles = commitTrainingSample.getDiffFiles();
+        if (diffFiles != null) {
+          List<Document> Files = new ArrayList<>();
+          for (DiffFile diffFile : diffFiles) {
+            Document addrAttr = new Document();
+            addrAttr.put("RepoID", diffFile.getRepoID());
+            addrAttr.put("RepoName", diffFile.getRepoName());
+            addrAttr.put("FileID", diffFile.getFileID());
+            addrAttr.put("RawHeaders", diffFile.getRawHeaders().toString());
+            addrAttr.put("FileStatus", diffFile.getStatus().label);
+            addrAttr.put("FileType", diffFile.getFileType().label);
+            addrAttr.put("BaseRelativePath", diffFile.getBaseRelativePath());
+            addrAttr.put("CurrentRelativePath", diffFile.getCurrentRelativePath());
+            addrAttr.put("BaseContent", diffFile.getBaseContent());
+            addrAttr.put("CurrentContent", diffFile.getCurrentContent());
+            addrAttr.put("Index", diffFile.getIndex());
+            addrAttr.put("sizeDiffHunks", diffFile.getDiffHunks().size());
+            Files.add(addrAttr);
+          }
+          doc1.put("DiffFiles", Files);
+        }
+      }
+
+      {
         List<Action> Actions1 = new ArrayList<>();
         // add ActionList to DB
         List<AstAction> GumtreeActions = commitTrainingSample.getGumtreeActionList();
@@ -421,27 +451,29 @@ public class CommitInfoHandler {
           }
           doc1.put("refactorMinerActions", actions);
         }
-        // add 3in1 to DB
-        List<Document> actions = new ArrayList<>();
-        Integer sizeActions1 = Actions1.size();
-        Integer sizeActions2 = Actions2.size();
-        Integer sizeActions3 = Actions3.size();
-        for (int i = 0; i < sizeActions1; i++) {
-          Document addrAttr = new Document();
-          addrAttr.put("Gumtree", Actions1.get(i).toString());
-          actions.add(addrAttr);
+        {
+          // add 3in1 to DB
+          List<Document> actions = new ArrayList<>();
+          Integer sizeActions1 = Actions1.size();
+          Integer sizeActions2 = Actions2.size();
+          Integer sizeActions3 = Actions3.size();
+          for (int i = 0; i < sizeActions1; i++) {
+            Document addrAttr = new Document();
+            addrAttr.put("Gumtree", Actions1.get(i).toString());
+            actions.add(addrAttr);
+          }
+          for (int i = 0; i < sizeActions2; i++) {
+            Document addrAttr = new Document();
+            addrAttr.put("DiffHunk", Actions2.get(i).toString());
+            actions.add(addrAttr);
+          }
+          for (int i = 0; i < sizeActions3; i++) {
+            Document addrAttr = new Document();
+            addrAttr.put("RefactorMiner", Actions3.get(i).toString());
+            actions.add(addrAttr);
+          }
+          doc1.put("AllActions", actions);
         }
-        for (int i = 0; i < sizeActions2; i++) {
-          Document addrAttr = new Document();
-          addrAttr.put("DiffHunk", Actions2.get(i).toString());
-          actions.add(addrAttr);
-        }
-        for (int i = 0; i < sizeActions3; i++) {
-          Document addrAttr = new Document();
-          addrAttr.put("RefactorMiner", Actions3.get(i).toString());
-          actions.add(addrAttr);
-        }
-        doc1.put("AllActions", actions);
       }
 
       collection.insertOne(doc1);
