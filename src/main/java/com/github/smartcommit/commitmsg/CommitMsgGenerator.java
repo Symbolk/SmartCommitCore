@@ -5,6 +5,8 @@ import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.GroupLabel;
 import org.apache.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -24,21 +26,6 @@ public class CommitMsgGenerator {
     this.astActions = astActions;
     this.refactorActions = refactorActions;
   }
-  /*
-   public static void main(String[] args) {
-     List<Action> astActions = new ArrayList<>();
-     astActions.add(new Action(Operation.ADD, "SingleVariableDeclaration", "VarA"));
-     astActions.add(new Action(Operation.ADD, "SimpleName", "VarB"));
-     astActions.add(new Action(Operation.ADD, "SimpleName", "VarC"));
-     List<Action> refActions = new ArrayList<>();
-     refActions.add(new Action(Operation.DEL, "Class", "E"));
-     refActions.add(new Action(Operation.ADD, "SingleVariableDeclaration", "G"));
-     refActions.add(new Action(Operation.ADD, "SingleVariableDeclration", "G"));
-     refActions.add(new Action(Operation.EXTRACT, "SingleVariableDeclaration", "G"));
-     CommitMsgGenerator commitMsgGenerator = new CommitMsgGenerator(astActions, refActions);
-     System.out.println(commitMsgGenerator.generateDetailedMsgs(MsgClass.ADD, GroupLabel.FEATURE));
-   }
-  */
 
   /**
    * Vectorize the group features
@@ -182,13 +169,13 @@ public class CommitMsgGenerator {
     // generate recommendedCommitMsg
     List<String> recommendedCommitMsgs = new ArrayList<>();
     recommendedCommitMsgs.add(commitMsg);
-    /*
-       // read json to get templates
-       JSONObject jsonObject = new JSONObject(getTemplate());
-       JSONArray jsonArray = jsonObject.getJSONArray(key);
-       for (int i = 0; i < jsonArray.length(); i++)
-         recommendedCommitMsgs.add(jsonArray.get(i).toString());
-    */
+
+    // read json to get templates
+    JSONObject jsonObject = new JSONObject(getTemplate());
+    JSONArray jsonArray = jsonObject.getJSONArray(key);
+    for (int i = 0; i < jsonArray.length(); i++)
+      recommendedCommitMsgs.add(jsonArray.get(i).toString());
+
     return recommendedCommitMsgs;
   }
 
