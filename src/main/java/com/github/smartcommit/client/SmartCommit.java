@@ -448,8 +448,7 @@ public class SmartCommit {
    */
   public List<MavenError> parseMavenErrors(String groupID) {
     List<MavenError> result = new ArrayList<>();
-    // String compileOut = compileWithMaven().get(groupID);
-    String compileOut = groupID;
+    String compileOut = compileWithMaven().get(groupID);
     String[] rows = compileOut.split("\\n");
     for (int i = 0; i < rows.length; i++) {
       String row = rows[i];
