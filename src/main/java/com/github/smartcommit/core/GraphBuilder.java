@@ -557,13 +557,17 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               for (VariableDeclarationFragment fragment : fragments) {
                 IVariableBinding binding = fragment.resolveBinding();
                 if (binding != null && binding.getDeclaringClass() != null) {
+                  // use qualified name
                   nodeOpt =
                       findNodeByNameAndType(
                           binding.getDeclaringClass().getQualifiedName() + ":" + binding.getName(),
                           NodeType.FIELD,
                           true);
                 } else {
-                  nodeOpt = findNodeByNameAndType(binding.getName(), NodeType.FIELD, false);
+                  // use simple name instead
+                  nodeOpt =
+                      findNodeByNameAndType(
+                          fragment.getName().getFullyQualifiedName(), NodeType.FIELD, false);
                 }
                 if (nodeOpt.isPresent()) {
                   existInGraph = true;
