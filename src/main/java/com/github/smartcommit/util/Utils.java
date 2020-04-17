@@ -154,6 +154,18 @@ public class Utils {
   }
 
   /**
+   * Write a list of lines into a file
+   *
+   * @param lines
+   * @return
+   */
+  public static List<String> writeLinesToFile(List<String> lines, String filePath) {
+    String content = lines.stream().collect(Collectors.joining(System.lineSeparator()));
+    writeStringToFile(content, filePath);
+    return lines;
+  }
+
+  /**
    * Create a folder if not exists
    *
    * @param dir abs path
@@ -545,5 +557,56 @@ public class Utils {
     }
 
     return max.getKey();
+  }
+
+  /**
+   * Sort a map in descending order by the value
+   *
+   * @param original
+   * @return
+   */
+  public static Map<String, Integer> sortMapByValue(Map<String, Integer> original) {
+    final Map<String, Integer> sorted =
+        original.entrySet().stream()
+            .sorted((Map.Entry.<String, Integer>comparingByValue().reversed()))
+            .collect(
+                Collectors.toMap(
+                    Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+    return sorted;
+  }
+
+  /**
+   * Jaccard = Intersection/Union in [0,1]
+   *
+   * @param s1
+   * @param s2
+   * @return
+   */
+  private static double jaccard(Set s1, Set s2) {
+    Set<String> union = new HashSet<>();
+    union.addAll(s1);
+    union.addAll(s2);
+    Set<String> intersection = new HashSet<>();
+    intersection.addAll(s1);
+    intersection.retainAll(s2);
+    if (union.size() <= 0) {
+      return 0D;
+    } else {
+      return (double) intersection.size() / union.size();
+    }
+  }
+
+  /**
+   * Compute the similarity of two lists by comparing as sets (no order, no duplicates)
+   *
+   * @param list1
+   * @param list2
+   * @return
+   */
+  public static double computeListSimilarity(List<Action> list1, List<Action> list2) {
+    if (list1.size() == 0 || list2.size() == 0) {
+      return 0D;
+    }
+    return jaccard(new HashSet(list1), new HashSet(list2));
   }
 }

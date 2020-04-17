@@ -455,16 +455,22 @@ public class GroupGenerator1 {
     if (diffHunk.getFileType().equals(FileType.JAVA)) {
       if (diffHunk.getBaseHunk().getContentType().equals(ContentType.CODE)
           || diffHunk.getCurrentHunk().getContentType().equals(ContentType.CODE)) {
-        // TODO check length to avoid low similarity computation
-        double baseSimi =
+        // TODO check length to avoid too low similarity computation
+        // textual similarity
+        double baseText =
             Utils.computeStringSimilarity(
                 Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet()),
                 Utils.convertListToStringNoFormat(diffHunk1.getBaseHunk().getCodeSnippet()));
-        double currentSimi =
+        double currentText =
             Utils.computeStringSimilarity(
                 Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()),
                 Utils.convertListToStringNoFormat(diffHunk1.getCurrentHunk().getCodeSnippet()));
-        return (double) Math.round((baseSimi + currentSimi) / 2 * 100) / 100;
+        // actions similarity
+        double astSimi =
+            Utils.computeListSimilarity(diffHunk.getAstActions(), diffHunk1.getAstActions());
+        double refSimi =
+            Utils.computeListSimilarity(diffHunk.getRefActions(), diffHunk1.getRefActions());
+        return (double) Math.round((baseText + currentText + astSimi + refSimi) / 4 * 100) / 100;
       }
     }
     return 0D;
