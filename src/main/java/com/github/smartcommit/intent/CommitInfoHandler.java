@@ -45,7 +45,10 @@ import java.util.Map;
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
   public static void main(String[] args) {
-    args = new String[] {"/Users/Chuncen/Desktop/refactoring-toy-example", "commitTrainingSample"};
+    args =
+        new String[] {
+          "/Users/Chuncen/Desktop/Repos/refactoring-toy-example", "commitTrainingSample"
+        };
     String repoPath = args[0];
     String collectionName = args[1];
     // CommitTrainingSample
@@ -59,16 +62,6 @@ public class CommitInfoHandler {
     } catch (Exception e) {
       e.printStackTrace();
     }
-
-    /*
-    String string =
-        "\n 你好"
-            + "    Merge pull request #3011 from testfixer/com.alibaba.json.bvt.jsonp.JSONPParseTest3\n"
-            + "    \n"
-            + "    Enable SerializeFeature.MapSortField for deterministic order";
-    System.out.println(getIntentDescriptionFromMsg(string.toLowerCase()));
-
-      */
   }
 
   // Split "git commit"
@@ -76,12 +69,12 @@ public class CommitInfoHandler {
       String REPO_DIR, List<CommitTrainingSample> commitTrainingSample) {
     GitService gitService = new GitServiceCGit();
     String log = Utils.runSystemCommand(REPO_DIR, "git", "log");
-    String parts[] = log.split("\\ncommit "), body[];
+    String[] parts = log.split("\\ncommit ");
     parts[0] = parts[0].substring("commit ".length());
     for (String part : parts) {
       List<String> tempList = new ArrayList<String>();
       CommitTrainingSample tempCommitTrainingSample = new CommitTrainingSample();
-      body = part.split("\\nAuthor: | <|>\\nDate:   |\\n\\n  ");
+      String[] body = part.split("\\nAuthor: | <|>\\nDate:   |\\n\\n  ");
       // String commitID
       tempCommitTrainingSample.setCommitID(body[0].substring(0, 40));
       // String committer
@@ -120,32 +113,29 @@ public class CommitInfoHandler {
       tempCommitTrainingSample.setRepoPath(repoPath);
       tempCommitTrainingSample.setRepoName(repoName);
 
-      String commitMsg = tempCommitTrainingSample.getCommitMsg();
+      String commitMsg = tempCommitTrainingSample.getCommitMsg().toLowerCase();
       String tempDir = "~/Downloads/";
+      RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
+      DataCollector dataCollector = new DataCollector(repoName, tempDir);
+
       // get Intent from commitMsg
       Intent intent = getIntentFromMsg(commitMsg);
       tempCommitTrainingSample.setIntent(intent);
-
       // get List<IntentDescription> from commitMsg
-      List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg.toLowerCase());
+      List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
       tempCommitTrainingSample.setIntentDescription(intentList);
-
-      RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
 
       // add DiffFiles, though the same as DiffHunks
       List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
       tempCommitTrainingSample.setDiffFiles(diffFiles);
 
-      DataCollector dataCollector = new DataCollector(repoName, tempDir);
       // add astActionList using gumtree
       tempCommitTrainingSample =
           generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
-
       // add DiffHunkActions using DiffHunks
       List<Action> DiffHunkActions =
           generateActionListFromDiffHunks(tempCommitTrainingSample, dataCollector);
       tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
-
       // add refactorCodeChange using RefactoringMiner
       List<RefactorMinerAction> refactorMinerActions =
           getRefactorCodeChangesFromCodeChange(repoPath, commitID);
@@ -160,12 +150,15 @@ public class CommitInfoHandler {
 
   // generate Intent from Message
   private static Intent getIntentFromMsg(String commitMsg) {
-    for (Intent intent : Intent.values()) {
-      if (commitMsg.contains(intent.label)) {
-        return intent;
+    String[] parts = commitMsg.toLowerCase().split("\\n");
+    for (int i = 0; i < parts.length; i++) {
+      for (Intent intent : Intent.values()) {
+        if (parts[i].contains(intent.label)) {
+          return intent;
+        }
       }
     }
-    return Intent.CHR;
+    return Intent.CHORE;
   }
 
   // generate IntentDescription from Message
@@ -193,46 +186,6 @@ public class CommitInfoHandler {
       }
     }
     return IntentDescriptions;
-  }
-
-  // generate Edit Script from file contents
-  private static EditScript generateEditScript(String baseContent, String currentContent) {
-    JdtTreeGenerator generator = new JdtTreeGenerator();
-    try {
-      TreeContext oldContext = generator.generateFrom().string(baseContent);
-      TreeContext newContext = generator.generateFrom().string(currentContent);
-
-      Matcher matcher = Matchers.getInstance().getMatcher();
-      MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
-      EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
-      return editScript;
-    } catch (Exception e) {
-      // e.printStackTrace();
-      // Failure to generate AbstractJdtTree because of the docChange instead of codeChange
-      return null;
-    }
-  }
-
-  // generate commit info from different file pathway
-  private static List<AstAction> generateAstActionList(EditScript editScript) {
-    List<AstAction> actionList = new ArrayList<>();
-    for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
-      com.github.gumtreediff.actions.model.Action action =
-          (com.github.gumtreediff.actions.model.Action) iter.next();
-      ASTOperation ASTOperation = null;
-      if (action instanceof Insert) {
-        ASTOperation = ASTOperation.ADD;
-      } else if (action instanceof Delete) {
-        ASTOperation = ASTOperation.DEL;
-      } else if (action instanceof Move) {
-        ASTOperation = ASTOperation.MOV;
-      } else if (action instanceof Update) {
-        ASTOperation = ASTOperation.UPD;
-      }
-      AstAction myAction = new AstAction(ASTOperation, action.getNode().getType().toString());
-      actionList.add(myAction);
-    }
-    return actionList;
   }
 
   // generate Gumtree action list from code changes: diffFile and EditScript
@@ -271,8 +224,46 @@ public class CommitInfoHandler {
     }
     return tempCommitTrainingSample;
   }
+  // generate Edit Script from file contents
+  private static EditScript generateEditScript(String baseContent, String currentContent) {
+    JdtTreeGenerator generator = new JdtTreeGenerator();
+    try {
+      TreeContext oldContext = generator.generateFrom().string(baseContent);
+      TreeContext newContext = generator.generateFrom().string(currentContent);
 
-  public static Action convertAstActionToAction(AstAction astAction) {
+      Matcher matcher = Matchers.getInstance().getMatcher();
+      MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
+      EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
+      return editScript;
+    } catch (Exception e) {
+      // e.printStackTrace();
+      // Failure to generate AbstractJdtTree because of the docChange instead of codeChange
+      return null;
+    }
+  }
+  // generate Commit Info from different file pathway
+  private static List<AstAction> generateAstActionList(EditScript editScript) {
+    List<AstAction> actionList = new ArrayList<>();
+    for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
+      com.github.gumtreediff.actions.model.Action action =
+          (com.github.gumtreediff.actions.model.Action) iter.next();
+      ASTOperation ASTOperation = null;
+      if (action instanceof Insert) {
+        ASTOperation = ASTOperation.ADD;
+      } else if (action instanceof Delete) {
+        ASTOperation = ASTOperation.DEL;
+      } else if (action instanceof Move) {
+        ASTOperation = ASTOperation.MOV;
+      } else if (action instanceof Update) {
+        ASTOperation = ASTOperation.UPD;
+      }
+      AstAction myAction = new AstAction(ASTOperation, action.getNode().getType().toString());
+      actionList.add(myAction);
+    }
+    return actionList;
+  }
+
+  private static Action convertAstActionToAction(AstAction astAction) {
     Operation op = Operation.UKN;
     for (Operation operation : Operation.values()) {
       if (astAction.getASTOperation().label.equals(operation.label)) {
@@ -323,8 +314,7 @@ public class CommitInfoHandler {
     org.refactoringminer.api.GitService gitService = new GitServiceImpl();
     List<RefactorMinerAction> refactorMinerActions = new ArrayList<>();
     try {
-      Repository repo =
-          gitService.openRepository(repoPath);
+      Repository repo = gitService.openRepository(repoPath);
       miner.detectAtCommit(
           repo,
           commitID,
@@ -350,7 +340,7 @@ public class CommitInfoHandler {
     return refactorMinerActions;
   }
 
-  public static Action convertRefactorCodeChangeToAction(RefactorMinerAction refactorMinerAction) {
+  private static Action convertRefactorCodeChangeToAction(RefactorMinerAction refactorMinerAction) {
     Operation op = Operation.UKN;
     for (Operation operation : Operation.values()) {
       if (refactorMinerAction.getName().equals(operation.label)) {
@@ -362,7 +352,7 @@ public class CommitInfoHandler {
   }
 
   // Load given commitTrainingSample into given DB collection
-  private static void loadTrainSampleToDB(
+  public static void loadTrainSampleToDB(
       MongoCollection<Document> collection, CommitTrainingSample commitTrainingSample) {
     try {
       Document doc1 = new Document();
@@ -374,7 +364,7 @@ public class CommitInfoHandler {
       doc1.put("committer", commitTrainingSample.getCommitter());
       doc1.put("committerEmail", commitTrainingSample.getCommitterEmail());
       doc1.put("commitTime", commitTrainingSample.getCommitTime());
-      doc1.put("commitIntent", commitTrainingSample.getIntent().getLabel());
+      doc1.put("commitIntent", commitTrainingSample.getIntent().get0().getLabel());
       doc1.put(
           "commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
       doc1.put("GumtreeCountFileChange", commitTrainingSample.getGumtreeCountFileChange());
