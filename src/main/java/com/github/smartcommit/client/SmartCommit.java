@@ -40,6 +40,7 @@ public class SmartCommit {
   private String repoPath;
   private String tempDir;
   private Map<String, DiffHunk> id2DiffHunkMap;
+  private Map<String, String> compileInfos;
   // options
   private Boolean detectRefactorings = false;
   private Double similarityThreshold = 0.618D;
@@ -52,6 +53,7 @@ public class SmartCommit {
     this.repoPath = repoPath;
     this.tempDir = tempDir;
     this.id2DiffHunkMap = new HashMap<>();
+    this.compileInfos = new HashMap<>();
   }
 
   public void setDetectRefactorings(Boolean detectRefactorings) {
@@ -419,7 +421,6 @@ public class SmartCommit {
    */
   public Map<String, String> compileWithMaven() {
     Map<String, String> result = new HashMap<>();
-    Map<String, DiffHunk> id2DiffHunkMap;
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
     List<DiffFile> diffFiles = repoAnalyzer.analyzeWorkingTree();
     List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
@@ -427,17 +428,13 @@ public class SmartCommit {
       logger.info("Files are unchanged");
       return null;
     }
-    id2DiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();
-    for (Map.Entry<String, DiffHunk> entry : id2DiffHunkMap.entrySet()) {
-      String groupId = entry.getKey();
-      DiffHunk diffHunk = entry.getValue();
 
-      // mvnPath must be specified ！！！
-      String log =
-          Utils.runSystemCommand(
-              repoPath, "/Users/Chuncen/.m2/apache-maven-3.6.3/bin/mvn", "compile");
-      result.put(groupId, log);
-    }
+    // mvnPath must be specified
+    String groupId = "Compiling Working Tree";
+    String log = Utils.runSystemCommand(repoPath, "mvn", "compile");
+
+    compileInfos.put(groupId, log);
+    result.put(groupId, log);
     return result;
   }
 
@@ -448,7 +445,8 @@ public class SmartCommit {
    */
   public List<MavenError> parseMavenErrors(String groupID) {
     List<MavenError> result = new ArrayList<>();
-    String compileOut = compileWithMaven().get(groupID);
+    if (compileInfos.isEmpty()) return null;
+    String compileOut = compileInfos.get(groupID);
     String[] rows = compileOut.split("\\n");
     for (int i = 0; i < rows.length; i++) {
       String row = rows[i];
