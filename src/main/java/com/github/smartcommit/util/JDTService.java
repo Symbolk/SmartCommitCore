@@ -377,7 +377,11 @@ public class JDTService {
       paramStringList.add(paramString);
     }
     String paramString = String.join(", ", paramStringList).trim();
-    return belongTo + ":" + node.getName() + "(" + paramString + ")";
+    if (belongTo.trim().equals("")) {
+      return node.getName() + "(" + paramString + ")";
+    } else {
+      return belongTo + ":" + node.getName() + "(" + paramString + ")";
+    }
   }
 
   /**
