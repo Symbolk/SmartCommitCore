@@ -283,6 +283,30 @@ public class JDTService {
   }
 
   /**
+   * Collect info inside an initializer block, which act like a method declaration
+   *
+   * @param fileIndex
+   * @param node
+   * @param belongTo
+   * @return
+   */
+  public InitializerInfo createInitializerInfo(
+      Integer fileIndex, Initializer node, String belongTo) {
+    InitializerInfo info = new InitializerInfo();
+    info.isStatic = isStatic(node);
+    info.belongTo = belongTo;
+    if (node.getJavadoc() != null) {
+      info.comment =
+          sourceContent.substring(
+              node.getJavadoc().getStartPosition(),
+              node.getJavadoc().getStartPosition() + node.getJavadoc().getLength());
+    }
+    info.body = node.getBody().toString();
+    parseInitializerBody(info, node.getBody());
+    return info;
+  }
+
+  /**
    * Collect information from a MethodDeclaration
    *
    * @thanks_to https://github.com/linzeqipku/SnowGraph
@@ -389,6 +413,12 @@ public class JDTService {
     if (expression.getNodeType() == ASTNode.INFIX_EXPRESSION) {
       parseFieldInitializer(fieldInfo, ((InfixExpression) expression).getLeftOperand());
       parseFieldInitializer(fieldInfo, ((InfixExpression) expression).getRightOperand());
+      List<ASTNode> extended = ((InfixExpression) expression).extendedOperands();
+      for (ASTNode exp : extended) {
+        if (exp instanceof Expression) {
+          parseFieldInitializer(fieldInfo, (Expression) exp);
+        }
+      }
     }
     if (expression.getNodeType() == ASTNode.INSTANCEOF_EXPRESSION) {
       parseFieldInitializer(fieldInfo, ((InstanceofExpression) expression).getLeftOperand());
@@ -447,6 +477,172 @@ public class JDTService {
         fieldInfo.fieldUses.add(name);
       }
       parseFieldInitializer(fieldInfo, ((QualifiedName) expression).getQualifier());
+    }
+  }
+
+  /**
+   * Parse the body of initializer block
+   *
+   * @param info
+   * @param body
+   */
+  private void parseInitializerBody(InitializerInfo info, Block body) {
+    if (body == null) return;
+    List<Statement> statementList = body.statements();
+    List<Statement> statements = new ArrayList<>();
+    for (int i = 0; i < statementList.size(); i++) {
+      statements.add(statementList.get(i));
+    }
+
+    for (int i = 0; i < statements.size(); i++) {
+
+      Statement statement = statements.get(i);
+      if (statement.getNodeType() == ASTNode.BLOCK) {
+        List<Statement> blockStatements = ((Block) statement).statements();
+        for (int j = 0; j < blockStatements.size(); j++) {
+          statements.add(i + j + 1, blockStatements.get(j));
+        }
+        continue;
+      }
+      if (statement.getNodeType() == ASTNode.RETURN_STATEMENT) {
+        Expression expression = ((ReturnStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+      }
+      if (statement.getNodeType() == ASTNode.ASSERT_STATEMENT) {
+        Expression expression = ((AssertStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+        expression = ((AssertStatement) statement).getMessage();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+      }
+
+      if (statement.getNodeType() == ASTNode.DO_STATEMENT) {
+        Expression expression = ((DoStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+        Statement doBody = ((DoStatement) statement).getBody();
+        if (doBody != null) {
+          statements.add(i + 1, doBody);
+        }
+      }
+      if (statement.getNodeType() == ASTNode.ENHANCED_FOR_STATEMENT) {
+        Expression expression = ((EnhancedForStatement) statement).getExpression();
+        Type type = ((EnhancedForStatement) statement).getParameter().getType();
+        info.typeUses.addAll(getTypes(type));
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+        Statement forBody = ((EnhancedForStatement) statement).getBody();
+        if (forBody != null) {
+          statements.add(i + 1, forBody);
+        }
+      }
+      if (statement.getNodeType() == ASTNode.EXPRESSION_STATEMENT) {
+        Expression expression = ((ExpressionStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+      }
+      if (statement.getNodeType() == ASTNode.FOR_STATEMENT) {
+        List<Expression> list = ((ForStatement) statement).initializers();
+        for (int j = 0; j < list.size(); j++) {
+          parseExpression(info, list.get(j));
+        }
+        Expression expression = ((ForStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+        Statement forBody = ((ForStatement) statement).getBody();
+        if (forBody != null) {
+          statements.add(i + 1, forBody);
+        }
+      }
+      if (statement.getNodeType() == ASTNode.IF_STATEMENT) {
+        Expression expression = ((IfStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+        Statement thenStatement = ((IfStatement) statement).getThenStatement();
+        Statement elseStatement = ((IfStatement) statement).getElseStatement();
+        if (elseStatement != null) {
+          statements.add(i + 1, elseStatement);
+        }
+        if (thenStatement != null) {
+          statements.add(i + 1, thenStatement);
+        }
+      }
+      if (statement.getNodeType() == ASTNode.SWITCH_STATEMENT) {
+        Expression expression = ((SwitchStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+        List<Statement> switchStatements = ((SwitchStatement) statement).statements();
+        for (int j = 0; j < switchStatements.size(); j++) {
+          statements.add(i + j + 1, switchStatements.get(j));
+        }
+      }
+      if (statement.getNodeType() == ASTNode.THROW_STATEMENT) {
+        Expression expression = ((ThrowStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+      }
+      if (statement.getNodeType() == ASTNode.TRY_STATEMENT) {
+        Statement tryStatement = ((TryStatement) statement).getBody();
+        if (tryStatement != null) {
+          statements.add(i + 1, tryStatement);
+        }
+        List<CatchClause> catchClauses = ((TryStatement) statement).catchClauses();
+        if (catchClauses != null && !catchClauses.isEmpty()) {
+          for (CatchClause catchClause : catchClauses) {
+            info.typeUses.addAll(getTypes(catchClause.getException().getType()));
+            // use a temp MethodInfo to collect information
+            MethodInfo temp = new MethodInfo();
+            temp.name = "CATCH";
+            parseMethodBody(temp, (Block) catchClause.getBody());
+            info.typeUses.addAll(temp.typeUses);
+            info.fieldUses.addAll(temp.fieldUses);
+            info.methodCalls.addAll(temp.methodCalls);
+          }
+        }
+        continue;
+      }
+      if (statement.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT) {
+        Type type = ((VariableDeclarationStatement) statement).getType();
+        List<VariableDeclaration> list = ((VariableDeclarationStatement) statement).fragments();
+        info.typeUses.addAll(getTypes(type));
+        for (VariableDeclaration decStat : list) {
+          parseExpression(info, decStat.getInitializer());
+        }
+      }
+      if (statement.getNodeType() == ASTNode.WHILE_STATEMENT) {
+        Expression expression = ((WhileStatement) statement).getExpression();
+        if (expression != null) {
+          parseExpression(info, expression);
+        }
+        Statement whileBody = ((WhileStatement) statement).getBody();
+        if (whileBody != null) {
+          statements.add(i + 1, whileBody);
+        }
+      }
+
+      if (statement.getNodeType() == ASTNode.CONSTRUCTOR_INVOCATION) {
+        IMethodBinding constructorBinding =
+            ((ConstructorInvocation) statement).resolveConstructorBinding();
+        if (constructorBinding != null) {
+          info.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
+        }
+        List<Expression> arguments = ((ConstructorInvocation) statement).arguments();
+        for (Expression exp : arguments) {
+          parseExpression(info, exp);
+        }
+      }
     }
   }
 
@@ -649,6 +845,12 @@ public class JDTService {
     if (expression.getNodeType() == ASTNode.INFIX_EXPRESSION) {
       parseExpressionInMethod(methodInfo, ((InfixExpression) expression).getLeftOperand());
       parseExpressionInMethod(methodInfo, ((InfixExpression) expression).getRightOperand());
+      List<ASTNode> extended = ((InfixExpression) expression).extendedOperands();
+      for (ASTNode exp : extended) {
+        if (exp instanceof Expression) {
+          parseExpressionInMethod(methodInfo, (Expression) exp);
+        }
+      }
     }
     if (expression.getNodeType() == ASTNode.INSTANCEOF_EXPRESSION) {
       parseExpressionInMethod(methodInfo, ((InstanceofExpression) expression).getLeftOperand());
@@ -945,6 +1147,12 @@ public class JDTService {
     if (expression.getNodeType() == ASTNode.INFIX_EXPRESSION) {
       parseExpression(entityInfo, ((InfixExpression) expression).getLeftOperand());
       parseExpression(entityInfo, ((InfixExpression) expression).getRightOperand());
+      List<ASTNode> extended = ((InfixExpression) expression).extendedOperands();
+      for (ASTNode exp : extended) {
+        if (exp instanceof Expression) {
+          parseExpression(entityInfo, (Expression) exp);
+        }
+      }
     }
     if (expression.getNodeType() == ASTNode.INSTANCEOF_EXPRESSION) {
       parseExpression(entityInfo, ((InstanceofExpression) expression).getLeftOperand());
