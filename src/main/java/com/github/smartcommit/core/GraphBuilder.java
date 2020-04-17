@@ -610,6 +610,33 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 logger.warn("Not Found: " + astNode);
               }
               break;
+            case ASTNode.INITIALIZER:
+              // parse all method calls/field access in initializer and create node
+              // find node by identifier and create edge
+              Initializer initializer = (Initializer) astNode;
+              if (initializer.getParent() instanceof TypeDeclaration) {
+                TypeDeclaration parent = ((TypeDeclaration) initializer.getParent());
+                if (parent.resolveBinding() != null) {
+                  String uniqueName = parent.resolveBinding().getQualifiedName() + ":INIT";
+                  nodeOpt = findNodeByNameAndType(uniqueName, NodeType.INITIALIZER_BLOCK, true);
+                } else {
+                  String uniqueName = parent.getName().getFullyQualifiedName() + ":INIT";
+                  nodeOpt = findNodeByNameAndType(uniqueName, NodeType.INITIALIZER_BLOCK, false);
+                }
+                if (nodeOpt.isPresent()) {
+                  existInGraph = true;
+                  Node node = nodeOpt.get();
+                  node.isInDiffHunk = true;
+                  node.diffHunkIndex = index;
+
+                  //                  hunkInfo.methodDefs.add(node.getQualifiedName());
+                  graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
+
+                } else {
+                  logger.warn("Not Found: " + astNode);
+                }
+              }
+              break;
             default:
               logger.warn(
                   "Unconsidered type: " + Annotation.nodeClassForType(astNode.getNodeType()));
