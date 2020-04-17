@@ -14,6 +14,7 @@ public class EntityPool {
   public Map<String, AnnotationInfo> annotationInfoMap;
   public Map<String, MethodInfo> methodInfoMap;
   public Map<String, FieldInfo> fieldInfoMap;
+  public Map<String, InitializerInfo> initBlockInfoMap; // initializer blocks
   public Map<String, HunkInfo> hunkInfoMap;
   // fileIndex : importedType : hunkInfo
   public Map<Integer, Map<String, HunkInfo>> importInfoMap;
@@ -27,6 +28,7 @@ public class EntityPool {
     annotationInfoMap = new HashMap<>();
     methodInfoMap = new HashMap<>();
     fieldInfoMap = new HashMap<>();
+    initBlockInfoMap = new HashMap<>();
     hunkInfoMap = new HashMap<>();
     importInfoMap = new HashMap<>();
   }
