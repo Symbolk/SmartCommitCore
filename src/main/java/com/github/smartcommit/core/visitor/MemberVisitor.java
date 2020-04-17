@@ -10,6 +10,7 @@ import com.github.smartcommit.util.JDTService;
 import org.eclipse.jdt.core.dom.*;
 import org.jgrapht.Graph;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -184,6 +185,29 @@ public class MemberVisitor extends ASTVisitor {
     }
 
     // process the members inside the current type
+
+    List<Initializer> initializers = new ArrayList<>();
+    for (Object child : type.bodyDeclarations()) {
+      if (child instanceof Initializer) {
+        initializers.add((Initializer) child);
+      }
+    }
+    if (!initializers.isEmpty()) {
+      for (Initializer initializer : initializers) {
+        InitializerInfo info =
+            jdtService.createInitializerInfo(fileIndex, initializer, qualifiedNameForType);
+        Node initNode =
+            new Node(
+                generateNodeID(), NodeType.INITIALIZER_BLOCK, info.uniqueName(), info.uniqueName());
+        graph.addVertex(initNode);
+        graph.addEdge(typeNode, initNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
+        info.node = initNode;
+
+        entityPool.initBlockInfoMap.put(info.uniqueName(), info);
+      }
+    }
+
     FieldDeclaration[] fieldDeclarations = type.getFields();
     for (FieldDeclaration fieldDeclaration : fieldDeclarations) {
       // each field declaration can declare multiple fields with the common properties
