@@ -30,6 +30,7 @@ import org.refactoringminer.api.RefactoringMinerTimedOutException;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class GroupGenerator1 {
@@ -124,7 +125,7 @@ public class GroupGenerator1 {
     Set<DiffHunk> resource = new TreeSet<>(ascendingByIndexComparator());
     Set<DiffHunk> reformat = new TreeSet<>(ascendingByIndexComparator());
     Set<DiffHunk> others = new TreeSet<>(ascendingByIndexComparator());
-    Set<DiffHunk> moving = new TreeSet<>(ascendingByIndexComparator());
+    //    Set<DiffHunk> moving = new TreeSet<>(ascendingByIndexComparator());
 
     // cache all links from base/current graph as a top order
     // outgoing
@@ -164,7 +165,25 @@ public class GroupGenerator1 {
 
     // refactor
     if (detectRefs) {
-      createEdges(groupRefactorings(), DiffEdgeType.REFACTOR, 1.0);
+      Set<DiffHunk> refDiffHunks = new TreeSet<>(ascendingByIndexComparator());
+      ExecutorService service = Executors.newSingleThreadExecutor();
+      Future<?> f = null;
+      try {
+        Runnable r = () -> groupRefactorings(refDiffHunks);
+        f = service.submit(r);
+        f.get(300, TimeUnit.SECONDS);
+      } catch (TimeoutException e) {
+        f.cancel(true);
+        logger.warn(String.format("Ignore refactoring detection due to timeout: "), e);
+      } catch (ExecutionException | InterruptedException e) {
+        logger.warn(String.format("Ignore refactoring detection due to RM error: "), e);
+        //        e.printStackTrace();
+      } finally {
+        service.shutdown();
+      }
+      if (refDiffHunks != null && !refDiffHunks.isEmpty()) {
+        createEdges(refDiffHunks, DiffEdgeType.REFACTOR, 1.0);
+      }
     }
 
     // for each of diff hunks
@@ -395,8 +414,8 @@ public class GroupGenerator1 {
     return nodeOpt.orElse(null);
   }
 
-  private Set<DiffHunk> groupRefactorings() {
-    Set<DiffHunk> refDiffHunks = new TreeSet<>(ascendingByIndexComparator());
+  private Set<DiffHunk> groupRefactorings(Set<DiffHunk> refDiffHunks) {
+    //    Set<DiffHunk> refDiffHunks = new TreeSet<>(ascendingByIndexComparator());
 
     try {
       File rootFolder1 = new File(srcDirs.getLeft());
@@ -645,7 +664,7 @@ public class GroupGenerator1 {
     this.threshold = threshold;
   }
 
-  public void setDetectRefs(boolean detectRefs) {
-    this.detectRefs = detectRefs;
+  public void enableRefDetection(boolean enable) {
+    this.detectRefs = enable;
   }
 }
