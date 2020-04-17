@@ -2,6 +2,7 @@ package com.github.smartcommit.intent.model;
 
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
+import com.github.smartcommit.model.DiffHunk;
 
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class CommitTrainingSample {
   private List<Action> diffHunksActions;
   private List<RefactorMinerAction> refactorMinerActions;
   private List<DiffFile> diffFiles;
+  private List<DiffHunk> diffHunks;
 
   public String getCommitID() {
     return commitID;

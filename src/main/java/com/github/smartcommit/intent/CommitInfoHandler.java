@@ -302,12 +302,12 @@ public class CommitInfoHandler {
         }
       }
     } catch (Exception e) {
-      System.out.println("DiffHunk Graph building fail");
+      System.out.println("DiffHunk Graph building failure");
     }
     return AstActions;
   }
 
-  // generate RefactorCodeChangeFromCodeChagne
+  // generate RefactorCodeChangeFromCodeChange
   private static List<RefactorMinerAction> getRefactorCodeChangesFromCodeChange(
       String repoPath, String commitID) {
     GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
@@ -388,7 +388,22 @@ public class CommitInfoHandler {
             addrAttr.put("BaseContent", diffFile.getBaseContent());
             addrAttr.put("CurrentContent", diffFile.getCurrentContent());
             addrAttr.put("Index", diffFile.getIndex());
-            addrAttr.put("sizeDiffHunks", diffFile.getDiffHunks().size());
+            List<DiffHunk> diffHunks = diffFile.getDiffHunks();
+            addrAttr.put("sizeOfDiffHunks", diffHunks.size());
+            if (diffHunks.size() > 1) {
+              List<Integer> nums = new ArrayList<>();
+              for (int i = 0; i < diffHunks.size(); i++) {
+                DiffHunk diffHunk = diffHunks.get(i);
+                Integer num =
+                    diffHunk.getBaseEndLine()
+                        - diffHunk.getBaseStartLine()
+                        + diffHunk.getCurrentEndLine()
+                        - diffHunk.getCurrentStartLine();
+                nums.add(num);
+              }
+              addrAttr.put("changedLines", nums.toString());
+            }
+
             Files.add(addrAttr);
           }
           doc1.put("DiffFiles", Files);
