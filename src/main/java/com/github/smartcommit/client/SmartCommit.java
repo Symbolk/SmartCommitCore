@@ -88,12 +88,12 @@ public class SmartCommit {
     List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
     if (diffFiles.isEmpty()) {
       logger.info("Nothing to commit, working tree clean.");
-      return null;
+      return new HashMap<>();
     }
 
     if (allDiffHunks.isEmpty()) {
       logger.info("File contents are unchanged.");
-      return null;
+      return new HashMap<>();
     }
 
     this.id2DiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();
@@ -141,7 +141,7 @@ public class SmartCommit {
 
     if (diffFiles.isEmpty() || allDiffHunks.isEmpty()) {
       logger.info("Files are unchanged at commit: " + commitID);
-      return null;
+      return new HashMap<>();
     }
 
     this.id2DiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();
