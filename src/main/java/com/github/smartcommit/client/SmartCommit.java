@@ -1,14 +1,12 @@
 package com.github.smartcommit.client;
 
+import com.github.smartcommit.compilation.HunkIndex;
 import com.github.smartcommit.compilation.MavenError;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
-import com.github.smartcommit.model.Action;
-import com.github.smartcommit.model.DiffFile;
-import com.github.smartcommit.model.DiffHunk;
-import com.github.smartcommit.model.Group;
+import com.github.smartcommit.model.*;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.GitServiceCGit;
@@ -16,6 +14,7 @@ import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
@@ -39,6 +38,7 @@ public class SmartCommit {
   private String tempDir;
   private Map<String, DiffHunk> id2DiffHunkMap;
   private Map<String, String> compileInfos;
+  private List<HunkIndex> hunkIndices;
   // options
   private Boolean detectRefactorings = false;
   private Double similarityThreshold = 0.618D;
@@ -52,6 +52,7 @@ public class SmartCommit {
     this.tempDir = tempDir;
     this.id2DiffHunkMap = new HashMap<>();
     this.compileInfos = new HashMap<>();
+    this.hunkIndices = new ArrayList<>();
   }
 
   public void setDetectRefactorings(Boolean detectRefactorings) {
@@ -492,5 +493,35 @@ public class SmartCommit {
    */
   public List<MavenError> fixMavenErrors(String groupID, List<MavenError> errors) {
     return new ArrayList<>();
+  }
+
+  public void generateIndexesFromDiffHunk() {
+    for(Map.Entry<String, DiffHunk> entry : id2DiffHunkMap.entrySet()) {
+      String id = entry.getKey();
+      DiffHunk diffHunk = entry.getValue();
+      Integer fileIndex = diffHunk.getFileIndex();
+      Integer index = diffHunk.getIndex();
+      Hunk currentHunk = diffHunk.getCurrentHunk();
+      String relativeFilePath = currentHunk.getRelativeFilePath();
+      Integer startLine = currentHunk.getStartLine();
+      Integer endLine = currentHunk.getEndLine();
+      HunkIndex hunkIndex = new HunkIndex(relativeFilePath, startLine,endLine,fileIndex,index);
+      hunkIndices.add(hunkIndex);
+    }
+  }
+
+  public Pair<Integer, Integer> findIndexPairFromMavenError(MavenError mavenError) {
+    String filePath = mavenError.getFilePath();
+    Integer line = mavenError.getLine();
+    for(HunkIndex hunkIndex : hunkIndices) {
+      if(filePath.contains(hunkIndex.getRelativeFilePath())
+      && line >= hunkIndex.getStartLine()) {
+        Integer fileIndex = hunkIndex.getFileIndex();
+        Integer Index = hunkIndex.getIndex();
+        Pair<Integer, Integer> pair = new ImmutablePair<>(fileIndex, Index);
+        return pair;
+      }
+    }
+    return null;
   }
 }

@@ -42,4 +42,16 @@ public class MavenError {
   public String getMsg() {
     return msg;
   }
+
+  @Override
+  public String toString() {
+    return "MavenError{" +
+            "type='" + type + '\'' +
+            ", filePath='" + filePath + '\'' +
+            ", line=" + line +
+            ", column=" + column +
+            ", symbol='" + symbol + '\'' +
+            ", msg='" + msg + '\'' +
+            '}';
+  }
 }
