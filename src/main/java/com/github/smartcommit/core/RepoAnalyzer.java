@@ -54,9 +54,11 @@ public class RepoAnalyzer {
     // analyze the diff files and hunks
     GitService gitService = new GitServiceCGit();
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesInWorkingTree(this.repoPath);
-    gitService.getDiffHunksInWorkingTree(this.repoPath, diffFiles);
-    this.diffFiles = diffFiles;
-    this.idToDiffFileMap = generateIDToDiffFileMap();
+    if (!diffFiles.isEmpty()) {
+      gitService.getDiffHunksInWorkingTree(this.repoPath, diffFiles);
+      this.diffFiles = diffFiles;
+      this.idToDiffFileMap = generateIDToDiffFileMap();
+    }
     return diffFiles;
   }
 
@@ -69,9 +71,11 @@ public class RepoAnalyzer {
     // analyze the diff files and hunks
     GitService gitService = new GitServiceCGit();
     ArrayList<DiffFile> diffFiles = gitService.getChangedFilesAtCommit(this.repoPath, commitID);
-    gitService.getDiffHunksAtCommit(this.repoPath, commitID, diffFiles);
-    this.diffFiles = diffFiles;
-    this.idToDiffFileMap = generateIDToDiffFileMap();
+    if (!diffFiles.isEmpty()) {
+      gitService.getDiffHunksAtCommit(this.repoPath, commitID, diffFiles);
+      this.diffFiles = diffFiles;
+      this.idToDiffFileMap = generateIDToDiffFileMap();
+    }
     return diffFiles;
   }
 

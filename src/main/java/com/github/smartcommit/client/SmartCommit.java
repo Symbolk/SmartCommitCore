@@ -105,7 +105,7 @@ public class SmartCommit {
     }
 
     if (allDiffHunks.isEmpty()) {
-      logger.info("File contents are unchanged.");
+      logger.info("Changes exist, but not in file contents.");
       return new HashMap<>();
     }
 
@@ -153,7 +153,7 @@ public class SmartCommit {
     List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
 
     if (diffFiles.isEmpty() || allDiffHunks.isEmpty()) {
-      logger.info("Files are unchanged at commit: " + commitID);
+      logger.info("No changes at commit: " + commitID);
       return new HashMap<>();
     }
 

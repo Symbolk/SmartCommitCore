@@ -31,9 +31,10 @@ public class GitServiceCGit implements GitService {
     ArrayList<DiffFile> diffFileList = new ArrayList<>();
     // run git status --porcelain to get changeset
     String output = Utils.runSystemCommand(repoPath, "git", "status", "--porcelain", "-uall");
+    // early return
     if (output.isEmpty()) {
       // working tree clean
-      return diffFileList;
+      return new ArrayList<>();
     }
 
     String lines[] = output.split("\\r?\\n");
@@ -112,6 +113,10 @@ public class GitServiceCGit implements GitService {
     // on Windows the ~ character must be used instead of ^
     String output =
         Utils.runSystemCommand(repoPath, "git", "diff", "--name-status", commitID + "~", commitID);
+    // early return
+    if (output.trim().isEmpty()) {
+      return new ArrayList<>();
+    }
     ArrayList<DiffFile> DiffFileList = new ArrayList<>();
     String lines[] = output.split("\\r?\\n");
     for (int i = 0; i < lines.length; i++) {
@@ -190,6 +195,10 @@ public class GitServiceCGit implements GitService {
     Utils.runSystemCommand(repoPath, "git", "reset", "HEAD", ".");
     // git diff + git diff --cached/staged == git diff HEAD (show all the changes since last commit
     String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
+    // early return
+    if (diffOutput.trim().isEmpty()) {
+      return new ArrayList<>();
+    }
     // with -U0 (no context lines), the generated patch cannot be applied successfully
     DiffParser parser = new UnifiedDiffParser();
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
@@ -387,6 +396,10 @@ public class GitServiceCGit implements GitService {
     // on Windows the ~ character must be used instead of ^
     String diffOutput =
         Utils.runSystemCommand(repoPath, "git", "diff", "-U0", "-w", commitID + "~", commitID);
+    // early return
+    if (diffOutput.trim().isEmpty()) {
+      return new ArrayList<>();
+    }
     DiffParser parser = new UnifiedDiffParser();
     List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
     return generateDiffHunks(diffs, diffFiles);
