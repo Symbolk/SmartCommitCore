@@ -87,7 +87,12 @@ public class GroupGenerator {
     }
     if (!nonJavaDiffHunks.isEmpty()) {
       Set<String> nonJavaDiffHunkIDs = new LinkedHashSet<>();
-      nonJavaDiffHunks.forEach(diffHunk -> nonJavaDiffHunkIDs.add(diffHunk.getUUID()));
+      nonJavaDiffHunks.forEach(
+          diffHunk -> {
+            if (!checkIfGrouped(diffHunk.getUUID())) {
+              nonJavaDiffHunkIDs.add(diffHunk.getUUID());
+            }
+          });
       createGroup(nonJavaDiffHunkIDs, GroupLabel.NONJAVA);
     }
   }
@@ -192,7 +197,12 @@ public class GroupGenerator {
     }
     if (!formatOnlyDiffHunks.isEmpty()) {
       Set<String> formatOnlyDiffHunkIDs = new LinkedHashSet<>();
-      formatOnlyDiffHunks.forEach(diffHunk -> formatOnlyDiffHunkIDs.add(diffHunk.getUUID()));
+      formatOnlyDiffHunks.forEach(
+          diffHunk -> {
+            if (!checkIfGrouped(diffHunk.getUUID())) {
+              formatOnlyDiffHunkIDs.add(diffHunk.getUUID());
+            }
+          });
       createGroup(formatOnlyDiffHunkIDs, GroupLabel.REFORMAT);
     }
   }
@@ -461,7 +471,12 @@ public class GroupGenerator {
       }
       if (!refDiffHunks.isEmpty()) {
         Set<String> diffHunkIDs = new LinkedHashSet<>();
-        refDiffHunks.forEach(diffHunk -> diffHunkIDs.add(diffHunk.getUUID()));
+        refDiffHunks.forEach(
+            diffHunk -> {
+              if (!checkIfGrouped(diffHunk.getUUID())) {
+                diffHunkIDs.add(diffHunk.getUUID());
+              }
+            });
         createGroup(diffHunkIDs, GroupLabel.REFACTOR);
       }
     } catch (RefactoringMinerTimedOutException | IOException e) {
