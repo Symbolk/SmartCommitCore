@@ -47,7 +47,7 @@ public class CommitInfoHandler {
   public static void main(String[] args) {
     args =
         new String[] {
-          "/Users/Chuncen/Desktop/Repos/refactoring-toy-example", "commitTrainingSample"
+          "/Users/Chuncen/Desktop/Repos/RxJava-Android-Samples", "commitTrainingSample"
         };
     String repoPath = args[0];
     String collectionName = args[1];
@@ -392,6 +392,7 @@ public class CommitInfoHandler {
             addrAttr.put("sizeOfDiffHunks", diffHunks.size());
             if (diffHunks.size() > 1) {
               List<Integer> nums = new ArrayList<>();
+              List<List<String>> rawDiffsList = new ArrayList<>();
               for (int i = 0; i < diffHunks.size(); i++) {
                 DiffHunk diffHunk = diffHunks.get(i);
                 Integer num =
@@ -400,9 +401,13 @@ public class CommitInfoHandler {
                         + diffHunk.getCurrentEndLine()
                         - diffHunk.getCurrentStartLine();
                 nums.add(num);
+                List<String> rawDiffs =  diffHunk.getRawDiffs();
+                rawDiffsList.add(rawDiffs);
               }
               addrAttr.put("changedLines", nums.toString());
+              addrAttr.put("RawDiffsList", rawDiffsList);
             }
+
 
             Files.add(addrAttr);
           }
