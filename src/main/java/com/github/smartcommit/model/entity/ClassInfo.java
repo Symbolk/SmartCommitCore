@@ -13,6 +13,7 @@ public class ClassInfo extends DeclarationInfo {
   public String visibility = "package";
   public boolean isAbstract = false;
   public boolean isFinal = false;
+  public boolean isAnonymous = false;
   public String superClassType;
   public List<String> superInterfaceTypeList = new ArrayList<>();
   public String comment = "";

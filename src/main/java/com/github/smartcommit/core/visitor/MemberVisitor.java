@@ -13,6 +13,7 @@ import org.jgrapht.Graph;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class MemberVisitor extends ASTVisitor {
   private Integer fileIndex;
@@ -36,7 +37,7 @@ public class MemberVisitor extends ASTVisitor {
 
   @Override
   public boolean visit(AnnotationTypeDeclaration node) {
-    String qualifiedName = jdtService.getQualifiedNameForType(node);
+    String qualifiedName = jdtService.getQualifiedNameForNamedType(node);
     Node enumNode =
         new Node(
             generateNodeID(), NodeType.ANNOTATION, node.getName().getIdentifier(), qualifiedName);
@@ -74,7 +75,7 @@ public class MemberVisitor extends ASTVisitor {
 
   @Override
   public boolean visit(EnumDeclaration node) {
-    String qualifiedName = jdtService.getQualifiedNameForType(node);
+    String qualifiedName = jdtService.getQualifiedNameForNamedType(node);
     Node enumNode =
         new Node(generateNodeID(), NodeType.ENUM, node.getName().getIdentifier(), qualifiedName);
     graph.addVertex(enumNode);
@@ -147,13 +148,107 @@ public class MemberVisitor extends ASTVisitor {
     return true;
   }
 
+  /**
+   * Visit and process anonymous class declaration, which can be declared in
+   * initializer/field/method
+   *
+   * <p>e.g. c.b.a:Field:SuperClass c.b.a:Method():SuperClass c.b.a::SuperClass
+   *
+   * @param declaration
+   * @return
+   */
+  @Override
+  public boolean visit(AnonymousClassDeclaration declaration) {
+    // create vertex
+    String superClassName = ((ClassInstanceCreation) declaration.getParent()).getType().toString();
+    String qualifiedName = jdtService.getQualifiedNameForAnonyType(declaration, superClassName);
+    Node node = new Node(generateNodeID(), NodeType.ANONY_CLASS, superClassName, qualifiedName);
+    graph.addVertex(node);
+    // parse info
+    ClassInfo classInfo =
+        jdtService.createAnonyClassInfo(declaration, superClassName, qualifiedName);
+    classInfo.node = node;
+    entityPool.classInfoMap.put(classInfo.fullName, classInfo);
+
+    // find parent node and create an edge
+    Optional<Node> parentNodeOpt =
+        getParentMemberNode(qualifiedName.substring(0, qualifiedName.lastIndexOf(":")));
+    parentNodeOpt.ifPresent(
+        parentNode -> graph.addEdge(parentNode, node, new Edge(generateEdgeID(), EdgeType.DEFINE)));
+
+    // parse member declarations and create vertices
+    List<Initializer> initializers =
+        (List<Initializer>)
+            declaration.bodyDeclarations().stream()
+                .filter(Initializer.class::isInstance)
+                .map(Initializer.class::cast)
+                .collect(Collectors.toList());
+    if (!initializers.isEmpty()) {
+      for (Initializer initializer : initializers) {
+        InitializerInfo info =
+            jdtService.createInitializerInfo(fileIndex, initializer, qualifiedName);
+        Node initNode =
+            new Node(
+                generateNodeID(), NodeType.INITIALIZER_BLOCK, info.uniqueName(), info.uniqueName());
+        graph.addVertex(initNode);
+        graph.addEdge(node, initNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
+        info.node = initNode;
+
+        entityPool.initBlockInfoMap.put(info.uniqueName(), info);
+      }
+    }
+
+    List<FieldDeclaration> fieldDeclarations =
+        (List<FieldDeclaration>)
+            declaration.bodyDeclarations().stream()
+                .filter(FieldDeclaration.class::isInstance)
+                .map(FieldDeclaration.class::cast)
+                .collect(Collectors.toList());
+    for (FieldDeclaration fieldDeclaration : fieldDeclarations) {
+      // each field declaration can declare multiple fields with the common properties
+      List<FieldInfo> fieldInfos =
+          jdtService.createFieldInfos(fileIndex, fieldDeclaration, qualifiedName);
+      for (FieldInfo fieldInfo : fieldInfos) {
+        Node fieldNode =
+            new Node(generateNodeID(), NodeType.FIELD, fieldInfo.name, fieldInfo.uniqueName());
+        graph.addVertex(fieldNode);
+        graph.addEdge(node, fieldNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
+        fieldInfo.node = fieldNode;
+
+        entityPool.fieldInfoMap.put(fieldInfo.uniqueName(), fieldInfo);
+      }
+    }
+
+    List<MethodDeclaration> methodDeclarations =
+        (List<MethodDeclaration>)
+            declaration.bodyDeclarations().stream()
+                .filter(MethodDeclaration.class::isInstance)
+                .map(MethodDeclaration.class::cast)
+                .collect(Collectors.toList());
+    for (MethodDeclaration methodDeclaration : methodDeclarations) {
+      MethodInfo methodInfo =
+          jdtService.createMethodInfo(fileIndex, methodDeclaration, qualifiedName);
+      Node methodNode =
+          new Node(generateNodeID(), NodeType.METHOD, methodInfo.name, methodInfo.uniqueName());
+      graph.addVertex(methodNode);
+      graph.addEdge(node, methodNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+
+      methodInfo.node = methodNode;
+      entityPool.methodInfoMap.put(methodInfo.uniqueName(), methodInfo);
+    }
+
+    return true;
+  }
+
   @Override
   public boolean visit(TypeDeclaration type) {
     // create the node for the current type declaration
     NodeType nodeType = type.isInterface() ? NodeType.INTERFACE : NodeType.CLASS;
     //    nodeType = (type.isMemberTypeDeclaration() || type.isMemberTypeDeclaration()) ?
     // NodeType.INNER_CLASS : nodeType;
-    String qualifiedNameForType = jdtService.getQualifiedNameForType(type);
+    String qualifiedNameForType = jdtService.getQualifiedNameForNamedType(type);
     Node typeNode =
         new Node(generateNodeID(), nodeType, type.getName().getIdentifier(), qualifiedNameForType);
     graph.addVertex(typeNode);
@@ -179,13 +274,11 @@ public class MemberVisitor extends ASTVisitor {
       String parentTypeName =
           qualifiedNameForType.replace("." + type.getName().getIdentifier(), "");
       Optional<Node> nodeOpt = getParentTypeNode(parentTypeName);
-      if (nodeOpt.isPresent()) {
-        graph.addEdge(nodeOpt.get(), typeNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
-      }
+      nodeOpt.ifPresent(
+          node -> graph.addEdge(node, typeNode, new Edge(generateEdgeID(), EdgeType.DEFINE)));
     }
 
     // process the members inside the current type
-
     List<Initializer> initializers = new ArrayList<>();
     for (Object child : type.bodyDeclarations()) {
       if (child instanceof Initializer) {
@@ -266,6 +359,23 @@ public class MemberVisitor extends ASTVisitor {
             node ->
                 (node.getType().equals(NodeType.CLASS) || node.getType().equals(NodeType.INTERFACE))
                     && node.getQualifiedName().equals(qualifiedName))
+        .findAny();
+  }
+
+  /**
+   * Find the parent method or field node of anonymous class
+   *
+   * @param qualifiedName
+   * @return
+   */
+  private Optional<Node> getParentMemberNode(String qualifiedName) {
+    return graph.vertexSet().stream()
+        .filter(
+            node ->
+                (node.getType().equals(NodeType.METHOD)
+                    || node.getType().equals(NodeType.FIELD)
+                    || node.getType().equals(NodeType.INITIALIZER_BLOCK)))
+        .filter(node -> node.getQualifiedName().equals(qualifiedName))
         .findAny();
   }
 
