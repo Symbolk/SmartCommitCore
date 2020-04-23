@@ -435,7 +435,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
 
               } else {
-                logger.warn("Not Found: " + astNode);
+                logger.warn("ANNOTATION_TYPE_DECLARATION Not Found: " + astNode);
               }
               break;
             case ASTNode.ANNOTATION_TYPE_MEMBER_DECLARATION:
@@ -464,7 +464,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
 
                 graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
               } else {
-                logger.warn("Not Found: " + astNode);
+                logger.warn("ANNOTATION_TYPE_MEMBER_DECLARATION Not Found: " + astNode);
               }
               break;
             case ASTNode.ENUM_DECLARATION:
@@ -488,20 +488,19 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 hunkInfo.typeDefs.add(node.getQualifiedName());
                 graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
               } else {
-                logger.warn("Not Found: " + astNode);
+                logger.warn("ENUM_DECLARATION Not Found: " + astNode);
               }
               break;
             case ASTNode.TYPE_DECLARATION:
               ITypeBinding typeBinding = ((TypeDeclaration) astNode).resolveBinding();
+              NodeType type =
+                  ((TypeDeclaration) astNode).isInterface() ? NodeType.INTERFACE : NodeType.CLASS;
               if (typeBinding != null) {
-                nodeOpt =
-                    findNodeByNameAndType(typeBinding.getQualifiedName(), NodeType.CLASS, true);
+                nodeOpt = findNodeByNameAndType(typeBinding.getQualifiedName(), type, true);
               } else {
                 nodeOpt =
                     findNodeByNameAndType(
-                        ((TypeDeclaration) astNode).getName().getIdentifier(),
-                        NodeType.CLASS,
-                        false);
+                        ((TypeDeclaration) astNode).getName().getIdentifier(), type, false);
               }
 
               if (nodeOpt.isPresent()) {
@@ -514,7 +513,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
 
               } else {
-                logger.warn("Not Found: " + astNode);
+                logger.warn("TYPE_DECLARATION Not Found: " + astNode);
               }
               break;
             case ASTNode.ENUM_CONSTANT_DECLARATION:
@@ -546,7 +545,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
 
               } else {
-                logger.warn("Not Found: " + astNode);
+                logger.warn("ENUM_CONSTANT_DECLARATION Not Found: " + astNode);
               }
               break;
             case ASTNode.FIELD_DECLARATION:
@@ -579,7 +578,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                   graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
 
                 } else {
-                  logger.warn("Not Found: " + astNode);
+                  logger.warn("FIELD_DECLARATION Not Found: " + astNode);
                 }
               }
               break;
@@ -607,7 +606,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
 
               } else {
-                logger.warn("Not Found: " + astNode);
+                // TODO annoymous type declaration
+                logger.warn("METHOD_DECLARATION Not Found: " + astNode);
               }
               break;
             case ASTNode.INITIALIZER:
@@ -633,7 +633,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                   graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
 
                 } else {
-                  logger.warn("Not Found: " + astNode);
+                  logger.warn("INITIALIZER Not Found: " + astNode);
                 }
               }
               break;
