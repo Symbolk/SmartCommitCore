@@ -58,12 +58,64 @@ public class JDTService {
   }
 
   /**
-   * Get the fully qualified name of a type declaration
+   * Get the qualified name of an anonymous declaration class declaration
+   *
+   * @param declaration
+   * @return
+   */
+  public String getQualifiedNameForAnonyType(
+      AnonymousClassDeclaration declaration, String superClassName) {
+    ASTNode parent = declaration.getParent();
+    // for inner declaration, resolve full name e.g.: A.B
+    StringBuilder builder = new StringBuilder(superClassName);
+    // get the method declaration where the class is declared in
+    while (parent != null
+        && parent.getClass() != MethodDeclaration.class
+        && parent.getClass() != FieldDeclaration.class
+        && parent.getClass() != Initializer.class) {
+      parent = parent.getParent();
+    }
+
+    assert parent != null;
+    if (parent instanceof MethodDeclaration) {
+      MethodDeclaration parentMethod = (MethodDeclaration) parent;
+      List<SingleVariableDeclaration> params = parentMethod.parameters();
+      List<String> paramStringList = new ArrayList<>();
+      for (SingleVariableDeclaration param : params) {
+        String name = param.getName().getFullyQualifiedName();
+        Type type = param.getType();
+        String paramString = (isFinal(param) ? "final" : "") + " " + type.toString() + " " + name;
+        paramStringList.add(paramString);
+      }
+      String paramString = String.join(", ", paramStringList).trim();
+      builder.insert(0, parentMethod.getName() + "(" + paramString + ")" + ":");
+    } else if (parent instanceof FieldDeclaration) {
+      FieldDeclaration parentField = (FieldDeclaration) parent;
+      VariableDeclarationFragment fragment =
+          (VariableDeclarationFragment) parentField.fragments().get(0);
+      builder.insert(0, fragment.getName() + ":");
+    } else if (parent instanceof Initializer) {
+      Initializer parentInitializer = (Initializer) parent;
+      builder.insert(0, "INIT:");
+    }
+
+    while (parent != null && parent.getClass() != TypeDeclaration.class) {
+      parent = parent.getParent();
+    }
+    if (parent != null) {
+      builder.insert(0, getQualifiedNameForNamedType(((TypeDeclaration) parent)) + ":");
+    }
+
+    return builder.toString();
+  }
+
+  /**
+   * Get the fully qualified name of a type declaration with name
    *
    * @param type
    * @return
    */
-  public String getQualifiedNameForType(AbstractTypeDeclaration type) {
+  public String getQualifiedNameForNamedType(AbstractTypeDeclaration type) {
     String name = type.getName().getIdentifier();
     ASTNode parent = type.getParent();
     // for inner type, resolve full name e.g.: A.B
@@ -117,6 +169,26 @@ public class JDTService {
     //        sourceContent.substring(
     //            node.getStartPosition(), node.getStartPosition() + node.getLength());
     return interfaceInfo;
+  }
+
+  /**
+   * Collect information in an anonymous class
+   *
+   * @param declaration
+   * @return
+   */
+  public ClassInfo createAnonyClassInfo(
+      AnonymousClassDeclaration declaration, String superClassName, String qualifiedName) {
+    ClassInfo classInfo = new ClassInfo();
+    classInfo.name = "";
+    classInfo.isAnonymous = true;
+    classInfo.fullName = qualifiedName;
+    classInfo.superClassType = superClassName;
+    classInfo.content =
+        sourceContent.substring(
+            declaration.getStartPosition(),
+            declaration.getStartPosition() + declaration.getLength());
+    return classInfo;
   }
 
   /**
