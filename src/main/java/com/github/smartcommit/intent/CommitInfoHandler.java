@@ -23,8 +23,6 @@ import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
 import com.github.smartcommit.model.constant.Operation;
-import com.github.smartcommit.util.GitService;
-import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -47,7 +45,7 @@ public class CommitInfoHandler {
   public static void main(String[] args) {
     args =
         new String[] {
-          "/Users/Chuncen/Desktop/Repos/RxJava-Android-Samples", "commitTrainingSample"
+          "/Users/Chuncen/Desktop/Repos/Apktool", "commitTrainingSample"
         };
     String repoPath = args[0];
     String collectionName = args[1];
@@ -67,14 +65,13 @@ public class CommitInfoHandler {
   // Split "git commit"
   public static boolean CommitsCollector(
       String REPO_DIR, List<CommitTrainingSample> commitTrainingSample) {
-    GitService gitService = new GitServiceCGit();
     String log = Utils.runSystemCommand(REPO_DIR, "git", "log");
     String[] parts = log.split("\\ncommit ");
     parts[0] = parts[0].substring("commit ".length());
     for (String part : parts) {
-      List<String> tempList = new ArrayList<String>();
       CommitTrainingSample tempCommitTrainingSample = new CommitTrainingSample();
       String[] body = part.split("\\nAuthor: | <|>\\nDate:   |\\n\\n  ");
+      if(body.length < 5)continue;
       // String commitID
       tempCommitTrainingSample.setCommitID(body[0].substring(0, 40));
       // String committer
@@ -158,7 +155,7 @@ public class CommitInfoHandler {
         }
       }
     }
-    return Intent.CHORE;
+    return Intent.OTHERS;
   }
 
   // generate IntentDescription from Message

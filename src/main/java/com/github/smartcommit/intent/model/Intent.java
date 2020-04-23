@@ -21,7 +21,8 @@ public enum Intent {
   DOC("doc"),
   // DOCS("docs"),
   REVERT("revert"),
-  VERSION("version");
+  VERSION("version"),
+  OTHERS("others");
   /*
   FEA("feat"), // feat/feature/Feature
   FIX("fix"), // fix/bugfix/fixed
