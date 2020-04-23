@@ -8,6 +8,7 @@ public enum NodeType {
 
   // nonterminal (children classes of AbstractTypeDeclaration)
   CLASS("class"),
+  ANONY_CLASS("anonymous class"),
   //  INNER_CLASS("class"),
   INTERFACE("interface"),
 
