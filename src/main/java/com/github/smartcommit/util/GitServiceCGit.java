@@ -36,6 +36,9 @@ public class GitServiceCGit implements GitService {
       // working tree clean
       return new ArrayList<>();
     }
+    // ! use an independent incremental index to avoid index jump in case of invalid status output
+    // only increment index when creating new diff file
+    int fileIndex = 0;
 
     String lines[] = output.split("\\r?\\n");
     for (int i = 0; i < lines.length; i++) {
@@ -50,7 +53,7 @@ public class GitServiceCGit implements GitService {
         case MODIFIED:
           DiffFile =
               new DiffFile(
-                  i,
+                  fileIndex++,
                   status,
                   fileType,
                   relativePath,
@@ -62,12 +65,18 @@ public class GitServiceCGit implements GitService {
         case UNTRACKED:
           DiffFile =
               new DiffFile(
-                  i, status, fileType, "", relativePath, "", Utils.readFileToString(absolutePath));
+                  fileIndex++,
+                  status,
+                  fileType,
+                  "",
+                  relativePath,
+                  "",
+                  Utils.readFileToString(absolutePath));
           break;
         case DELETED:
           DiffFile =
               new DiffFile(
-                  i,
+                  fileIndex++,
                   status,
                   fileType,
                   relativePath,
@@ -78,12 +87,27 @@ public class GitServiceCGit implements GitService {
         case RENAMED:
         case COPIED:
           if (temp.length == 4) {
+            // C/R aaa -> bbb
             String oldPath = temp[1];
             String newPath = temp[3];
-            String newAbsPath = repoPath + File.separator + temp[3];
+            String newAbsPath = repoPath + File.separator + newPath;
             DiffFile =
                 new DiffFile(
-                    i,
+                    fileIndex++,
+                    status,
+                    fileType,
+                    oldPath,
+                    newPath,
+                    getContentAtHEAD(repoPath, oldPath),
+                    Utils.readFileToString(newAbsPath));
+          } else if (temp.length == 3) {
+            // CXX/RXX aaa bbb
+            String oldPath = temp[1];
+            String newPath = temp[2];
+            String newAbsPath = repoPath + File.separator + newPath;
+            DiffFile =
+                new DiffFile(
+                    fileIndex++,
                     status,
                     fileType,
                     oldPath,
@@ -99,6 +123,7 @@ public class GitServiceCGit implements GitService {
         diffFileList.add(DiffFile);
       }
     }
+    // assert: diffFileList.size() == fileIndex + 1
     return diffFileList;
   }
 
@@ -117,21 +142,24 @@ public class GitServiceCGit implements GitService {
     if (output.trim().isEmpty()) {
       return new ArrayList<>();
     }
-    ArrayList<DiffFile> DiffFileList = new ArrayList<>();
+    ArrayList<DiffFile> diffFileList = new ArrayList<>();
     String lines[] = output.split("\\r?\\n");
+    // ! use an independent incremental index to avoid index jump in case of invalid status output
+    // only increment index when creating new diff file
+    int fileIndex = 0;
     for (int i = 0; i < lines.length; i++) {
       String temp[] = lines[i].trim().split("\\s+");
       String symbol = temp[0];
       String relativePath = temp[1];
       FileType fileType = Utils.checkFileType(relativePath);
-      //            String absolutePath = repoDir + File.separator + relativePath;
+      //                  String absolutePath = repoDir + File.separator + relativePath;
       FileStatus status = Utils.convertSymbolToStatus(symbol);
-      DiffFile DiffFile = null;
+      DiffFile diffFile = null;
       switch (status) {
         case MODIFIED:
-          DiffFile =
+          diffFile =
               new DiffFile(
-                  i,
+                  fileIndex++,
                   status,
                   fileType,
                   relativePath,
@@ -141,9 +169,9 @@ public class GitServiceCGit implements GitService {
           break;
         case ADDED:
         case UNTRACKED:
-          DiffFile =
+          diffFile =
               new DiffFile(
-                  i,
+                  fileIndex++,
                   status,
                   fileType,
                   "",
@@ -152,9 +180,9 @@ public class GitServiceCGit implements GitService {
                   getContentAtCommit(repoPath, relativePath, commitID));
           break;
         case DELETED:
-          DiffFile =
+          diffFile =
               new DiffFile(
-                  i,
+                  fileIndex++,
                   status,
                   fileType,
                   relativePath,
@@ -165,11 +193,25 @@ public class GitServiceCGit implements GitService {
         case RENAMED:
         case COPIED:
           if (temp.length == 4) {
+            // C/R aaa -> bbb
             String oldPath = temp[1];
             String newPath = temp[3];
-            DiffFile =
+            diffFile =
                 new DiffFile(
-                    i,
+                    fileIndex++,
+                    status,
+                    fileType,
+                    oldPath,
+                    newPath,
+                    getContentAtCommit(repoPath, oldPath, commitID + "~"),
+                    getContentAtCommit(repoPath, newPath, commitID));
+          } else if (temp.length == 3) {
+            // CXX/RXX aaa bbb
+            String oldPath = temp[1];
+            String newPath = temp[2];
+            diffFile =
+                new DiffFile(
+                    fileIndex++,
                     status,
                     fileType,
                     oldPath,
@@ -181,11 +223,12 @@ public class GitServiceCGit implements GitService {
         default:
           break;
       }
-      if (DiffFile != null) {
-        DiffFileList.add(DiffFile);
+      if (diffFile != null) {
+        diffFileList.add(diffFile);
       }
     }
-    return DiffFileList;
+    // assert: diffFileList.size() == fileIndex + 1
+    return diffFileList;
   }
 
   @Override
