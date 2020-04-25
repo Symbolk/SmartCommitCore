@@ -350,7 +350,9 @@ public class JDTService {
     memberInfo.name = node.getName().getFullyQualifiedName();
     memberInfo.belongTo = belongTo;
     memberInfo.type = node.getType().toString();
-    memberInfo.defaultValue = node.getDefault().toString();
+    if (node.getDefault() != null) {
+      memberInfo.defaultValue = node.getDefault().toString();
+    }
     return memberInfo;
   }
 
@@ -1316,7 +1318,7 @@ public class JDTService {
           if (varBinding.isField()) {
             entityInfo.fieldUses.add(
                 varBinding.getDeclaringClass().getQualifiedName() + ":" + binding.getName());
-          } else if (varBinding.isParameter()) {
+          } else if (varBinding.isParameter() && varBinding.getDeclaringMethod() != null) {
             entityInfo.paraUses.add(
                 varBinding.getDeclaringMethod().getDeclaringClass().getQualifiedName()
                     + ":"
