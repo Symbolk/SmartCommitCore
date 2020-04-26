@@ -124,8 +124,12 @@ public class JDTService {
       parent = parent.getParent();
     }
     // resolve fully qualified name e.g.: some.package.A.B
+    // if it is in a package
     if (type.getRoot().getClass() == CompilationUnit.class) {
-      name = getPackageName(type) + "." + name;
+      String packageName = getPackageName(type);
+      if (!packageName.isEmpty()) {
+        name = packageName + "." + name;
+      }
     }
     return name;
   }

@@ -414,7 +414,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               // TODO: for type declarations, members should all be in diff
             case ASTNode.ANNOTATION_TYPE_DECLARATION:
               ITypeBinding annoBinding = ((AnnotationTypeDeclaration) astNode).resolveBinding();
-              if (annoBinding != null) {
+              if (annoBinding != null && annoBinding.getQualifiedName().contains(".")) {
                 nodeOpt =
                     findNodeByNameAndType(
                         annoBinding.getQualifiedName(), NodeType.ANNOTATION, true);
@@ -441,7 +441,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
             case ASTNode.ANNOTATION_TYPE_MEMBER_DECLARATION:
               IMethodBinding memberBinding =
                   ((AnnotationTypeMemberDeclaration) astNode).resolveBinding();
-              if (memberBinding != null) {
+              if (memberBinding != null
+                  && memberBinding.getDeclaringClass().getQualifiedName().contains(".")) {
                 nodeOpt =
                     findNodeByNameAndType(
                         memberBinding.getDeclaringClass().getQualifiedName()
@@ -469,7 +470,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               break;
             case ASTNode.ENUM_DECLARATION:
               ITypeBinding enumBinding = ((EnumDeclaration) astNode).resolveBinding();
-              if (enumBinding != null) {
+              if (enumBinding != null && enumBinding.getQualifiedName().contains(".")) {
                 nodeOpt =
                     findNodeByNameAndType(enumBinding.getQualifiedName(), NodeType.ENUM, true);
               } else {
@@ -495,7 +496,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               ITypeBinding typeBinding = ((TypeDeclaration) astNode).resolveBinding();
               NodeType type =
                   ((TypeDeclaration) astNode).isInterface() ? NodeType.INTERFACE : NodeType.CLASS;
-              if (typeBinding != null) {
+              if (typeBinding != null && typeBinding.getQualifiedName().contains(".")) {
                 nodeOpt = findNodeByNameAndType(typeBinding.getQualifiedName(), type, true);
               } else {
                 nodeOpt =
@@ -518,7 +519,8 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               break;
             case ASTNode.ENUM_CONSTANT_DECLARATION:
               IVariableBinding varBinding = ((EnumConstantDeclaration) astNode).resolveVariable();
-              if (varBinding != null) {
+              if (varBinding != null
+                  && varBinding.getDeclaringClass().getQualifiedName().contains(".")) {
                 nodeOpt =
                     findNodeByNameAndType(
                         varBinding.getDeclaringClass().getQualifiedName()
@@ -555,7 +557,9 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               //                  processAnnotations(((FieldDeclaration) astNode).modifiers()));
               for (VariableDeclarationFragment fragment : fragments) {
                 IVariableBinding binding = fragment.resolveBinding();
-                if (binding != null && binding.getDeclaringClass() != null) {
+                if (binding != null
+                    && binding.getDeclaringClass() != null
+                    && binding.getDeclaringClass().getQualifiedName().contains(".")) {
                   // use qualified name
                   nodeOpt =
                       findNodeByNameAndType(
@@ -586,7 +590,9 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               MethodDeclaration methodDeclaration = (MethodDeclaration) astNode;
               String uniqueMethodName = methodDeclaration.getName().getIdentifier();
               IMethodBinding methodBinding = methodDeclaration.resolveBinding();
-              if (methodBinding != null && methodBinding.getDeclaringClass() != null) {
+              if (methodBinding != null
+                  && methodBinding.getDeclaringClass() != null
+                  && methodBinding.getDeclaringClass().getQualifiedName().contains(".")) {
                 // get the unique name of the method, including the parameter string
                 uniqueMethodName =
                     jdtService.getUniqueNameForMethod(
@@ -606,7 +612,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
                 graph.addEdge(hunkNode, node, new Edge(edgeID, EdgeType.CONTAIN));
 
               } else {
-                // TODO annoymous type declaration
                 logger.warn("METHOD_DECLARATION Not Found: " + astNode);
               }
               break;
