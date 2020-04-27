@@ -37,6 +37,7 @@ public class MemberVisitor extends ASTVisitor {
 
   @Override
   public boolean visit(AnnotationTypeDeclaration node) {
+    // Annotation types are a form of interface
     String qualifiedName = jdtService.getQualifiedNameForNamedType(node);
     Node enumNode =
         new Node(
@@ -54,8 +55,13 @@ public class MemberVisitor extends ASTVisitor {
     annotationInfo.node = enumNode;
     entityPool.annotationInfoMap.put(annotationInfo.fullName, annotationInfo);
 
-    List<AnnotationTypeMemberDeclaration> memberDeclarations = node.bodyDeclarations();
-    for (AnnotationTypeMemberDeclaration declaration : memberDeclarations) {
+    // suppress the other unusual members in higher Java versions (like TypeDecl, EnumDecl, FieldDecl, etc.)
+    List<AnnotationTypeMemberDeclaration> bodyDeclarations = (List<AnnotationTypeMemberDeclaration>) node.bodyDeclarations().stream()
+            .filter(AnnotationTypeMemberDeclaration.class::isInstance)
+            .map(AnnotationTypeMemberDeclaration.class::cast)
+            .collect(Collectors.toList());
+    // annotation type element declarations, which look a lot like methods
+    for (AnnotationTypeMemberDeclaration declaration : bodyDeclarations) {
       AnnotationMemberInfo memberInfo =
           jdtService.createAnnotationMemberInfo(fileIndex, declaration, qualifiedName);
       Node memberNode =
@@ -160,7 +166,13 @@ public class MemberVisitor extends ASTVisitor {
   @Override
   public boolean visit(AnonymousClassDeclaration declaration) {
     // create vertex
-    String superClassName = ((ClassInstanceCreation) declaration.getParent()).getType().toString();
+    String superClassName = "";
+    if(declaration.getParent() instanceof ClassInstanceCreation){
+      superClassName = ((ClassInstanceCreation) declaration.getParent()).getType().toString();
+    }else if(declaration.getParent() instanceof EnumConstantDeclaration){
+      superClassName = ((EnumConstantDeclaration) declaration.getParent()).getName().toString();
+    }
+
     String qualifiedName = jdtService.getQualifiedNameForAnonyType(declaration, superClassName);
     Node node = new Node(generateNodeID(), NodeType.ANONY_CLASS, superClassName, qualifiedName);
     graph.addVertex(node);
@@ -171,11 +183,12 @@ public class MemberVisitor extends ASTVisitor {
     entityPool.classInfoMap.put(classInfo.fullName, classInfo);
 
     // find parent node and create an edge
-    Optional<Node> parentNodeOpt =
-        getParentMemberNode(qualifiedName.substring(0, qualifiedName.lastIndexOf(":")));
-    parentNodeOpt.ifPresent(
-        parentNode -> graph.addEdge(parentNode, node, new Edge(generateEdgeID(), EdgeType.DEFINE)));
-
+    if(qualifiedName.lastIndexOf(":" ) != -1) {
+      Optional<Node> parentNodeOpt =
+          getParentMemberNode(qualifiedName.substring(0, qualifiedName.lastIndexOf(":")));
+      parentNodeOpt.ifPresent(
+          parentNode -> graph.addEdge(parentNode, node, new Edge(generateEdgeID(), EdgeType.DEFINE)));
+    }
     // parse member declarations and create vertices
     List<Initializer> initializers =
         (List<Initializer>)
