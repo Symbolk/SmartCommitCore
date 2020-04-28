@@ -10,6 +10,8 @@ public enum DiffEdgeType {
   REFORMAT(true, "reformat"),
   DOC(false, "doc"),
   CONFIG(false, "config"),
+  RESOURCE(false, "resource"),
+  NONJAVA(false, "non-java"),
   OTHERS(false, "others");
 
   Boolean fixed;

@@ -49,7 +49,8 @@ public class GroupGenerator1 {
   private Graph<DiffNode, DiffEdge> diffGraph;
 
   // options
-  private double threshold = 0.618; // default
+  private boolean processNonJava = false;
+  private boolean detectRefs = false;
 
   public GroupGenerator1(
       String repoID,
@@ -69,8 +70,6 @@ public class GroupGenerator1 {
 
     this.diffGraph = initDiffGraph();
   }
-
-  private boolean detectRefs = false;
 
   // hard -- topo sort + union find
   // soft -- similarity, distance
@@ -132,36 +131,37 @@ public class GroupGenerator1 {
     Map<String, Set<String>> hardLinks =
         Utils.mergeTwoMaps(analyzeHardLinks(baseGraph), analyzeHardLinks(currentGraph));
 
-    // classify non-java changes and remove
+    // classify non-java changes into doc/config/resources/others
     for (DiffFile diffFile : diffFiles) {
       if (!diffFile.getFileType().equals(FileType.JAVA)) {
         String filePath =
             diffFile.getBaseRelativePath().isEmpty()
                 ? diffFile.getCurrentRelativePath()
                 : diffFile.getBaseRelativePath();
-        if (Utils.isDocFile(filePath)) {
-          for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
-            doc.add(diffHunk);
-          }
-        } else if (Utils.isConfigFile(filePath)) {
-          for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
-            config.add(diffHunk);
-          }
-        } else if (Utils.isResourceFile(filePath)) {
-          for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
-            resource.add(diffHunk);
+        if (processNonJava) {
+          if (Utils.isDocFile(filePath)) {
+            doc.addAll(diffFile.getDiffHunks());
+          } else if (Utils.isConfigFile(filePath)) {
+            config.addAll(diffFile.getDiffHunks());
+          } else if (Utils.isResourceFile(filePath)) {
+            resource.addAll(diffFile.getDiffHunks());
+          } else {
+            others.addAll(diffFile.getDiffHunks());
           }
         } else {
-          for (DiffHunk diffHunk : diffFile.getDiffHunks()) {
-            others.add(diffHunk);
-          }
+          others.addAll(diffFile.getDiffHunks());
         }
       }
     }
 
-    createEdges(doc, DiffEdgeType.DOC, 1.0);
-    createEdges(config, DiffEdgeType.CONFIG, 1.0);
-    createEdges(others, DiffEdgeType.OTHERS, 1.0);
+    if (processNonJava) {
+      createEdges(doc, DiffEdgeType.DOC, 1.0);
+      createEdges(config, DiffEdgeType.CONFIG, 1.0);
+      createEdges(resource, DiffEdgeType.RESOURCE, 1.0);
+      createEdges(others, DiffEdgeType.OTHERS, 1.0);
+    } else {
+      createEdges(others, DiffEdgeType.NONJAVA, 1.0);
+    }
 
     // refactor
     if (detectRefs) {
@@ -314,6 +314,8 @@ public class GroupGenerator1 {
         return GroupLabel.DOC;
       case CONFIG:
         return GroupLabel.CONFIG;
+      case NONJAVA:
+        return GroupLabel.NONJAVA;
       case CLOSE:
       default:
         return GroupLabel.OTHER;
@@ -655,16 +657,11 @@ public class GroupGenerator1 {
     return Optional.empty();
   }
 
-  /**
-   * Change the default threshold
-   *
-   * @param threshold
-   */
-  public void setThreshold(double threshold) {
-    this.threshold = threshold;
-  }
-
   public void enableRefDetection(boolean enable) {
     this.detectRefs = enable;
+  }
+
+  public void processNonJavaChanges(boolean process) {
+    this.processNonJava = process;
   }
 }
