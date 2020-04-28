@@ -38,10 +38,11 @@ public class SmartCommit {
   private String tempDir;
   private Map<String, DiffHunk> id2DiffHunkMap;
   // options
-  private Boolean detectRefactorings = false;
-  private Double similarityThreshold = 0.618D;
+  private boolean detectRefactorings = false;
+  private boolean processNonJavaChanges = false;
+  private double similarityThreshold = 0.618D;
   // {hunk: 0 (default), member: 1, class: 2, package: 3}
-  private Integer distanceThreshold = 0;
+  private int distanceThreshold = 0;
 
   public SmartCommit(String repoID, String repoName, String repoPath, String tempDir) {
     this.repoID = repoID;
@@ -51,15 +52,20 @@ public class SmartCommit {
     this.id2DiffHunkMap = new HashMap<>();
   }
 
-  public void setDetectRefactorings(Boolean detectRefactorings) {
+  public void setDetectRefactorings(boolean detectRefactorings) {
     this.detectRefactorings = detectRefactorings;
   }
 
-  public void setSimilarityThreshold(Double similarityThreshold) {
+
+  public void setProcessNonJavaChanges(boolean processNonJavaChanges) {
+    this.processNonJavaChanges = processNonJavaChanges;
+  }
+
+  public void setSimilarityThreshold(double similarityThreshold) {
     this.similarityThreshold = similarityThreshold;
   }
 
-  public void setDistanceThreshold(Integer distanceThreshold) {
+  public void setDistanceThreshold(int distanceThreshold) {
     this.distanceThreshold = distanceThreshold;
   }
 
