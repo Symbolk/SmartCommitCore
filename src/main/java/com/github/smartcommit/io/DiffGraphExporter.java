@@ -20,7 +20,8 @@ public class DiffGraphExporter {
       ComponentNameProvider<DiffNode> vertexLabelProvider = diffNode -> diffNode.getIndex();
       ComponentAttributeProvider<DiffNode> vertexAttributeProvider = new DiffTypeProvider();
 
-      ComponentNameProvider<DiffEdge> edgeLabelProvider = edge -> edge.getWeight().toString();
+      ComponentNameProvider<DiffEdge> edgeLabelProvider =
+          edge -> edge.getType().asString() + "(" + edge.getWeight().toString() + ")";
       ComponentAttributeProvider<DiffEdge> edgeAttributeProvider = new DiffTypeProvider();
       org.jgrapht.io.GraphExporter<DiffNode, DiffEdge> exporter =
           new DOTExporter<>(
