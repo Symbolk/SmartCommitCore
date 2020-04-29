@@ -1,5 +1,6 @@
 package com.github.smartcommit.core;
 
+import com.github.smartcommit.io.DiffGraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
@@ -81,7 +82,7 @@ public class GroupGenerator {
     Graph<DiffNode, DiffEdge> diffGraph =
         GraphTypeBuilder.<DiffNode, DiffEdge>directed()
             .allowingMultipleEdges(true)
-            .allowingSelfLoops(false)
+            .allowingSelfLoops(true)
             .edgeClass(DiffEdge.class)
             .weighted(true)
             .buildGraph();
@@ -122,9 +123,8 @@ public class GroupGenerator {
     //    Set<DiffHunk> moving = new TreeSet<>(ascendingByIndexComparator());
 
     // cache all links from base/current graph as a top order
-    // outgoing
     Map<String, Set<String>> hardLinks =
-        Utils.mergeTwoMaps(analyzeHardLinks(baseGraph), analyzeHardLinks(currentGraph));
+        Utils.mergeTwoMaps(analyzeDefUse(baseGraph), analyzeDefUse(currentGraph));
 
     List<DiffFile> nonJavaDiffFiles =
         diffFiles.stream()
@@ -244,16 +244,83 @@ public class GroupGenerator {
     createEdges(reformat, DiffEdgeType.REFORMAT, 1.0);
   }
 
+  private Map<String, Set<String>> analyzeDefUse(Graph<Node, Edge> graph) {
+    Map<String, Set<String>> defUseLinks = new HashMap<>();
+    List<Node> hunkNodes =
+        graph.vertexSet().stream().filter(node -> node.isInDiffHunk).collect(Collectors.toList());
+    for (Node node : hunkNodes) {
+      List<String> defHunkNodes = analyzeDef(graph, node, new HashSet<>());
+      List<String> useHunkNodes = analyzeUse(graph, node, new HashSet<>());
+      // record the links an return
+      if (!defHunkNodes.isEmpty() || !useHunkNodes.isEmpty()) {
+        if (!defUseLinks.containsKey(node.diffHunkIndex)) {
+          defUseLinks.put(node.diffHunkIndex, new HashSet<>());
+        }
+        for (String s : defHunkNodes) {
+          defUseLinks.get(node.diffHunkIndex).add(s);
+        }
+        for (String s : useHunkNodes) {
+          defUseLinks.get(node.diffHunkIndex).add(s);
+        }
+      }
+    }
+    return defUseLinks;
+  }
+
+  private List<String> analyzeDef(Graph<Node, Edge> graph, Node node, HashSet<Node> visited) {
+    List<String> res = new ArrayList<>();
+    Set<Edge> inEdges =
+        graph.incomingEdgesOf(node).stream()
+            .filter(edge -> edge.getType().isStructural())
+            .collect(Collectors.toSet());
+    if (inEdges.isEmpty() || visited.contains(node)) {
+      return res;
+    }
+    visited.add(node);
+    for (Edge edge : inEdges) {
+      Node srcNode = graph.getEdgeSource(edge);
+      if (srcNode == node || visited.contains(node)) {
+        continue;
+      } else {
+        if (srcNode.isInDiffHunk) {
+          res.add(srcNode.diffHunkIndex);
+        }
+        res.addAll(analyzeDef(graph, srcNode, visited));
+      }
+    }
+    return res;
+  }
+
+  private List<String> analyzeUse(Graph<Node, Edge> graph, Node node, HashSet<Node> visited) {
+    List<String> res = new ArrayList<>();
+    Set<Edge> outEdges =
+        graph.outgoingEdgesOf(node).stream()
+            .filter(edge -> !edge.getType().isStructural())
+            .collect(Collectors.toSet());
+    if (outEdges.isEmpty() || visited.contains(node)) {
+      return res;
+    }
+    visited.add(node);
+    for (Edge edge : outEdges) {
+      Node tgtNode = graph.getEdgeTarget(edge);
+      if (tgtNode == node || visited.contains(tgtNode)) {
+        continue;
+      } else {
+        if (tgtNode.isInDiffHunk) {
+          res.add(tgtNode.diffHunkIndex);
+        }
+        res.addAll(analyzeUse(graph, tgtNode, visited));
+      }
+    }
+    return res;
+  }
+
   /**
-   * Allow the user adjustment for threshold like zooming to dynamically regenerate groups The final
-   * threshold would be remembered to update the default
+   * Accept a threshold to adjust and regenerate the result
    *
    * @param threshold
    */
   public Map<String, Group> generateGroups(Double threshold) {
-    Map<String, Group> generatedGroups = new HashMap<>();
-    Set<String> individuals = new LinkedHashSet<>();
-
     // remove edges under threshold from the diff graph
     Set<DiffEdge> edges = new HashSet<>(diffGraph.edgeSet());
     for (DiffEdge edge : edges) {
@@ -261,7 +328,21 @@ public class GroupGenerator {
         diffGraph.removeEdge(edge);
       }
     }
-//    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
+    //    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
+    return generateGroups();
+  }
+
+  /**
+   * Generate groups of related changes from the graph
+   *
+   * @return
+   */
+  public Map<String, Group> generateGroups() {
+            String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
+
+    Map<String, Group> generatedGroups = new HashMap<>();
+    Set<String> individuals = new LinkedHashSet<>();
+
     // generate group results from connections (order diff hunks topologically)
     // union-find/disjoint set to generate group
     ConnectivityInspector inspector = new ConnectivityInspector(diffGraph);
@@ -294,8 +375,7 @@ public class GroupGenerator {
       }
     }
 
-    createGroup(generatedGroups, individuals, GroupLabel.FEATURE);
-
+    createGroup(generatedGroups, individuals, GroupLabel.OTHER);
     return generatedGroups;
   }
 
@@ -320,7 +400,7 @@ public class GroupGenerator {
         return GroupLabel.NONJAVA;
       case CLOSE:
       default:
-        return GroupLabel.OTHER;
+        return GroupLabel.FEATURE;
     }
   }
   /**
@@ -348,6 +428,20 @@ public class GroupGenerator {
     List<Node> diffEntities =
         graph.vertexSet().stream().filter(node -> node.isInDiffHunk).collect(Collectors.toList());
     for (Node node : diffEntities) {
+      List<Node> defs =
+          Graphs.predecessorListOf(graph, node).stream()
+              .filter(n -> n.isInDiffHunk)
+              .collect(Collectors.toList());
+      if (!defs.isEmpty()) {
+        for (Node u : defs) {
+          if (u.getDiffHunkIndex().equals(node.getDiffHunkIndex())) {
+            continue;
+          } else if (!results.containsKey(node.diffHunkIndex)) {
+            results.put(node.diffHunkIndex, new HashSet<>());
+          }
+          results.get(node.diffHunkIndex).add(u.getDiffHunkIndex());
+        }
+      }
       // direct one-hop dependency
       List<Node> uses =
           Graphs.successorListOf(graph, node).stream()
@@ -377,7 +471,11 @@ public class GroupGenerator {
     if (diffHunks.isEmpty()) {
       return;
     }
+
     List<DiffHunk> list = new ArrayList<>(diffHunks);
+    if(diffHunks.size() == 1){
+      createEdge(list.get(0).getUniqueIndex(), list.get(0).getUniqueIndex(), type, weight);
+    }
     // create groups and build edges in order
     for (int i = 0; i < list.size() - 1; i++) {
       if (i + 1 < list.size()) {
@@ -673,5 +771,9 @@ public class GroupGenerator {
 
   public void setMinSimilarity(double minSimilarity) {
     this.minSimilarity = minSimilarity;
+  }
+
+  public void setMaxDistance(int maxDistance) {
+    this.maxDistance = maxDistance;
   }
 }

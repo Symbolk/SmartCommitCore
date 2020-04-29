@@ -208,10 +208,11 @@ public class SmartCommit {
         new GroupGenerator(
             repoID, repoName, srcDirs, diffFiles, allDiffHunks, baseGraph, currentGraph);
     generator.setMinSimilarity(similarityThreshold);
+    generator.setMaxDistance(distanceThreshold);
     generator.enableRefDetection(detectRefactorings);
     generator.processNonJavaChanges(processNonJavaChanges);
     generator.buildDiffGraph();
-    return generator.generateGroups(0.618);
+    return generator.generateGroups();
   }
 
   /**
