@@ -1,16 +1,24 @@
 package com.github.smartcommit.model.diffgraph;
 
 public enum DiffEdgeType {
-  HARD(true, "hard"),
-  NONJAVA(false, "nonjava"),
-  OTHERS(false, "others"),
-  SOFT(false, "soft");
+  DEPEND(true, "dependency"),
+  REFACTOR(true, "refactor"),
+  SIMILAR(false, "similar"),
+  CLOSE(false, "close"),
 
-  Boolean isConstraint;
+  MOVING(true, "moving"),
+  REFORMAT(true, "reformat"),
+  DOC(false, "doc"),
+  CONFIG(false, "config"),
+  RESOURCE(false, "resource"),
+  NONJAVA(false, "non-java"),
+  OTHERS(false, "others");
+
+  Boolean fixed;
   String label;
 
-  DiffEdgeType(Boolean isConstraint, String label) {
-    this.isConstraint = isConstraint;
+  DiffEdgeType(Boolean fixed, String label) {
+    this.fixed = fixed;
     this.label = label;
   }
 
@@ -19,6 +27,6 @@ public enum DiffEdgeType {
   }
 
   public Boolean isConstraint() {
-    return this.isConstraint;
+    return this.fixed;
   }
 }

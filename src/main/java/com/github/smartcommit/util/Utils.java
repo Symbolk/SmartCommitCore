@@ -154,6 +154,18 @@ public class Utils {
   }
 
   /**
+   * Write a list of lines into a file
+   *
+   * @param lines
+   * @return
+   */
+  public static List<String> writeLinesToFile(List<String> lines, String filePath) {
+    String content = lines.stream().collect(Collectors.joining(System.lineSeparator()));
+    writeStringToFile(content, filePath);
+    return lines;
+  }
+
+  /**
    * Create a folder if not exists
    *
    * @param dir abs path
@@ -464,5 +476,147 @@ public class Utils {
           TypeTo,
           codeChangeTo.getCodeElement());
     }
+  }
+
+  private static boolean checkSuffix(String str, String[] suffixes) {
+    return Arrays.stream(suffixes).parallel().anyMatch(str::contains);
+    //      for(String s : suffixes){
+    //          if(str.endsWith(s)){
+    //              return true;
+    //          }
+    //      }
+    //      return  false;
+  }
+
+  public static boolean isDocFile(String fileName) {
+    if (fileName.lastIndexOf(".") != -1) {
+      return checkSuffix(fileName, new String[] {".md", ".txt"});
+    } else {
+      return true;
+    }
+  }
+
+  public static boolean isResourceFile(String fileName) {
+    if (fileName.lastIndexOf(".") != -1) {
+      return checkSuffix(fileName, new String[] {".json", ".css", ".html"});
+    } else {
+      return true;
+    }
+  }
+
+  public static boolean isConfigFile(String fileName) {
+    if (fileName.lastIndexOf(".") != -1) {
+      return checkSuffix(
+          fileName, new String[] {".xml", ".yml", ".gitignore", ".gradle", ".properties"});
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Merge two maps into one
+   *
+   * @param map1
+   * @param map2
+   * @return
+   */
+  public static Map<String, Set<String>> mergeTwoMaps(
+      Map<String, Set<String>> map1, Map<String, Set<String>> map2) {
+    map2.forEach(
+        (key, value) ->
+            map1.merge(
+                key,
+                value,
+                (v1, v2) -> {
+                  v1.addAll(v2);
+                  return v1;
+                }));
+
+    return map1;
+  }
+
+  /**
+   * Get the most common element in one list
+   *
+   * @param list
+   * @param <T>
+   * @return
+   */
+  public static <T> T mostCommon(List<T> list) {
+    Map<T, Integer> map = new HashMap<>();
+
+    for (T t : list) {
+      Integer val = map.get(t);
+      map.put(t, val == null ? 1 : val + 1);
+    }
+
+    Map.Entry<T, Integer> max = null;
+
+    for (Map.Entry<T, Integer> e : map.entrySet()) {
+      if (max == null || e.getValue() > max.getValue()) max = e;
+    }
+
+    return max.getKey();
+  }
+
+  /**
+   * Sort a map in descending order by the value
+   *
+   * @param original
+   * @return
+   */
+  public static Map<String, Integer> sortMapByValue(Map<String, Integer> original) {
+    final Map<String, Integer> sorted =
+        original.entrySet().stream()
+            .sorted((Map.Entry.<String, Integer>comparingByValue().reversed()))
+            .collect(
+                Collectors.toMap(
+                    Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+    return sorted;
+  }
+
+  /**
+   * Jaccard = Intersection/Union in [0,1]
+   *
+   * @param s1
+   * @param s2
+   * @return
+   */
+  private static double jaccard(Set s1, Set s2) {
+    Set<String> union = new HashSet<>();
+    union.addAll(s1);
+    union.addAll(s2);
+    Set<String> intersection = new HashSet<>();
+    intersection.addAll(s1);
+    intersection.retainAll(s2);
+    if (union.size() <= 0) {
+      return 0D;
+    } else {
+      return (double) intersection.size() / union.size();
+    }
+  }
+
+  /**
+   * Compute the similarity of two lists by comparing as sets (no order, no duplicates)
+   *
+   * @param list1
+   * @param list2
+   * @return
+   */
+  public static double computeListSimilarity(List<Action> list1, List<Action> list2) {
+    if (list1.size() == 0 || list2.size() == 0) {
+      return 0D;
+    }
+    return jaccard(new HashSet(list1), new HashSet(list2));
+  }
+
+  /**
+   * Format the double value to leave 2 digits after .
+   *
+   * @param value
+   * @return
+   */
+  public static double formatDouble(double value) {
+    return (double) Math.round(value * 100) / 100;
   }
 }

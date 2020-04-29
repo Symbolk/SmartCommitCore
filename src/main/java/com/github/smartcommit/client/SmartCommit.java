@@ -40,10 +40,11 @@ public class SmartCommit {
   private Map<String, String> compileInfos;
   private List<HunkIndex> hunkIndices;
   // options
-  private Boolean detectRefactorings = false;
-  private Double similarityThreshold = 0.618D;
+  private boolean detectRefactorings = false;
+  private boolean processNonJavaChanges = false;
+  private double similarityThreshold = 0.618D;
   // {hunk: 0 (default), member: 1, class: 2, package: 3}
-  private Integer distanceThreshold = 0;
+  private int distanceThreshold = 0;
 
   public SmartCommit(String repoID, String repoName, String repoPath, String tempDir) {
     this.repoID = repoID;
@@ -55,15 +56,20 @@ public class SmartCommit {
     this.hunkIndices = new ArrayList<>();
   }
 
-  public void setDetectRefactorings(Boolean detectRefactorings) {
+  public void setDetectRefactorings(boolean detectRefactorings) {
     this.detectRefactorings = detectRefactorings;
   }
 
-  public void setSimilarityThreshold(Double similarityThreshold) {
+
+  public void setProcessNonJavaChanges(boolean processNonJavaChanges) {
+    this.processNonJavaChanges = processNonJavaChanges;
+  }
+
+  public void setSimilarityThreshold(double similarityThreshold) {
     this.similarityThreshold = similarityThreshold;
   }
 
-  public void setDistanceThreshold(Integer distanceThreshold) {
+  public void setDistanceThreshold(int distanceThreshold) {
     this.distanceThreshold = distanceThreshold;
   }
 
@@ -120,7 +126,7 @@ public class SmartCommit {
 
     Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
 
-    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunksWorking(diffFiles);
+    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunks(diffFiles, tempDir);
 
     // generate commit message
     if (results != null) {
@@ -167,6 +173,8 @@ public class SmartCommit {
 
     Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
 
+    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunks(diffFiles, resultsDir);
+
     exportGroupResults(results, resultsDir);
 
     return results;
@@ -196,29 +204,14 @@ public class SmartCommit {
     //    String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
     executorService.shutdown();
 
-    // analyze the diff hunks
-    GroupGenerator groupGenerator =
+    GroupGenerator generator =
         new GroupGenerator(
-            repoID,
-            repoName,
-            similarityThreshold,
-            distanceThreshold,
-            diffFiles,
-            allDiffHunks,
-            baseGraph,
-            currentGraph);
-    groupGenerator.analyzeNonJavaFiles();
-    groupGenerator.analyzeSoftLinks();
-    groupGenerator.analyzeHardLinks();
-    if (detectRefactorings) {
-      groupGenerator.analyzeRefactorings(tempDir);
-    }
-
-    // visualize the diff hunk graph
-    //    String diffGraphString =
-    //        DiffGraphExporter.exportAsDotWithType(groupGenerator.getDiffHunkGraph());
-
-    return groupGenerator.generateGroups();
+            repoID, repoName, srcDirs, diffFiles, allDiffHunks, baseGraph, currentGraph);
+    generator.setMinSimilarity(similarityThreshold);
+    generator.enableRefDetection(detectRefactorings);
+    generator.processNonJavaChanges(processNonJavaChanges);
+    generator.buildDiffGraph();
+    return generator.generateGroups(0.618);
   }
 
   /**
