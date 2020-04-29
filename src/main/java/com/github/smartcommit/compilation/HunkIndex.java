@@ -8,12 +8,16 @@ public class HunkIndex {
     private Integer fileIndex;
     private Integer index;
 
-    public HunkIndex(String relativeFilePath, Integer startLine, Integer endLine, Integer fileIndex, Integer index) {
+
+    private String uuid;
+
+    public HunkIndex(String relativeFilePath, Integer startLine, Integer endLine) {
         this.relativeFilePath = relativeFilePath;
         this.startLine = startLine;
         this.endLine = endLine;
-        this.fileIndex = fileIndex;
-        this.index = index;
+        this.fileIndex = null;
+        this.index = null;
+        this.uuid = null;
     }
 
     public String getRelativeFilePath() {
@@ -54,6 +58,14 @@ public class HunkIndex {
 
     public void setIndex(Integer index) {
         this.index = index;
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.*;
+import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.GitServiceCGit;
@@ -18,6 +19,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.jgrapht.Graph;
 
 import java.io.File;
@@ -460,7 +462,7 @@ public class SmartCommit {
         String symbol = null;
         String location = null;
         if (i + 1 < rows.length && rows[i + 1].contains("symbol:")) {
-          symbol = rows[i + 1].substring(rows[i + 1].indexOf("symbol:") + 7);
+          symbol = rows[i + 1].substring(rows[i + 1].indexOf("symbol:") + 10);
         }
         if (i + 2 < rows.length && rows[i + 2].contains("location:"))
           location = rows[i + 2].substring(rows[i + 2].indexOf("location:") + 9);
@@ -486,21 +488,32 @@ public class SmartCommit {
    * @return the remaining errors
    */
   public List<MavenError> fixMavenErrors(String groupID, List<MavenError> errors) {
+
     return new ArrayList<>();
   }
 
   public void generateIndexesFromDiffHunk() {
     for(Map.Entry<String, DiffHunk> entry : id2DiffHunkMap.entrySet()) {
-      String id = entry.getKey();
       DiffHunk diffHunk = entry.getValue();
       Integer fileIndex = diffHunk.getFileIndex();
       Integer index = diffHunk.getIndex();
+      String diffHunkUUID = diffHunk.getUUID();
+
+      Pair baseIndex = diffHunk.getCodeRangeOf(Version.BASE);
+      Pair currentIndex = diffHunk.getCodeRangeOf(Version.CURRENT);
+
       Hunk currentHunk = diffHunk.getCurrentHunk();
-      String relativeFilePath = currentHunk.getRelativeFilePath();
-      Integer startLine = currentHunk.getStartLine();
-      Integer endLine = currentHunk.getEndLine();
-      HunkIndex hunkIndex = new HunkIndex(relativeFilePath, startLine,endLine,fileIndex,index);
-      hunkIndices.add(hunkIndex);
+      String currentRelativeFilePath = currentHunk.getRelativeFilePath();
+      Integer currentStartLine = currentHunk.getStartLine();
+      Integer currentEndLine = currentHunk.getEndLine();
+
+
+      HunkIndex currentHunkIndex = new HunkIndex(currentRelativeFilePath, currentStartLine,currentEndLine);
+      currentHunkIndex.setFileIndex(fileIndex);
+      currentHunkIndex.setIndex(index);
+      currentHunkIndex.setUuid(diffHunkUUID);
+
+      hunkIndices.add(currentHunkIndex);
     }
   }
 
@@ -512,6 +525,7 @@ public class SmartCommit {
       && line >= hunkIndex.getStartLine()) {
         Integer fileIndex = hunkIndex.getFileIndex();
         Integer Index = hunkIndex.getIndex();
+        String uuid = hunkIndex.getUuid();
         Pair<Integer, Integer> pair = new ImmutablePair<>(fileIndex, Index);
         return pair;
       }

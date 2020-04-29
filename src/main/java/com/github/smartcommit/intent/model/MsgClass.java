@@ -10,12 +10,22 @@ public enum MsgClass {
     MAK("Make"),
     UPD("Update"),
     USE("Use"),
+    SET("Set"),
+    HDL("Handle"),
     IMV("Improve"),
+    OPT("Optimize"),
     UPG("Upgrade"),
     RMV("Remove"),
+    RFC("Refactor"),
+    REP("Replace"),
+    MOV("Move"),
+    CHG("Change"),
+    RNM("Rename"),
+    DOC("Document"),
+    RFM("Reformat"),
     FIX("Fix"),
-    TST("Test"),
-    MDF("Modify");
+    RVT("Revert"),
+    TST("Test");
 
     public String label;
 
