@@ -609,4 +609,14 @@ public class Utils {
     }
     return jaccard(new HashSet(list1), new HashSet(list2));
   }
+
+  /**
+   * Format the double value to leave 2 digits after .
+   *
+   * @param value
+   * @return
+   */
+  public static double formatDouble(double value) {
+    return (double) Math.round(value * 100) / 100;
+  }
 }

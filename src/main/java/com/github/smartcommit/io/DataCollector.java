@@ -232,8 +232,9 @@ public class DataCollector {
       case DELETED:
         return Operation.DEL;
       case MODIFIED:
+        return Operation.UPD;
       default:
-        return Operation.CHANGE;
+        return Operation.UPD;
     }
   }
   /**
@@ -243,8 +244,7 @@ public class DataCollector {
    * @param coveredNodes
    * @return
    */
-  private static List<Action> analyzeCoveredNodes(
-      ChangeType changeType, List<ASTNode> coveredNodes) {
+  private static List<Action> analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
     List<Action> actions = new ArrayList<>();
     Operation operation = convertChangeTypeToOperation(changeType);
 
