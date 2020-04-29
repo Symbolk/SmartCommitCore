@@ -224,7 +224,7 @@ public class CommitMsgGenerator {
         }
         // 0 normal case: no
         else {
-          commitMsg = key + " : No action";
+          commitMsg = key + " ...";
         }
       }
     }
@@ -243,6 +243,7 @@ public class CommitMsgGenerator {
     } else if (!intentLabel.label.equals(key) && key.equals("Fix")) {
       iLabel = key.toUpperCase();
     } else iLabel = intentLabel.toString();
+    if (intentLabel.label.equals("Non-Java")) commitMsg = key + " code or files";
     recommendedCommitMsgs.add(iLabel + " - " + commitMsg);
 
     // read json to get templates
