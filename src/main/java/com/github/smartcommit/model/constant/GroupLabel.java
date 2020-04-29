@@ -1,16 +1,18 @@
 package com.github.smartcommit.model.constant;
 
 public enum GroupLabel {
-  NONJAVA("Non-Java"),
   FEATURE("Feature"), // new feature
-  REFORMAT("Reformat"), // moving, whitespace changes
-  REFACTOR("Refactor"), // currently support types: renaming method/field/type
-  DOC("Document"), // comment, javadoc only changes
+  REFACTOR("Refactor"), // refactoring
   FIX("Fix"), // fix bugs
 
-  LINKED("Dependent"), // syntatically or semantically dependent
+  REFORMAT("Reformat"), // blank character changes
+  DOC("Document"),
+  CONFIG("Config"),
   SIMILAR("Similar"), // systematic changes
   CLEAR("Clear"), // clear unused code
+  MOVING("Moving"),
+
+  NONJAVA("Non-Java"),
   OTHER("Others"); // trivial changes
 
   public String label;

@@ -17,11 +17,13 @@ public class Main {
       SmartCommit smartCommit =
           new SmartCommit(Config.REPO_ID, Config.REPO_NAME, Config.REPO_PATH, Config.TEMP_DIR);
       smartCommit.setDetectRefactorings(true);
+      smartCommit.setProcessNonJavaChanges(false);
       smartCommit.setSimilarityThreshold(Config.SIMI_THRESHOLD);
       smartCommit.setDistanceThreshold(Config.DIS_THRESHOLD);
+
       Map<String, Group> groups = smartCommit.analyzeWorkingTree();
       //      Map<String, Group> groups = smartCommit.analyzeCommit(Config.COMMIT_ID);
-      if (groups != null) {
+      if (groups != null && !groups.isEmpty()) {
         for (Map.Entry<String, Group> entry : groups.entrySet()) {
           Group group = entry.getValue();
           // regenerate commit message according to manual results
