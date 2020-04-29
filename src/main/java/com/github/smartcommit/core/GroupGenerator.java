@@ -1,6 +1,5 @@
 package com.github.smartcommit.core;
 
-import com.github.smartcommit.io.DiffGraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
@@ -338,7 +337,7 @@ public class GroupGenerator {
    * @return
    */
   public Map<String, Group> generateGroups() {
-            String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
+//    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
 
     Map<String, Group> generatedGroups = new HashMap<>();
     Set<String> individuals = new LinkedHashSet<>();
@@ -380,12 +379,11 @@ public class GroupGenerator {
   }
 
   private GroupLabel getIntentFromEdges(List<DiffEdgeType> edgeTypes) {
+    if (edgeTypes.contains(DiffEdgeType.REFACTOR)) {
+      return GroupLabel.REFACTOR;
+    }
     DiffEdgeType edgeType = Utils.mostCommon(edgeTypes);
     switch (edgeType) {
-      case DEPEND:
-        return GroupLabel.FEATURE;
-      case REFACTOR:
-        return GroupLabel.REFACTOR;
       case SIMILAR:
         return GroupLabel.FIX;
       case MOVING:
@@ -473,7 +471,7 @@ public class GroupGenerator {
     }
 
     List<DiffHunk> list = new ArrayList<>(diffHunks);
-    if(diffHunks.size() == 1){
+    if (diffHunks.size() == 1) {
       createEdge(list.get(0).getUniqueIndex(), list.get(0).getUniqueIndex(), type, weight);
     }
     // create groups and build edges in order
