@@ -3,6 +3,7 @@ package com.github.smartcommit.commitmsg;
 import com.github.smartcommit.client.SmartCommit;
 import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.model.Action;
+import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.constant.GroupLabel;
 import com.github.smartcommit.model.constant.Operation;
 import org.apache.log4j.Logger;
@@ -12,19 +13,23 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class CommitMsgGenerator {
   private static final Logger Logger = org.apache.log4j.Logger.getLogger(SmartCommit.class);
   private List<Action> astActions;
   private List<Action> refactorActions;
   private String commitMsg;
+  private List<DiffHunk> diffHunks;
 
-  public CommitMsgGenerator(List<Action> astActions, List<Action> refactorActions) {
-    this.astActions = astActions;
-    this.refactorActions = refactorActions;
+  public CommitMsgGenerator(List<DiffHunk> diffHunks) {
+    this.astActions = new ArrayList<>();
+    this.refactorActions = new ArrayList<>();
+    this.diffHunks = diffHunks;
+    for(DiffHunk diffHunk : diffHunks) {
+      this.astActions.addAll(diffHunk.getAstActions());
+      this.refactorActions.addAll(diffHunk.getRefActions());
+    }
   }
 
   /**
@@ -41,7 +46,9 @@ public class CommitMsgGenerator {
     int RefTypeSum = 18;
     int AstSum = AstOperationSum * AstTypeSum;
     int RefSum = RefOperationSum * RefTypeSum;
-    int vectorSize = AstSum + RefSum;
+    int numFeatures = 18;
+    //
+    int vectorSize = AstSum + RefSum + numFeatures;
 
     List<Integer> vectors = new ArrayList<>(Collections.nCopies(vectorSize, 0));
     int indexOperation, indexType, indexFinal;
@@ -84,6 +91,83 @@ public class CommitMsgGenerator {
           vectors.set(indexFinal, vectors.get(indexFinal) + 1);
         }
       }
+
+      Integer NumOfDiffFiles = 0,
+              NumOfDiffFilesJava = 0,
+              NumOfDiffFilesNonJAVA = 0,
+              NumOfDiffFilesAdded = 0,
+              NumOfDiffFilesModified = 0,
+              NumOfDiffFilesAddedJAVA = 0,
+              NumOfDiffFilesModifiedJAVA = 0,
+              NumOfDiffFilesAddedXML = 0,
+              NumOfDiffFilesModifiedXML = 0,
+              NumOfDiffHunks = 0,
+              AveLinesOfDiffHunks = 0,
+              SumOfLinesAdded = 0,
+              SumOfLinesDeleted = 0,
+              SumOfLinesModified = 0,
+              SumOfLinesChanged = 0,
+              SumOfLinesChangedJava = 0,
+              SumOfLinesChangedXML = 0,
+              SumOfLinesChangedOthers = 0;
+      Set<String> fileIDs = new HashSet<>();
+
+      for(DiffHunk diffHunk : diffHunks) {
+        String fileID = diffHunk.getFileID();
+        if(fileIDs.contains(fileID)) continue;
+        fileIDs.contains(fileID);
+        String fileType = diffHunk.getFileType().label;
+        String fileStatus = diffHunk.getChangeType().label;
+        if(fileType.equals("Java")) NumOfDiffFilesJava += 1;
+        else NumOfDiffFilesNonJAVA += 1;
+        if(fileStatus.equals("Add")) {
+          NumOfDiffFilesAdded += 1;
+          if(fileType.equals("Java")) NumOfDiffFilesAddedJAVA += 1;
+          else if(fileType.equals("XML")) NumOfDiffFilesAddedXML += 1;
+        }
+        else if(fileStatus.equals("Modify")) {
+          NumOfDiffFilesModified += 1;
+          if(fileType.equals("Java")) NumOfDiffFilesModifiedJAVA += 1;
+          else if(fileType.equals("XML")) NumOfDiffFilesModifiedXML += 1;
+        }
+        Integer num =
+                diffHunk.getBaseEndLine()
+                        - diffHunk.getBaseStartLine()
+                        + diffHunk.getCurrentEndLine()
+                        - diffHunk.getCurrentStartLine();
+        if (num > 0) SumOfLinesAdded += num;
+        else if (num < 0) SumOfLinesDeleted += num;
+        else SumOfLinesAdded += num;
+        SumOfLinesChanged += num;
+        if (fileType.equals("Java")) SumOfLinesChangedJava += num;
+        else if (fileType.equals("XML")) SumOfLinesChangedXML += num;
+        else SumOfLinesChangedOthers += num;
+
+      }
+      NumOfDiffFiles = fileIDs.size();
+      NumOfDiffHunks = diffHunks.size();
+      AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
+
+
+      vectors.set(AstSum + RefSum + 0, NumOfDiffFiles);
+      vectors.set(AstSum + RefSum + 1, NumOfDiffFilesJava);
+      vectors.set(AstSum + RefSum + 2, NumOfDiffFilesNonJAVA);
+      vectors.set(AstSum + RefSum + 3, NumOfDiffFilesAdded);
+      vectors.set(AstSum + RefSum + 4, NumOfDiffFilesModified);
+      vectors.set(AstSum + RefSum + 5, NumOfDiffFilesAddedJAVA);
+      vectors.set(AstSum + RefSum + 6, NumOfDiffFilesModifiedJAVA);
+      vectors.set(AstSum + RefSum + 7, NumOfDiffFilesAddedXML);
+      vectors.set(AstSum + RefSum + 8, NumOfDiffFilesModifiedXML);
+      vectors.set(AstSum + RefSum + 9, NumOfDiffHunks);
+      vectors.set(AstSum + RefSum + 10, AveLinesOfDiffHunks);
+      vectors.set(AstSum + RefSum + 11, SumOfLinesAdded);
+      vectors.set(AstSum + RefSum + 12, SumOfLinesDeleted);
+      vectors.set(AstSum + RefSum + 13, SumOfLinesModified);
+      vectors.set(AstSum + RefSum + 14, SumOfLinesChanged);
+      vectors.set(AstSum + RefSum + 15, SumOfLinesChangedJava);
+      vectors.set(AstSum + RefSum + 16, SumOfLinesChangedXML);
+      vectors.set(AstSum + RefSum + 17, SumOfLinesChangedOthers);
+
     } catch (Exception e) {
       e.printStackTrace();
       Logger.info("fail to generate Group Vector");

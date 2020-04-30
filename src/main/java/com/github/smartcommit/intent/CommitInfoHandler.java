@@ -43,10 +43,7 @@ import java.util.Map;
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
   public static void main(String[] args) {
-    args =
-        new String[] {
-          "/Users/Chuncen/Desktop/Repos/Apktool", "commitTrainingSample"
-        };
+    args = new String[] {"/Users/Chuncen/Desktop/Repos/Apktool", "commitTrainingSample"};
     String repoPath = args[0];
     String collectionName = args[1];
     // CommitTrainingSample
@@ -71,7 +68,7 @@ public class CommitInfoHandler {
     for (String part : parts) {
       CommitTrainingSample tempCommitTrainingSample = new CommitTrainingSample();
       String[] body = part.split("\\nAuthor: | <|>\\nDate:   |\\n\\n  ");
-      if(body.length < 5)continue;
+      if (body.length < 5) continue;
       // String commitID
       tempCommitTrainingSample.setCommitID(body[0].substring(0, 40));
       // String committer
@@ -368,17 +365,26 @@ public class CommitInfoHandler {
       doc1.put("GumtreeCountDocChange", commitTrainingSample.getGumtreeCountDocChange());
 
       {
-        Integer NumOfDiffFiles = 0, NumOfDiffFilesJava = 0, NumOfDiffFilesNonJAVA = 0,
-                NumOfDiffFilesAdded = 0, NumOfDiffFilesModified = 0,
-                NumOfDiffFilesAddedJAVA = 0, NumOfDiffFilesModifiedJAVA = 0,
-                NumOfDiffFilesAddedXML = 0, NumOfDiffFilesModifiedXML = 0,
-                NumOfDiffHunks = 0, AveLinesOfDiffHunks = 0,
-                SumOfLinesAdded = 0, SumOfLinesDeleted = 0, SumOfLinesModified = 0,
-                SumOfLinesChanged = 0, SumOfLinesChangedJava = 0,
-                SumOfLinesChangedXML = 0, SumOfLinesChangedOthers = 0;
+        Integer NumOfDiffFiles = 0,
+            NumOfDiffFilesJava = 0,
+            NumOfDiffFilesNonJAVA = 0,
+            NumOfDiffFilesAdded = 0,
+            NumOfDiffFilesModified = 0,
+            NumOfDiffFilesAddedJAVA = 0,
+            NumOfDiffFilesModifiedJAVA = 0,
+            NumOfDiffFilesAddedXML = 0,
+            NumOfDiffFilesModifiedXML = 0,
+            NumOfDiffHunks = 0,
+            AveLinesOfDiffHunks = 0,
+            SumOfLinesAdded = 0,
+            SumOfLinesDeleted = 0,
+            SumOfLinesModified = 0,
+            SumOfLinesChanged = 0,
+            SumOfLinesChangedJava = 0,
+            SumOfLinesChangedXML = 0,
+            SumOfLinesChangedOthers = 0;
         // add DiffFile to DB
         List<DiffFile> diffFiles = commitTrainingSample.getDiffFiles();
-        NumOfDiffFiles = diffFiles.size();
         if (diffFiles != null) {
           List<Document> Files = new ArrayList<>();
           // diffFile Level
@@ -422,47 +428,46 @@ public class CommitInfoHandler {
                         - diffHunk.getBaseStartLine()
                         + diffHunk.getCurrentEndLine()
                         - diffHunk.getCurrentStartLine();
-                if(num > 0) SumOfLinesAdded += num;
-                else if(num < 0) SumOfLinesDeleted += num;
+                if (num > 0) SumOfLinesAdded += num;
+                else if (num < 0) SumOfLinesDeleted += num;
                 else SumOfLinesAdded += num;
                 SumOfLinesChanged += num;
-                if(FileType.equals("Java")) SumOfLinesChangedJava += num;
-                else if(FileType.equals("XML")) SumOfLinesChangedXML += num;
+                if (FileType.equals("Java")) SumOfLinesChangedJava += num;
+                else if (FileType.equals("XML")) SumOfLinesChangedXML += num;
                 else SumOfLinesChangedOthers += num;
 
                 nums.add(num);
-                List<String> rawDiffs =  diffHunk.getRawDiffs();
+                List<String> rawDiffs = diffHunk.getRawDiffs();
                 rawDiffsList.add(rawDiffs);
               }
               addrAttr.put("changedLines", nums.toString());
               addrAttr.put("RawDiffsList", rawDiffsList);
             }
 
-            if(FileStatus.equals("modified")) {
+            if (FileStatus.equals("modified")) {
               NumOfDiffFilesModified += 1;
-            } else if(FileStatus.equals("added")) {
+            } else if (FileStatus.equals("added")) {
               NumOfDiffFilesAdded += 1;
             }
 
-            if(FileType.equals("Java")) {
+            if (FileType.equals("Java")) {
               NumOfDiffFilesJava += 1;
-              if(FileStatus.equals("modified")) NumOfDiffFilesModifiedJAVA += 1;
-              if(FileStatus.equals("added")) NumOfDiffFilesAddedJAVA += 1;
+              if (FileStatus.equals("modified")) NumOfDiffFilesModifiedJAVA += 1;
+              if (FileStatus.equals("added")) NumOfDiffFilesAddedJAVA += 1;
             } else {
               NumOfDiffFilesNonJAVA += 1;
-              if(FileType.equals("XML")) {
-                if(FileStatus.equals("modified")) NumOfDiffFilesModifiedXML += 1;
-                if(FileStatus.equals("added")) NumOfDiffFilesAddedXML += 1;
+              if (FileType.equals("XML")) {
+                if (FileStatus.equals("modified")) NumOfDiffFilesModifiedXML += 1;
+                if (FileStatus.equals("added")) NumOfDiffFilesAddedXML += 1;
               }
             }
 
+            NumOfDiffFiles = diffFiles.size();
             NumOfDiffHunks = diffHunks.size();
-            AveLinesOfDiffHunks = SumOfLinesChanged/NumOfDiffHunks;
-
+            AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
 
             Files.add(addrAttr);
           }
-
 
           doc1.put("DiffFiles", Files);
           Document features = new Document();
@@ -485,7 +490,6 @@ public class CommitInfoHandler {
           features.put("SumOfLinesChangedXML", SumOfLinesChangedXML);
           features.put("SumOfLinesOthers", SumOfLinesChangedOthers);
           doc1.put("18Features", features);
-
         }
       }
 

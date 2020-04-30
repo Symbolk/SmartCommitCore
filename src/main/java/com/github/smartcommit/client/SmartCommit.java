@@ -6,7 +6,10 @@ import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
-import com.github.smartcommit.model.*;
+import com.github.smartcommit.model.DiffFile;
+import com.github.smartcommit.model.DiffHunk;
+import com.github.smartcommit.model.Group;
+import com.github.smartcommit.model.Hunk;
 import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
@@ -19,7 +22,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.eclipse.jdt.core.dom.ASTNode;
 import org.jgrapht.Graph;
 
 import java.io.File;
@@ -357,17 +359,15 @@ public class SmartCommit {
   public List<String> generateCommitMsg(Group group) {
     // get the ast actions and refactoring actions
     List<String> diffHunkIDs = group.getDiffHunkIDs();
-    List<Action> astActions = new ArrayList<>();
-    List<Action> refActions = new ArrayList<>();
+    List<DiffHunk> diffHunks = new ArrayList<>();
     for (String id : diffHunkIDs) {
       DiffHunk diffHunk = id2DiffHunkMap.getOrDefault(id.split(":")[1], null);
       if (diffHunk != null) {
-        astActions.addAll(diffHunk.getAstActions());
-        refActions.addAll(diffHunk.getRefActions());
+        diffHunks.add(diffHunk);
       }
     }
 
-//    CommitMsgGenerator generator = new CommitMsgGenerator(astActions, refActions);
+//    CommitMsgGenerator generator = new CommitMsgGenerator(diffHunks);
 //    List<Integer> vectors = generator.generateGroupVector();
 //    MsgClass msgClass = generator.invokeAIModel(vectors);
 //    return generator.generateDetailedMsgs(msgClass, group.getIntentLabel());
