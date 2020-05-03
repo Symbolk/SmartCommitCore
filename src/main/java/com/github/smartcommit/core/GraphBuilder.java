@@ -407,6 +407,11 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
         if (astNode instanceof ImportDeclaration) {
           // save type defs in import statements
           hunkInfo.typeDefs.add(((ImportDeclaration) astNode).getName().toString());
+        } else if (astNode instanceof Statement) {
+          // add edge between used and the current node
+          jdtService.parseStatement(hunkInfo, (Statement) astNode);
+        } else if (astNode instanceof Expression) {
+          jdtService.parseExpression(hunkInfo, (Expression) astNode);
         } else if (astNode instanceof BodyDeclaration) {
           Optional<Node> nodeOpt = Optional.empty();
           // find the corresponding nodeOpt in the entity pool (expected to exist)
@@ -646,8 +651,6 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               logger.warn(
                   "Unconsidered type: " + Annotation.nodeClassForType(astNode.getNodeType()));
           }
-        } else if (astNode instanceof Statement) {
-          jdtService.parseStatement(hunkInfo, (Statement) astNode);
         }
       }
       // create the HunkInfo node for hunks inside entities

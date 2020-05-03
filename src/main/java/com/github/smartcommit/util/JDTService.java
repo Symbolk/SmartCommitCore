@@ -1203,7 +1203,7 @@ public class JDTService {
    * @param entityInfo
    * @param expression
    */
-  private void parseExpression(DeclarationInfo entityInfo, Expression expression) {
+  public void parseExpression(DeclarationInfo entityInfo, Expression expression) {
     if (expression == null) {
       return;
     }
