@@ -55,11 +55,14 @@ public class MemberVisitor extends ASTVisitor {
     annotationInfo.node = enumNode;
     entityPool.annotationInfoMap.put(annotationInfo.fullName, annotationInfo);
 
-    // suppress the other unusual members in higher Java versions (like TypeDecl, EnumDecl, FieldDecl, etc.)
-    List<AnnotationTypeMemberDeclaration> bodyDeclarations = (List<AnnotationTypeMemberDeclaration>) node.bodyDeclarations().stream()
-            .filter(AnnotationTypeMemberDeclaration.class::isInstance)
-            .map(AnnotationTypeMemberDeclaration.class::cast)
-            .collect(Collectors.toList());
+    // suppress the other unusual members in higher Java versions (like TypeDecl, EnumDecl,
+    // FieldDecl, etc.)
+    List<AnnotationTypeMemberDeclaration> bodyDeclarations =
+        ((List<?>) node.bodyDeclarations())
+            .stream()
+                .filter(AnnotationTypeMemberDeclaration.class::isInstance)
+                .map(AnnotationTypeMemberDeclaration.class::cast)
+                .collect(Collectors.toList());
     // annotation type element declarations, which look a lot like methods
     for (AnnotationTypeMemberDeclaration declaration : bodyDeclarations) {
       AnnotationMemberInfo memberInfo =
@@ -95,9 +98,8 @@ public class MemberVisitor extends ASTVisitor {
     } else if (node.isLocalTypeDeclaration() || node.isMemberTypeDeclaration()) {
       String parentTypeName = qualifiedName.replace("." + node.getName().getIdentifier(), "");
       Optional<Node> nodeOpt = getParentTypeNode(parentTypeName);
-      if (nodeOpt.isPresent()) {
-        graph.addEdge(nodeOpt.get(), enumNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
-      }
+      nodeOpt.ifPresent(
+          value -> graph.addEdge(value, enumNode, new Edge(generateEdgeID(), EdgeType.DEFINE)));
     }
 
     EnumInfo enumInfo = jdtService.createEnumInfo(node);
@@ -167,9 +169,9 @@ public class MemberVisitor extends ASTVisitor {
   public boolean visit(AnonymousClassDeclaration declaration) {
     // create vertex
     String superClassName = "";
-    if(declaration.getParent() instanceof ClassInstanceCreation){
+    if (declaration.getParent() instanceof ClassInstanceCreation) {
       superClassName = ((ClassInstanceCreation) declaration.getParent()).getType().toString();
-    }else if(declaration.getParent() instanceof EnumConstantDeclaration){
+    } else if (declaration.getParent() instanceof EnumConstantDeclaration) {
       superClassName = ((EnumConstantDeclaration) declaration.getParent()).getName().toString();
     }
 
@@ -183,16 +185,17 @@ public class MemberVisitor extends ASTVisitor {
     entityPool.classInfoMap.put(classInfo.fullName, classInfo);
 
     // find parent node and create an edge
-    if(qualifiedName.lastIndexOf(":" ) != -1) {
+    if (qualifiedName.lastIndexOf(":") != -1) {
       Optional<Node> parentNodeOpt =
           getParentMemberNode(qualifiedName.substring(0, qualifiedName.lastIndexOf(":")));
       parentNodeOpt.ifPresent(
-          parentNode -> graph.addEdge(parentNode, node, new Edge(generateEdgeID(), EdgeType.DEFINE)));
+          parentNode ->
+              graph.addEdge(parentNode, node, new Edge(generateEdgeID(), EdgeType.DEFINE)));
     }
     // parse member declarations and create vertices
     List<Initializer> initializers =
-        (List<Initializer>)
-            declaration.bodyDeclarations().stream()
+        ((List<?>) declaration.bodyDeclarations())
+            .stream()
                 .filter(Initializer.class::isInstance)
                 .map(Initializer.class::cast)
                 .collect(Collectors.toList());
@@ -213,8 +216,8 @@ public class MemberVisitor extends ASTVisitor {
     }
 
     List<FieldDeclaration> fieldDeclarations =
-        (List<FieldDeclaration>)
-            declaration.bodyDeclarations().stream()
+        ((List<?>) declaration.bodyDeclarations())
+            .stream()
                 .filter(FieldDeclaration.class::isInstance)
                 .map(FieldDeclaration.class::cast)
                 .collect(Collectors.toList());
@@ -235,8 +238,8 @@ public class MemberVisitor extends ASTVisitor {
     }
 
     List<MethodDeclaration> methodDeclarations =
-        (List<MethodDeclaration>)
-            declaration.bodyDeclarations().stream()
+        ((List<?>) declaration.bodyDeclarations())
+            .stream()
                 .filter(MethodDeclaration.class::isInstance)
                 .map(MethodDeclaration.class::cast)
                 .collect(Collectors.toList());
