@@ -162,6 +162,7 @@ public class SmartCommit {
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunks(diffFiles, resultsDir);
 
     exportGroupResults(results, resultsDir);
+    exportGroupDetails(results, resultsDir);
 
     return results;
   }
@@ -205,12 +206,12 @@ public class SmartCommit {
    *
    * @param generatedGroups
    */
-  public void exportGroupResults(Map<String, Group> generatedGroups, String targetDir) {
+  public void exportGroupResults(Map<String, Group> generatedGroups, String outputDir) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     for (Map.Entry<String, Group> entry : generatedGroups.entrySet()) {
       Utils.writeStringToFile(
           gson.toJson(entry.getValue()),
-          targetDir
+          outputDir
               + File.separator
               + "generated_groups"
               + File.separator
@@ -219,7 +220,7 @@ public class SmartCommit {
       // the copy to accept the user feedback
       Utils.writeStringToFile(
           gson.toJson(entry.getValue()),
-          targetDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
+          outputDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
     }
   }
 
@@ -228,14 +229,14 @@ public class SmartCommit {
    *
    * @param results
    */
-  public void exportGroupDetails(Map<String, Group> results) {
+  public void exportGroupDetails(Map<String, Group> results, String outputDir) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     List<String> groupedDiffHunks = new ArrayList<>();
     for (Map.Entry<String, Group> entry : results.entrySet()) {
       String path =
-          tempDir + File.separator + "details" + File.separator + entry.getKey() + ".json";
+          outputDir + File.separator + "details" + File.separator + entry.getKey() + ".json";
       StringBuilder builder = new StringBuilder();
-      builder.append(entry.getValue().getIntentLabel()).append("\n");
+      builder.append(entry.getValue().getIntentLabel().label).append("\n");
       for (String id : entry.getValue().getDiffHunkIDs()) {
         if (groupedDiffHunks.contains(id)) {
           DiffHunk diffHunk = id2DiffHunkMap.get(id.split(":")[1]);
