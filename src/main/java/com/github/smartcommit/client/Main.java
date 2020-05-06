@@ -30,7 +30,6 @@ public class Main {
           System.out.println(entry.getKey());
           System.out.println(entry.getValue().toString());
         }
-        smartCommit.exportGroupDetails(groups);
 
       } else {
         System.out.println("No Changes.");
