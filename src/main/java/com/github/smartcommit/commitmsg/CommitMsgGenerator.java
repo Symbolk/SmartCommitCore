@@ -166,115 +166,163 @@ public class CommitMsgGenerator {
    */
   public List<String> generateDetailedMsgs(MsgClass msgClass, GroupLabel intentLabel) {
 
-    // Count Frequency of typeFrom in Actions whose q equals key currently
-    String key = msgClass.label;
-
-    List<Action> actions = new ArrayList<>();
-    actions.addAll(astActions);
-    actions.addAll(refactorActions);
-
-    // Matched Cases: count by frequency
-    List<Integer> IndexesUnlabeledMatched = getTop2IndexTypeFrom(actions, key);
-    // Special Cases: package, class, method，interface
-    List<Integer> IndexesLabeled = get4IndexOfTypeFrom(actions);
-
-    // 2 matches between MsgClass and AstAction
-    if (IndexesUnlabeledMatched.size() > 1) {
-      Action action0 = actions.get(IndexesUnlabeledMatched.get(0));
-      Action action1 = actions.get(IndexesUnlabeledMatched.get(1));
-      commitMsg = generateObjectMsgFromActions(action0, false, action1, false);
-    }
-    // 1 matches between MsgClass and AstAction
-    else if (IndexesUnlabeledMatched.size() == 1) {
-      if (IndexesLabeled.size() > 0) {
-        Action action0 = actions.get(IndexesUnlabeledMatched.get(0));
-        Action action1 = actions.get(IndexesLabeled.get(0));
-        commitMsg = generateObjectMsgFromActions(action0, false, action1, true);
-      } else {
-        Action action0 = actions.get(IndexesUnlabeledMatched.get(0));
-        commitMsg = generateObjectMsgFromActions(action0, false);
-      }
-
-    }
-    // 0 match between MsgClass and AstAction
-    else {
-      // Unmatched Cases: count by frequency
-      List<Integer> IndexesUnlabeledUnmatched = getTop2IndexTypeFrom(actions, "");
-      // 2 special cases: package, class, method，interface
-      if (IndexesLabeled.size() > 1) {
-        Action action0 = actions.get(IndexesLabeled.get(0));
-        Action action1 = actions.get(IndexesLabeled.get(1));
-        commitMsg = generateObjectMsgFromActions(action0, true, action1, true);
-      }
-      // 1 special cases: package, class, method，interface
-      else if (IndexesLabeled.size() == 1) {
-        Action action0 = actions.get(IndexesLabeled.get(0));
-        commitMsg = generateObjectMsgFromActions(action0, true);
-      }
-      // 0 special case: package, class, method，interface
-      else {
-        // 2 normal cases: top2
-        if (IndexesUnlabeledUnmatched.size() > 1) {
-          Action action0 = actions.get(IndexesUnlabeledUnmatched.get(0));
-          Action action1 = actions.get(IndexesUnlabeledUnmatched.get(1));
-          commitMsg = generateObjectMsgFromActions(action0, false, action1, false);
-        }
-        // 1 normal cases: only1
-        else if (IndexesUnlabeledUnmatched.size() == 1) {
-          Action action0 = actions.get(IndexesUnlabeledUnmatched.get(0));
-          commitMsg = generateObjectMsgFromActions(action0, false);
-        }
-        // 0 normal case: no
-        else {
-          commitMsg = key + " ...";
-        }
-      }
-    }
-
-    // generate recommendedCommitMsg
-    List<String> recommendedCommitMsgs = new ArrayList<>();
-    String iLabel = "";
-    if (intentLabel.label.equals("Others")) {
-      if (key.equals("Fix")
-          || key.equals(" Test")
-          || key.equals("Reformat")
-          || key.equals("Document")
-          || key.equals("Revert")
-          || key.equals("Refactor")) iLabel = key.toUpperCase();
-      else iLabel = "FUNCTIONCHANGE";
-    } else if (!intentLabel.label.equals(key) && key.equals("Fix")) {
-      iLabel = key.toUpperCase();
-    } else iLabel = intentLabel.toString();
-    if (intentLabel.label.equals("Non-Java")) commitMsg = key + " code or files";
-    recommendedCommitMsgs.add(iLabel + " - " + commitMsg);
-
+    // generate commitMsgs
+    List<String> commitMsgs = new ArrayList<>();
+    commitMsg = generateCommitMsg(msgClass, intentLabel);
+    commitMsgs.add(commitMsg);
     // read json to get templates
     JSONObject jsonObject = new JSONObject(getTemplate());
-    JSONArray jsonArray = jsonObject.getJSONArray(key);
-    for (int i = 0; i < jsonArray.length(); i++)
-      recommendedCommitMsgs.add(jsonArray.get(i).toString());
+    JSONArray jsonArray = jsonObject.getJSONArray(msgClass.label);
+    for (int i = 0; i < jsonArray.length(); i++) commitMsgs.add(jsonArray.get(i).toString());
 
-    return recommendedCommitMsgs;
+    return commitMsgs;
   }
 
-  // get max2Count of Frequency in Actions
-  private List<Integer> getTop2IndexTypeFrom(List<Action> Actions, String key) {
+  private String generateCommitMsg(MsgClass msgClass, GroupLabel intentLabel) {
+    String commitMsg = null;
+    List<Integer> top2Index, prior4Index;
+    switch (intentLabel) {
+      case REFACTOR:
+        commitMsg = "Refactor - ";
+        top2Index = getTop2Index(refactorActions);
+        if (!top2Index.isEmpty()) commitMsg += getRefactorObject(top2Index, refactorActions);
+        else {
+          prior4Index = getPrior4Index(refactorActions);
+          if (!prior4Index.isEmpty()) commitMsg += getRefactorObject(prior4Index, refactorActions);
+          else {
+            if (!refactorActions.isEmpty())
+              commitMsg +=
+                  refactorActions.get(0).getOperation().label
+                      + " "
+                      + refactorActions.get(0).getLabelFrom();
+            else {
+              commitMsg = "Chore - Modify code";
+            }
+          }
+        }
+        return commitMsg;
+      case REFORMAT:
+        return "Style - Code reformat";
+      case DOC:
+        return "Docs - Document change";
+      case CONFIG:
+        return "Docs - Configuration file change";
+      case NONJAVA:
+        return "Docs - Other file change";
+      case FIX:
+      case FEATURE:
+      case OTHER:
+        commitMsg = msgClass.label + " - ";
+        top2Index = getTop2Index(astActions);
+        if (!top2Index.isEmpty()) commitMsg += getOtherObject(top2Index, astActions);
+        else {
+          prior4Index = getPrior4Index(astActions);
+          if (!prior4Index.isEmpty()) commitMsg += getOtherObject(prior4Index, astActions);
+          else {
+            if (!astActions.isEmpty())
+              commitMsg +=
+                  astActions.get(0).getOperation().label
+                      + " "
+                      + astActions.get(0).getLabelFrom();
+            else {
+              commitMsg = "Chore - Modify code";
+            }
+          }
+        }
+        return commitMsg;
+      default:
+        return "Chore - Modify code";
+    }
+  }
+
+  private String getRefactorObject(List<Integer> indexes, List<Action> actions) {
+    if (indexes.size() == 2) {
+      Action action0 = actions.get(indexes.get(0));
+      Action action1 = actions.get(indexes.get(1));
+      if (action0.getOperation().equals(action1.getOperation())) {
+        return action0.getOperation().label
+            + " "
+            + action0.getTypeFrom()
+            + " and "
+            + action1.getTypeFrom();
+      } else {
+        return action0.getOperation().label
+            + " "
+            + action0.getTypeFrom()
+            + " and "
+            + action1.getOperation().label
+            + " "
+            + action1.getTypeFrom();
+      }
+    } else {
+      Action action0 = actions.get(indexes.get(0));
+      return action0.getOperation().label + " " + action0.getLabelFrom();
+    }
+  }
+
+  private String getOtherObject(List<Integer> indexes, List<Action> actions) {
+    if (indexes.size() == 2) {
+      Action action0 = actions.get(indexes.get(0));
+      Action action1 = actions.get(indexes.get(1));
+      if (action0.getOperation().equals(action1.getOperation())) {
+        if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
+          return action0.getOperation().label
+                  + " "
+                  + action0.getTypeFrom()
+                  + " "
+                  + action1.getLabelFrom()
+                  + " and "
+                  + action1.getLabelFrom();
+        } else return action0.getOperation().label
+                + " "
+                + action0.getTypeFrom()
+                + " "
+                + action0.getLabelFrom()
+                + " and "
+                + action1.getTypeFrom()
+                + " "
+                + action1.getLabelFrom();
+      } else {
+        return action0.getOperation().label
+                + " "
+                + action0.getTypeFrom()
+                + " "
+                + action0.getLabelFrom()
+                + " and "
+                + action1.getOperation().label
+                + " "
+                + action1.getTypeFrom()
+                + " "
+                + action1.getLabelFrom();
+      }
+    } else {
+      Action action0 = actions.get(indexes.get(0));
+      return action0.getOperation().label
+              + " "
+              + action0.getTypeFrom()
+              + " "
+              + action0.getLabelFrom();
+    }
+  }
+
+  // get top2Index: Operation and typeFrom both as identifier
+  private List<Integer> getTop2Index(List<Action> Actions) {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
     for (int i = 0; i < sizeActions; i++) {
+      Operation operation = Actions.get(i).getOperation();
       String typeFrom = Actions.get(i).getTypeFrom();
       if (typeFrom.equals("Code")) continue;
       if (Actions.get(i).getTypeFrom().isEmpty()) continue;
-      if (!key.equals("") && !Actions.get(i).getOperation().label.equals(key)) continue;
       for (int j = 0; j < i; j++) {
-        if (Actions.get(j).getTypeFrom().equals(typeFrom)) {
+        if (Actions.get(j).getOperation().equals(operation)
+            && Actions.get(j).getTypeFrom().equals(typeFrom)) {
           count[j]++;
           break;
         }
       }
       count[i] = 1;
     }
-    // lazy to sort, simply cycle once
     int max1 = 0, max2 = 0;
     int max1Index = 0, max2Index = 0;
     for (int i = 0; i < sizeActions; i++) {
@@ -294,8 +342,8 @@ public class CommitMsgGenerator {
     return maxIndexes;
   }
 
-  // get 4Indexes(appear for the first time) in Actions: package, class, method，interface
-  private List<Integer> get4IndexOfTypeFrom(List<Action> Actions) {
+  // get prior4Indexes(appear for the first time): package, class, method，interface
+  private List<Integer> getPrior4Index(List<Action> Actions) {
     int sizeActions = Actions.size();
     List<Integer> Indexes = new ArrayList<>();
     for (int i = 0; i < sizeActions && Indexes.size() < 2; i++)
@@ -330,57 +378,5 @@ public class CommitMsgGenerator {
     content = buffer.toString();
     Logger.info("Get template from template json file");
     return content;
-  }
-
-  // only for label is needed
-  private String generateObjectMsgFromActions(Action action0, boolean needLabel) {
-    String objectMsg = null;
-    if (action0.getOperation().equals(Operation.ADD)) objectMsg = "Add ";
-    else objectMsg = "Modify ";
-    if (needLabel) {
-      if (action0.getLabelFrom().isEmpty()) objectMsg += action0.getTypeFrom();
-      else objectMsg += action0.getTypeFrom() + " " + action0.getLabelFrom();
-    } else {
-      objectMsg += action0.getTypeFrom();
-    }
-    return objectMsg;
-  }
-
-  private String generateObjectMsgFromActions(
-      Action action0, boolean needLabel0, Action action1, boolean needLabel1) {
-    String objectMsg;
-    // Operation
-    if (action0.getOperation().equals(Operation.ADD)
-        && action1.getOperation().equals(Operation.ADD)) objectMsg = "Add ";
-    else objectMsg = "Modify ";
-    // Type + label
-    boolean Label0 = !action0.getLabelFrom().isEmpty() && needLabel0;
-    boolean Label1 = !action1.getLabelFrom().isEmpty() && needLabel1;
-    if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
-      if (!Label0 && !Label1) objectMsg += action0.getTypeFrom();
-      else if (Label0 && !Label1) objectMsg += action0.getTypeFrom() + " " + action0.getLabelFrom();
-      else if (!Label0 && Label1) objectMsg += action1.getTypeFrom() + " " + action1.getLabelFrom();
-      else if (Label0 && Label1)
-        objectMsg +=
-            action0.getTypeFrom() + " " + action0.getLabelFrom() + " and " + action1.getLabelFrom();
-    } else {
-      if (!Label0 && !Label1) objectMsg += action0.getTypeFrom() + " and " + action1.getTypeFrom();
-      else if (Label0 && !Label1)
-        objectMsg +=
-            action0.getTypeFrom() + " " + action0.getLabelFrom() + " and " + action1.getTypeFrom();
-      else if (!Label0 && Label1)
-        objectMsg +=
-            action0.getTypeFrom() + " and " + action1.getTypeFrom() + " " + action1.getLabelFrom();
-      else if (Label0 && Label1)
-        objectMsg +=
-            action0.getTypeFrom()
-                + " "
-                + action0.getLabelFrom()
-                + " and "
-                + action1.getTypeFrom()
-                + " "
-                + action1.getLabelFrom();
-    }
-    return objectMsg;
   }
 }
