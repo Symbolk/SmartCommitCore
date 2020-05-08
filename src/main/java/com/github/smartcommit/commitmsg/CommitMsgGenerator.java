@@ -185,10 +185,10 @@ public class CommitMsgGenerator {
       case REFACTOR:
         commitMsg = "Refactor - ";
         top2Index = getTop2Index(refactorActions);
-        if (!top2Index.isEmpty()) commitMsg += getRefactorObject(top2Index, refactorActions);
+        if (!top2Index.isEmpty()) commitMsg += getObject(top2Index, refactorActions);
         else {
           prior4Index = getPrior4Index(refactorActions);
-          if (!prior4Index.isEmpty()) commitMsg += getRefactorObject(prior4Index, refactorActions);
+          if (!prior4Index.isEmpty()) commitMsg += getObject(prior4Index, refactorActions);
           else {
             if (!refactorActions.isEmpty())
               commitMsg +=
@@ -214,10 +214,10 @@ public class CommitMsgGenerator {
       case OTHER:
         commitMsg = msgClass.label + " - ";
         top2Index = getTop2Index(astActions);
-        if (!top2Index.isEmpty()) commitMsg += getOtherObject(top2Index, astActions);
+        if (!top2Index.isEmpty()) commitMsg += getObject(top2Index, astActions);
         else {
           prior4Index = getPrior4Index(astActions);
-          if (!prior4Index.isEmpty()) commitMsg += getOtherObject(prior4Index, astActions);
+          if (!prior4Index.isEmpty()) commitMsg += getObject(prior4Index, astActions);
           else {
             if (!astActions.isEmpty())
               commitMsg +=
@@ -235,7 +235,7 @@ public class CommitMsgGenerator {
     }
   }
 
-  private String getRefactorObject(List<Integer> indexes, List<Action> actions) {
+  private String getObject(List<Integer> indexes, List<Action> actions) {
     if (indexes.size() == 2) {
       Action action0 = actions.get(indexes.get(0));
       Action action1 = actions.get(indexes.get(1));
@@ -257,51 +257,6 @@ public class CommitMsgGenerator {
     } else {
       Action action0 = actions.get(indexes.get(0));
       return action0.getOperation().label + " " + action0.getLabelFrom();
-    }
-  }
-
-  private String getOtherObject(List<Integer> indexes, List<Action> actions) {
-    if (indexes.size() == 2) {
-      Action action0 = actions.get(indexes.get(0));
-      Action action1 = actions.get(indexes.get(1));
-      if (action0.getOperation().equals(action1.getOperation())) {
-        if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
-          return action0.getOperation().label
-                  + " "
-                  + action0.getTypeFrom()
-                  + " "
-                  + action1.getLabelFrom()
-                  + " and "
-                  + action1.getLabelFrom();
-        } else return action0.getOperation().label
-                + " "
-                + action0.getTypeFrom()
-                + " "
-                + action0.getLabelFrom()
-                + " and "
-                + action1.getTypeFrom()
-                + " "
-                + action1.getLabelFrom();
-      } else {
-        return action0.getOperation().label
-                + " "
-                + action0.getTypeFrom()
-                + " "
-                + action0.getLabelFrom()
-                + " and "
-                + action1.getOperation().label
-                + " "
-                + action1.getTypeFrom()
-                + " "
-                + action1.getLabelFrom();
-      }
-    } else {
-      Action action0 = actions.get(indexes.get(0));
-      return action0.getOperation().label
-              + " "
-              + action0.getTypeFrom()
-              + " "
-              + action0.getLabelFrom();
     }
   }
 
