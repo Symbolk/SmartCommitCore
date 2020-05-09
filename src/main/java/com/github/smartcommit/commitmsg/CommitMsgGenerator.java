@@ -26,7 +26,7 @@ public class CommitMsgGenerator {
     this.astActions = new ArrayList<>();
     this.refactorActions = new ArrayList<>();
     this.diffHunks = diffHunks;
-    for(DiffHunk diffHunk : diffHunks) {
+    for (DiffHunk diffHunk : diffHunks) {
       this.astActions.addAll(diffHunk.getAstActions());
       this.refactorActions.addAll(diffHunk.getRefActions());
     }
@@ -38,103 +38,79 @@ public class CommitMsgGenerator {
    * @return
    */
   public List<Integer> generateGroupVector() {
-    // Operation: 4(astAction) 13(refAction)
-    // Type: 99(astAction) 18(refAction)
+    // Operation: 4(astAction)
+    // Type: 99(astAction)
     int AstOperationSum = 4;
-    int RefOperationSum = 13;
     int AstTypeSum = 99;
-    int RefTypeSum = 18;
     int AstSum = AstOperationSum * AstTypeSum;
-    int RefSum = RefOperationSum * RefTypeSum;
     int numFeatures = 18;
-    //
-    int vectorSize = AstSum + RefSum + numFeatures;
+    int vectorSize = AstSum + numFeatures;
 
     List<Integer> vectors = new ArrayList<>(Collections.nCopies(vectorSize, 0));
-    int indexOperation, indexType, indexFinal;
+
+    int indexOperation, indexType, indexFinal, valueFinal;
     try {
       for (Action action : astActions) {
-        indexType = 0;
         indexOperation = action.getOperationIndex();
-        if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
+        String typeFrom = action.getTypeFrom();
         // when DiffHunk Graph building fails, get "code" and contribute nothing to vector
-        else if (action.getTypeFrom().equals("Code")) continue;
-        else {
-          for (AstActionType astActionType : AstActionType.values()) {
-            if (action.getTypeFrom().equals(astActionType.label)) {
-              indexType = astActionType.index;
-              break;
-            }
+        if (typeFrom.equals("Code")) continue;
+        indexType = -1;
+        for (AstActionType astActionType : AstActionType.values()) {
+          if (typeFrom.equals(astActionType.label)) {
+            indexType = astActionType.index;
+            break;
           }
         }
-        if (indexType != 0) {
+        if (indexType != -1) {
           indexFinal = (indexOperation - 1) * AstTypeSum + indexType - 1;
-          vectors.set(indexFinal, vectors.get(indexFinal) + 1);
-        }
-      }
-
-      for (Action action : refactorActions) {
-        indexType = 0;
-        // Operation contains both ast and ref, while the index of Ref need to start from 0
-        indexOperation = action.getOperationIndex() - AstOperationSum;
-        if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
-        else {
-          for (RefActionType refActionType : RefActionType.values()) {
-            if (action.getTypeFrom().equals(refActionType.label)) {
-              indexType = refActionType.index;
-              break;
-            }
-          }
-        }
-        if (indexType != 0) {
-          indexFinal = AstSum + (indexOperation - 1) * RefTypeSum + indexType - 1;
-          vectors.set(indexFinal, vectors.get(indexFinal) + 1);
+          valueFinal = vectors.get(indexFinal) + 1;
+          vectors.set(indexFinal, valueFinal);
         }
       }
 
       Integer NumOfDiffFiles = 0,
-              NumOfDiffFilesJava = 0,
-              NumOfDiffFilesNonJAVA = 0,
-              NumOfDiffFilesAdded = 0,
-              NumOfDiffFilesModified = 0,
-              NumOfDiffFilesAddedJAVA = 0,
-              NumOfDiffFilesModifiedJAVA = 0,
-              NumOfDiffFilesAddedXML = 0,
-              NumOfDiffFilesModifiedXML = 0,
-              NumOfDiffHunks = 0,
-              AveLinesOfDiffHunks = 0,
-              SumOfLinesAdded = 0,
-              SumOfLinesDeleted = 0,
-              SumOfLinesModified = 0,
-              SumOfLinesChanged = 0,
-              SumOfLinesChangedJava = 0,
-              SumOfLinesChangedXML = 0,
-              SumOfLinesChangedOthers = 0;
+          NumOfDiffFilesJava = 0,
+          NumOfDiffFilesNonJAVA = 0,
+          NumOfDiffFilesAdded = 0,
+          NumOfDiffFilesModified = 0,
+          NumOfDiffFilesAddedJAVA = 0,
+          NumOfDiffFilesModifiedJAVA = 0,
+          NumOfDiffFilesAddedXML = 0,
+          NumOfDiffFilesModifiedXML = 0,
+          NumOfDiffHunks = 0,
+          AveLinesOfDiffHunks = 0,
+          SumOfLinesAdded = 0,
+          SumOfLinesDeleted = 0,
+          SumOfLinesModified = 0,
+          SumOfLinesChanged = 0,
+          SumOfLinesChangedJava = 0,
+          SumOfLinesChangedXML = 0,
+          SumOfLinesChangedOthers = 0;
       Set<String> fileIDs = new HashSet<>();
 
-      for(DiffHunk diffHunk : diffHunks) {
+      for (DiffHunk diffHunk : diffHunks) {
         String fileID = diffHunk.getFileID();
-        if(fileIDs.contains(fileID)) continue;
+        if (fileIDs.contains(fileID)) continue;
         fileIDs.contains(fileID);
         String fileType = diffHunk.getFileType().label;
         String fileStatus = diffHunk.getChangeType().label;
-        if(fileType.equals("Java")) NumOfDiffFilesJava += 1;
+        if (fileType.equals("Java")) NumOfDiffFilesJava += 1;
         else NumOfDiffFilesNonJAVA += 1;
-        if(fileStatus.equals("Add")) {
+        if (fileStatus.equals("Add")) {
           NumOfDiffFilesAdded += 1;
-          if(fileType.equals("Java")) NumOfDiffFilesAddedJAVA += 1;
-          else if(fileType.equals("XML")) NumOfDiffFilesAddedXML += 1;
-        }
-        else if(fileStatus.equals("Modify")) {
+          if (fileType.equals("Java")) NumOfDiffFilesAddedJAVA += 1;
+          else if (fileType.equals("XML")) NumOfDiffFilesAddedXML += 1;
+        } else if (fileStatus.equals("Modify")) {
           NumOfDiffFilesModified += 1;
-          if(fileType.equals("Java")) NumOfDiffFilesModifiedJAVA += 1;
-          else if(fileType.equals("XML")) NumOfDiffFilesModifiedXML += 1;
+          if (fileType.equals("Java")) NumOfDiffFilesModifiedJAVA += 1;
+          else if (fileType.equals("XML")) NumOfDiffFilesModifiedXML += 1;
         }
         Integer num =
-                diffHunk.getBaseEndLine()
-                        - diffHunk.getBaseStartLine()
-                        + diffHunk.getCurrentEndLine()
-                        - diffHunk.getCurrentStartLine();
+            diffHunk.getBaseEndLine()
+                - diffHunk.getBaseStartLine()
+                + diffHunk.getCurrentEndLine()
+                - diffHunk.getCurrentStartLine();
         if (num > 0) SumOfLinesAdded += num;
         else if (num < 0) SumOfLinesDeleted += num;
         else SumOfLinesAdded += num;
@@ -142,93 +118,35 @@ public class CommitMsgGenerator {
         if (fileType.equals("Java")) SumOfLinesChangedJava += num;
         else if (fileType.equals("XML")) SumOfLinesChangedXML += num;
         else SumOfLinesChangedOthers += num;
-
       }
       NumOfDiffFiles = fileIDs.size();
       NumOfDiffHunks = diffHunks.size();
       AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
 
-
-      vectors.set(AstSum + RefSum + 0, NumOfDiffFiles);
-      vectors.set(AstSum + RefSum + 1, NumOfDiffFilesJava);
-      vectors.set(AstSum + RefSum + 2, NumOfDiffFilesNonJAVA);
-      vectors.set(AstSum + RefSum + 3, NumOfDiffFilesAdded);
-      vectors.set(AstSum + RefSum + 4, NumOfDiffFilesModified);
-      vectors.set(AstSum + RefSum + 5, NumOfDiffFilesAddedJAVA);
-      vectors.set(AstSum + RefSum + 6, NumOfDiffFilesModifiedJAVA);
-      vectors.set(AstSum + RefSum + 7, NumOfDiffFilesAddedXML);
-      vectors.set(AstSum + RefSum + 8, NumOfDiffFilesModifiedXML);
-      vectors.set(AstSum + RefSum + 9, NumOfDiffHunks);
-      vectors.set(AstSum + RefSum + 10, AveLinesOfDiffHunks);
-      vectors.set(AstSum + RefSum + 11, SumOfLinesAdded);
-      vectors.set(AstSum + RefSum + 12, SumOfLinesDeleted);
-      vectors.set(AstSum + RefSum + 13, SumOfLinesModified);
-      vectors.set(AstSum + RefSum + 14, SumOfLinesChanged);
-      vectors.set(AstSum + RefSum + 15, SumOfLinesChangedJava);
-      vectors.set(AstSum + RefSum + 16, SumOfLinesChangedXML);
-      vectors.set(AstSum + RefSum + 17, SumOfLinesChangedOthers);
+      vectors.set(AstSum + 0, NumOfDiffFiles);
+      vectors.set(AstSum + 1, NumOfDiffFilesJava);
+      vectors.set(AstSum + 2, NumOfDiffFilesNonJAVA);
+      vectors.set(AstSum + 3, NumOfDiffFilesAdded);
+      vectors.set(AstSum + 4, NumOfDiffFilesModified);
+      vectors.set(AstSum + 5, NumOfDiffFilesAddedJAVA);
+      vectors.set(AstSum + 6, NumOfDiffFilesModifiedJAVA);
+      vectors.set(AstSum + 7, NumOfDiffFilesAddedXML);
+      vectors.set(AstSum + 8, NumOfDiffFilesModifiedXML);
+      vectors.set(AstSum + 9, NumOfDiffHunks);
+      vectors.set(AstSum + 10, AveLinesOfDiffHunks);
+      vectors.set(AstSum + 11, SumOfLinesAdded);
+      vectors.set(AstSum + 12, SumOfLinesDeleted);
+      vectors.set(AstSum + 13, SumOfLinesModified);
+      vectors.set(AstSum + 14, SumOfLinesChanged);
+      vectors.set(AstSum + 15, SumOfLinesChangedJava);
+      vectors.set(AstSum + 16, SumOfLinesChangedXML);
+      vectors.set(AstSum + 17, SumOfLinesChangedOthers);
 
     } catch (Exception e) {
       e.printStackTrace();
       Logger.info("fail to generate Group Vector");
     }
-
     return vectors;
-  }
-
-  public List<Integer> generateSeparatedGroupVector() {
-    // Operation: 4(astAction) 13(refAction)
-    // Type: 99(astAction) 18(refAction)
-    int AstOperationSum = 4;
-    int AstTypeSum = 99;
-    int AstSum = AstOperationSum * AstTypeSum;
-
-    int RefOperationSum = 13;
-    int RefTypeSum = 18;
-    int RefSum = RefOperationSum * RefTypeSum;
-
-    if (refactorActions.isEmpty()) {
-      List<Integer> vectors = new ArrayList<>(Collections.nCopies(AstSum, 0));
-      int indexOperation = 0, indexType = 0, indexFinal = 0;
-      for (Action action : astActions) {
-        indexOperation = action.getOperationIndex();
-        // Operation "Unknown" contributes nothing to vector
-        if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
-        // When DiffHunk Graph building failed, TypeFrom "Code" contributes nothing to vector
-        if (action.getTypeFrom().equals("Code")) continue;
-        else {
-          for (AstActionType astActionType : AstActionType.values()) {
-            if (action.getTypeFrom().equals(astActionType.label)) {
-              indexType = astActionType.index;
-              break;
-            }
-          }
-          indexFinal = (indexOperation - 1) * AstTypeSum + indexType - 1;
-        }
-        vectors.set(indexFinal, vectors.get(indexFinal) + 1);
-      }
-      return vectors;
-    } else {
-      List<Integer> vectors = new ArrayList<>(Collections.nCopies(RefSum, 0));
-      int indexOperation = 0, indexType = 0, indexFinal = 0;
-      for (Action action : refactorActions) {
-        // Operation contains both ast and ref, while the index of Ref need to start from 0
-        indexOperation = action.getOperationIndex() - AstOperationSum;
-        // Operation "Unknown" contributes nothing to vector
-        if (indexOperation == AstOperationSum + RefOperationSum + 1) continue;
-        else {
-          for (RefActionType refActionType : RefActionType.values()) {
-            if (action.getTypeFrom().equals(refActionType.label)) {
-              indexType = refActionType.index;
-              break;
-            }
-          }
-          indexFinal = (indexOperation - 1) * RefTypeSum + indexType - 1;
-        }
-        vectors.set(indexFinal, vectors.get(indexFinal) + 1);
-      }
-      return vectors;
-    }
   }
 
   /**
@@ -248,115 +166,118 @@ public class CommitMsgGenerator {
    */
   public List<String> generateDetailedMsgs(MsgClass msgClass, GroupLabel intentLabel) {
 
-    // Count Frequency of typeFrom in Actions whose q equals key currently
-    String key = msgClass.label;
-
-    List<Action> actions = new ArrayList<>();
-    actions.addAll(astActions);
-    actions.addAll(refactorActions);
-
-    // Matched Cases: count by frequency
-    List<Integer> IndexesUnlabeledMatched = getTop2IndexTypeFrom(actions, key);
-    // Special Cases: package, class, method，interface
-    List<Integer> IndexesLabeled = get4IndexOfTypeFrom(actions);
-
-    // 2 matches between MsgClass and AstAction
-    if (IndexesUnlabeledMatched.size() > 1) {
-      Action action0 = actions.get(IndexesUnlabeledMatched.get(0));
-      Action action1 = actions.get(IndexesUnlabeledMatched.get(1));
-      commitMsg = generateObjectMsgFromActions(action0, false, action1, false);
-    }
-    // 1 matches between MsgClass and AstAction
-    else if (IndexesUnlabeledMatched.size() == 1) {
-      if (IndexesLabeled.size() > 0) {
-        Action action0 = actions.get(IndexesUnlabeledMatched.get(0));
-        Action action1 = actions.get(IndexesLabeled.get(0));
-        commitMsg = generateObjectMsgFromActions(action0, false, action1, true);
-      } else {
-        Action action0 = actions.get(IndexesUnlabeledMatched.get(0));
-        commitMsg = generateObjectMsgFromActions(action0, false);
-      }
-
-    }
-    // 0 match between MsgClass and AstAction
-    else {
-      // Unmatched Cases: count by frequency
-      List<Integer> IndexesUnlabeledUnmatched = getTop2IndexTypeFrom(actions, "");
-      // 2 special cases: package, class, method，interface
-      if (IndexesLabeled.size() > 1) {
-        Action action0 = actions.get(IndexesLabeled.get(0));
-        Action action1 = actions.get(IndexesLabeled.get(1));
-        commitMsg = generateObjectMsgFromActions(action0, true, action1, true);
-      }
-      // 1 special cases: package, class, method，interface
-      else if (IndexesLabeled.size() == 1) {
-        Action action0 = actions.get(IndexesLabeled.get(0));
-        commitMsg = generateObjectMsgFromActions(action0, true);
-      }
-      // 0 special case: package, class, method，interface
-      else {
-        // 2 normal cases: top2
-        if (IndexesUnlabeledUnmatched.size() > 1) {
-          Action action0 = actions.get(IndexesUnlabeledUnmatched.get(0));
-          Action action1 = actions.get(IndexesUnlabeledUnmatched.get(1));
-          commitMsg = generateObjectMsgFromActions(action0, false, action1, false);
-        }
-        // 1 normal cases: only1
-        else if (IndexesUnlabeledUnmatched.size() == 1) {
-          Action action0 = actions.get(IndexesUnlabeledUnmatched.get(0));
-          commitMsg = generateObjectMsgFromActions(action0, false);
-        }
-        // 0 normal case: no
-        else {
-          commitMsg = key + " ...";
-        }
-      }
-    }
-
-    // generate recommendedCommitMsg
-    List<String> recommendedCommitMsgs = new ArrayList<>();
-    String iLabel = "";
-    if (intentLabel.label.equals("Others")) {
-      if (key.equals("Fix")
-          || key.equals(" Test")
-          || key.equals("Reformat")
-          || key.equals("Document")
-          || key.equals("Revert")
-          || key.equals("Refactor")) iLabel = key.toUpperCase();
-      else iLabel = "FUNCTIONCHANGE";
-    } else if (!intentLabel.label.equals(key) && key.equals("Fix")) {
-      iLabel = key.toUpperCase();
-    } else iLabel = intentLabel.toString();
-    if (intentLabel.label.equals("Non-Java")) commitMsg = key + " code or files";
-    recommendedCommitMsgs.add(iLabel + " - " + commitMsg);
-
+    // generate commitMsgs
+    List<String> commitMsgs = new ArrayList<>();
+    commitMsg = generateCommitMsg(msgClass, intentLabel);
+    commitMsgs.add(commitMsg);
     // read json to get templates
     JSONObject jsonObject = new JSONObject(getTemplate());
-    JSONArray jsonArray = jsonObject.getJSONArray(key);
-    for (int i = 0; i < jsonArray.length(); i++)
-      recommendedCommitMsgs.add(jsonArray.get(i).toString());
+    JSONArray jsonArray = jsonObject.getJSONArray(msgClass.label);
+    for (int i = 0; i < jsonArray.length(); i++) commitMsgs.add(jsonArray.get(i).toString());
 
-    return recommendedCommitMsgs;
+    return commitMsgs;
   }
 
-  // get max2Count of Frequency in Actions
-  private List<Integer> getTop2IndexTypeFrom(List<Action> Actions, String key) {
+  private String generateCommitMsg(MsgClass msgClass, GroupLabel intentLabel) {
+    String commitMsg = null;
+    List<Integer> top2Index, prior4Index;
+    switch (intentLabel) {
+      case REFACTOR:
+        commitMsg = "Refactor - ";
+        top2Index = getTop2Index(refactorActions);
+        if (!top2Index.isEmpty()) commitMsg += getObject(top2Index, refactorActions);
+        else {
+          prior4Index = getPrior4Index(refactorActions);
+          if (!prior4Index.isEmpty()) commitMsg += getObject(prior4Index, refactorActions);
+          else {
+            if (!refactorActions.isEmpty())
+              commitMsg +=
+                  refactorActions.get(0).getOperation().label
+                      + " "
+                      + refactorActions.get(0).getLabelFrom();
+            else {
+              commitMsg = "Chore - Modify code";
+            }
+          }
+        }
+        return commitMsg;
+      case REFORMAT:
+        return "Style - Code reformat";
+      case DOC:
+        return "Docs - Document change";
+      case CONFIG:
+        return "Docs - Configuration file change";
+      case NONJAVA:
+        return "Docs - Other file change";
+      case FIX:
+      case FEATURE:
+      case OTHER:
+        commitMsg = msgClass.label + " - ";
+        top2Index = getTop2Index(astActions);
+        if (!top2Index.isEmpty()) commitMsg += getObject(top2Index, astActions);
+        else {
+          prior4Index = getPrior4Index(astActions);
+          if (!prior4Index.isEmpty()) commitMsg += getObject(prior4Index, astActions);
+          else {
+            if (!astActions.isEmpty())
+              commitMsg +=
+                  astActions.get(0).getOperation().label
+                      + " "
+                      + astActions.get(0).getLabelFrom();
+            else {
+              commitMsg = "Chore - Modify code";
+            }
+          }
+        }
+        return commitMsg;
+      default:
+        return "Chore - Modify code";
+    }
+  }
+
+  private String getObject(List<Integer> indexes, List<Action> actions) {
+    if (indexes.size() == 2) {
+      Action action0 = actions.get(indexes.get(0));
+      Action action1 = actions.get(indexes.get(1));
+      if (action0.getOperation().equals(action1.getOperation())) {
+        return action0.getOperation().label
+            + " "
+            + action0.getTypeFrom()
+            + " and "
+            + action1.getTypeFrom();
+      } else {
+        return action0.getOperation().label
+            + " "
+            + action0.getTypeFrom()
+            + " and "
+            + action1.getOperation().label
+            + " "
+            + action1.getTypeFrom();
+      }
+    } else {
+      Action action0 = actions.get(indexes.get(0));
+      return action0.getOperation().label + " " + action0.getLabelFrom();
+    }
+  }
+
+  // get top2Index: Operation and typeFrom both as identifier
+  private List<Integer> getTop2Index(List<Action> Actions) {
     int sizeActions = Actions.size();
     int count[] = new int[sizeActions];
     for (int i = 0; i < sizeActions; i++) {
+      Operation operation = Actions.get(i).getOperation();
       String typeFrom = Actions.get(i).getTypeFrom();
       if (typeFrom.equals("Code")) continue;
       if (Actions.get(i).getTypeFrom().isEmpty()) continue;
-      if (!key.equals("") && !Actions.get(i).getOperation().label.equals(key)) continue;
       for (int j = 0; j < i; j++) {
-        if (Actions.get(j).getTypeFrom().equals(typeFrom)) {
+        if (Actions.get(j).getOperation().equals(operation)
+            && Actions.get(j).getTypeFrom().equals(typeFrom)) {
           count[j]++;
           break;
         }
       }
       count[i] = 1;
     }
-    // lazy to sort, simply cycle once
     int max1 = 0, max2 = 0;
     int max1Index = 0, max2Index = 0;
     for (int i = 0; i < sizeActions; i++) {
@@ -376,8 +297,8 @@ public class CommitMsgGenerator {
     return maxIndexes;
   }
 
-  // get 4Indexes(appear for the first time) in Actions: package, class, method，interface
-  private List<Integer> get4IndexOfTypeFrom(List<Action> Actions) {
+  // get prior4Indexes(appear for the first time): package, class, method，interface
+  private List<Integer> getPrior4Index(List<Action> Actions) {
     int sizeActions = Actions.size();
     List<Integer> Indexes = new ArrayList<>();
     for (int i = 0; i < sizeActions && Indexes.size() < 2; i++)
@@ -412,57 +333,5 @@ public class CommitMsgGenerator {
     content = buffer.toString();
     Logger.info("Get template from template json file");
     return content;
-  }
-
-  // only for label is needed
-  private String generateObjectMsgFromActions(Action action0, boolean needLabel) {
-    String objectMsg = null;
-    if (action0.getOperation().equals(Operation.ADD)) objectMsg = "Add ";
-    else objectMsg = "Modify ";
-    if (needLabel) {
-      if (action0.getLabelFrom().isEmpty()) objectMsg += action0.getTypeFrom();
-      else objectMsg += action0.getTypeFrom() + " " + action0.getLabelFrom();
-    } else {
-      objectMsg += action0.getTypeFrom();
-    }
-    return objectMsg;
-  }
-
-  private String generateObjectMsgFromActions(
-      Action action0, boolean needLabel0, Action action1, boolean needLabel1) {
-    String objectMsg;
-    // Operation
-    if (action0.getOperation().equals(Operation.ADD)
-        && action1.getOperation().equals(Operation.ADD)) objectMsg = "Add ";
-    else objectMsg = "Modify ";
-    // Type + label
-    boolean Label0 = !action0.getLabelFrom().isEmpty() && needLabel0;
-    boolean Label1 = !action1.getLabelFrom().isEmpty() && needLabel1;
-    if (action0.getTypeFrom().equals(action1.getTypeFrom())) {
-      if (!Label0 && !Label1) objectMsg += action0.getTypeFrom();
-      else if (Label0 && !Label1) objectMsg += action0.getTypeFrom() + " " + action0.getLabelFrom();
-      else if (!Label0 && Label1) objectMsg += action1.getTypeFrom() + " " + action1.getLabelFrom();
-      else if (Label0 && Label1)
-        objectMsg +=
-            action0.getTypeFrom() + " " + action0.getLabelFrom() + " and " + action1.getLabelFrom();
-    } else {
-      if (!Label0 && !Label1) objectMsg += action0.getTypeFrom() + " and " + action1.getTypeFrom();
-      else if (Label0 && !Label1)
-        objectMsg +=
-            action0.getTypeFrom() + " " + action0.getLabelFrom() + " and " + action1.getTypeFrom();
-      else if (!Label0 && Label1)
-        objectMsg +=
-            action0.getTypeFrom() + " and " + action1.getTypeFrom() + " " + action1.getLabelFrom();
-      else if (Label0 && Label1)
-        objectMsg +=
-            action0.getTypeFrom()
-                + " "
-                + action0.getLabelFrom()
-                + " and "
-                + action1.getTypeFrom()
-                + " "
-                + action1.getLabelFrom();
-    }
-    return objectMsg;
   }
 }

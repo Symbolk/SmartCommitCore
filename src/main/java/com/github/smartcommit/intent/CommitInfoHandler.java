@@ -15,6 +15,7 @@ import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.TreeContext;
 import com.github.smartcommit.client.Config;
 import com.github.smartcommit.client.SmartCommit;
+import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.intent.model.*;
 import com.github.smartcommit.io.DataCollector;
@@ -26,6 +27,7 @@ import com.github.smartcommit.model.constant.Operation;
 import com.github.smartcommit.util.Utils;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import org.apache.log4j.Logger;
 import org.bson.Document;
 import org.eclipse.jgit.lib.Repository;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
@@ -39,11 +41,13 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
 
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
+  private static final Logger logger = Logger.getLogger(GroupGenerator.class);
   public static void main(String[] args) {
-    args = new String[] {"/Users/Chuncen/Desktop/Repos/Apktool", "commitTrainingSample"};
+    args = new String[] {"/Users/Chuncen/Desktop/Repos/lwjgl3", "commitTrainingSample"};
     String repoPath = args[0];
     String collectionName = args[1];
     // CommitTrainingSample
@@ -92,54 +96,81 @@ public class CommitInfoHandler {
       MongoCollection<Document> collection)
       throws Exception {
 
-    // get the final dir name as repoName, thus generate repoID using hash
+    // Analyze the Sample List
+    Integer size = commitTrainingSample.size();
+    for (int i = 20; i < size; i++) {
+      ExecutorService service = Executors.newSingleThreadExecutor();
+      Future<?> f = null;
+      try {
+        int finalI = i;
+        Runnable r = () -> {
+          try {
+            analyzeCommitTrainingSample(repoPath, commitTrainingSample, collection, finalI, size);
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        };
+        f = service.submit(r);
+        f.get(300, TimeUnit.SECONDS);
+      } catch (TimeoutException e) {
+        f.cancel(true);
+        logger.warn(String.format("Ignore refactoring detection due to timeout: "), e);
+      } catch (ExecutionException | InterruptedException e) {
+        logger.warn(String.format("Ignore refactoring detection due to RM error: "), e);
+        //        e.printStackTrace();
+      } finally {
+        service.shutdown();
+      }
+
+
+    }
+
+    return true;
+  }
+
+  private static void analyzeCommitTrainingSample(String repoPath, List<CommitTrainingSample> commitTrainingSample,
+                                                    MongoCollection<Document> collection, int i, int size) throws Exception {
     int index = repoPath.lastIndexOf(File.separator);
     String repoName = repoPath.substring(index + 1);
     String repoID = String.valueOf(Math.abs(repoName.hashCode()));
 
-    // Analyze the Sample List
-    Integer size = commitTrainingSample.size();
-    for (int i = 0; i < size; i++) {
-      CommitTrainingSample tempCommitTrainingSample = commitTrainingSample.get(i);
-      String commitID = tempCommitTrainingSample.getCommitID();
-      System.out.println("Proceeding: " + commitID + "  " + (i + 1) + "/" + size);
-      tempCommitTrainingSample.setRepoID(repoID);
-      tempCommitTrainingSample.setRepoPath(repoPath);
-      tempCommitTrainingSample.setRepoName(repoName);
+    CommitTrainingSample tempCommitTrainingSample = commitTrainingSample.get(i);
+    String commitID = tempCommitTrainingSample.getCommitID();
+    logger.warn(String.format("Proceeding: " + commitID + "  " + (i + 1) + "/" + size));
+    tempCommitTrainingSample.setRepoID(repoID);
+    tempCommitTrainingSample.setRepoPath(repoPath);
+    tempCommitTrainingSample.setRepoName(repoName);
 
-      String commitMsg = tempCommitTrainingSample.getCommitMsg().toLowerCase();
-      String tempDir = "~/Downloads/";
-      RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
-      DataCollector dataCollector = new DataCollector(repoName, tempDir);
+    String commitMsg = tempCommitTrainingSample.getCommitMsg().toLowerCase();
+    String tempDir = "~/Downloads/";
+    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
+    DataCollector dataCollector = new DataCollector(repoName, tempDir);
 
-      // get Intent from commitMsg
-      Intent intent = getIntentFromMsg(commitMsg);
-      tempCommitTrainingSample.setIntent(intent);
-      // get List<IntentDescription> from commitMsg
-      List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
-      tempCommitTrainingSample.setIntentDescription(intentList);
+    // get Intent from commitMsg
+    Intent intent = getIntentFromMsg(commitMsg);
+    tempCommitTrainingSample.setIntent(intent);
+    // get List<IntentDescription> from commitMsg
+    List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
+    tempCommitTrainingSample.setIntentDescription(intentList);
 
-      // add DiffFiles, though the same as DiffHunks
-      List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
-      tempCommitTrainingSample.setDiffFiles(diffFiles);
+    // add DiffFiles, though the same as DiffHunks
+    List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
+    tempCommitTrainingSample.setDiffFiles(diffFiles);
 
-      // add astActionList using gumtree
-      tempCommitTrainingSample =
-          generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
-      // add DiffHunkActions using DiffHunks
-      List<Action> DiffHunkActions =
-          generateActionListFromDiffHunks(tempCommitTrainingSample, dataCollector);
-      tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
-      // add refactorCodeChange using RefactoringMiner
-      List<RefactorMinerAction> refactorMinerActions =
-          getRefactorCodeChangesFromCodeChange(repoPath, commitID);
-      tempCommitTrainingSample.setRefactorMinerActions(refactorMinerActions);
+    // add astActionList using gumtree
+    tempCommitTrainingSample =
+            generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
+    // add DiffHunkActions using DiffHunks
+    List<Action> DiffHunkActions =
+            generateActionListFromDiffHunks(tempCommitTrainingSample, dataCollector);
+    tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
+    // add refactorCodeChange using RefactoringMiner
+    List<RefactorMinerAction> refactorMinerActions =
+            getRefactorCodeChangesFromCodeChange(repoPath, commitID);
+    tempCommitTrainingSample.setRefactorMinerActions(refactorMinerActions);
 
-      // Load into DB
-      loadTrainSampleToDB(collection, tempCommitTrainingSample);
-    }
-
-    return true;
+    // Load into DB
+    loadTrainSampleToDB(collection, tempCommitTrainingSample);
   }
 
   // generate Intent from Message
