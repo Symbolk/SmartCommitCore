@@ -238,13 +238,13 @@ public class GitServiceCGit implements GitService {
     Utils.runSystemCommand(repoPath, "git", "reset", "HEAD", ".");
     // git diff + git diff --cached/staged == git diff HEAD (show all the changes since last commit
     String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
-    // early return
-    if (diffOutput.trim().isEmpty()) {
-      return new ArrayList<>();
+    List<Diff> diffs = new ArrayList<>();
+    if (!diffOutput.trim().isEmpty()) {
+      // with -U0 (no context lines), the generated patch cannot be applied successfully
+      DiffParser parser = new UnifiedDiffParser();
+      diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
     }
-    // with -U0 (no context lines), the generated patch cannot be applied successfully
-    DiffParser parser = new UnifiedDiffParser();
-    List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
+
     return generateDiffHunks(diffs, diffFiles);
   }
 
@@ -439,12 +439,13 @@ public class GitServiceCGit implements GitService {
     // on Windows the ~ character must be used instead of ^
     String diffOutput =
         Utils.runSystemCommand(repoPath, "git", "diff", "-U0", "-w", commitID + "~", commitID);
-    // early return
-    if (diffOutput.trim().isEmpty()) {
-      return new ArrayList<>();
+    List<Diff> diffs = new ArrayList<>();
+    if (!diffOutput.trim().isEmpty()) {
+      // with -U0 (no context lines), the generated patch cannot be applied successfully
+      DiffParser parser = new UnifiedDiffParser();
+      diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
     }
-    DiffParser parser = new UnifiedDiffParser();
-    List<Diff> diffs = parser.parse(new ByteArrayInputStream(diffOutput.getBytes()));
+
     return generateDiffHunks(diffs, diffFiles);
   }
 
