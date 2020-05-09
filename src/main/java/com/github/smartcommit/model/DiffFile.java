@@ -139,6 +139,10 @@ public class DiffFile {
     return currentContent;
   }
 
+  public void setIndex(Integer index) {
+    this.index = index;
+  }
+
   public Integer getIndex() {
     return index;
   }

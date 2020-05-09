@@ -1,5 +1,6 @@
 package com.github.smartcommit.evaluation;
 
+import com.github.smartcommit.util.Utils;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
@@ -38,9 +39,11 @@ public class DataMiner {
     String resultsDir = "/Users/symbolk/coding/data/results/";
     String tempDir = "/Users/symbolk/coding/data/temp/";
 
-    String repoName = "jruby";
+    String repoName = "gradle";
     String repoPath = repoDir + repoName;
-
+    // number of examined commits
+    int numCommits = 0;
+    System.out.println("Mining " + repoName);
     // !merge && fix/close/resolve/issue && #issueid/number
     // atomic: # == 1 && !bullet list <= 1
     // composite: (# > 1 || and/also/plus/too/other || bullet list))
@@ -54,6 +57,7 @@ public class DataMiner {
       // iterate commits from master:HEAD
       try (RevWalk walk = gitService.createAllRevsWalk(repository, repository.getBranch())) {
         for (RevCommit commit : walk) {
+          numCommits+=1;
           // no merge commits
           if (commit.getParentCount() == 1) {
             String msg = commit.getFullMessage().toLowerCase();
@@ -93,11 +97,13 @@ public class DataMiner {
         }
       }
 
-      System.out.println("[C]: " + compositeCommits.size());
-      System.out.println("[A]: " + atomicCommits.size());
+      System.out.println("[Total]: " + numCommits);
+      System.out.println("[Composite]: " + compositeCommits.size() +
+              "("+ Utils.formatDouble((double)compositeCommits.size()*100/numCommits)+"%)");
+      System.out.println("[Atomic]: " + atomicCommits.size());
       // save results into mongodb
-      saveSamplesInDB(repoName, "atomic", atomicCommits);
-      saveSamplesInDB(repoName, "composite", compositeCommits);
+//      saveSamplesInDB(repoName, "atomic", atomicCommits);
+//      saveSamplesInDB(repoName, "composite", compositeCommits);
       // write results into csv file
       //      saveSamplesInCSV(atomicCommits, resultsDir + repoName + "_atomic.csv");
       //      saveSamplesInCSV(compositeCommits, resultsDir + repoName + "_composite.csv");
