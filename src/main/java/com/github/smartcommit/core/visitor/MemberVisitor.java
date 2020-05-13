@@ -102,7 +102,7 @@ public class MemberVisitor extends ASTVisitor {
           value -> graph.addEdge(value, enumNode, new Edge(generateEdgeID(), EdgeType.DEFINE)));
     }
 
-    EnumInfo enumInfo = jdtService.createEnumInfo(node);
+    EnumInfo enumInfo = jdtService.createEnumInfo(fileIndex, node);
     enumInfo.node = enumNode;
     entityPool.enumInfoMap.put(enumInfo.fullName, enumInfo);
 
@@ -270,11 +270,11 @@ public class MemberVisitor extends ASTVisitor {
     graph.addVertex(typeNode);
 
     if (type.isInterface()) {
-      InterfaceInfo interfaceInfo = jdtService.createInterfaceInfo(type);
+      InterfaceInfo interfaceInfo = jdtService.createInterfaceInfo(fileIndex, type);
       interfaceInfo.node = typeNode;
       entityPool.interfaceInfoMap.put(interfaceInfo.fullName, interfaceInfo);
     } else {
-      ClassInfo classInfo = jdtService.createClassInfo(type);
+      ClassInfo classInfo = jdtService.createClassInfo(fileIndex, type);
       classInfo.node = typeNode;
       entityPool.classInfoMap.put(classInfo.fullName, classInfo);
     }
