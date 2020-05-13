@@ -78,6 +78,10 @@ public class Group {
     }
   }
 
+  public void setDiffHunkIDs(List<String> diffHunkIDs) {
+    this.diffHunkIDs = diffHunkIDs;
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();

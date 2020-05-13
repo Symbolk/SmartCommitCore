@@ -1,5 +1,6 @@
 package com.github.smartcommit.model.entity;
 
+import com.github.smartcommit.model.graph.Node;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 
 import java.util.HashSet;
@@ -12,6 +13,8 @@ import java.util.Set;
 public class DeclarationInfo {
   // which file the entity belongs to
   public Integer fileIndex;
+  // corresponding node in the graph
+  public Node node;
 
   // def internal
   public Set<String> typeDefs = new HashSet<>(); // AbstractType, including Type, Enum, Annotation
