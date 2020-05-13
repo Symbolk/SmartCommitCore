@@ -1,6 +1,5 @@
 package com.github.smartcommit.model.entity;
 
-import com.github.smartcommit.model.graph.Node;
 import org.eclipse.jdt.core.dom.ASTNode;
 
 import java.util.LinkedHashSet;
@@ -26,8 +25,6 @@ public class HunkInfo extends DeclarationInfo {
       this.hunkIndex = Integer.valueOf(indices[1]);
     }
   }
-
-  public Node node;
 
   public String uniqueName() {
     return fileIndex + ":" + hunkIndex;
