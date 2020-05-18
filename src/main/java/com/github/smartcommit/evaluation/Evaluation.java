@@ -4,10 +4,12 @@ import com.github.smartcommit.client.SmartCommit;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.*;
+import com.github.smartcommit.model.constant.GroupLabel;
 import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
+import com.google.common.base.Stopwatch;
 import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
@@ -16,6 +18,7 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -29,24 +32,25 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class Evaluation {
   private static final Logger logger = Logger.getLogger(Evaluation.class);
 
   public static void main(String[] args) {
     BasicConfigurator.configure();
-    org.apache.log4j.Logger.getRootLogger().setLevel(Level.INFO);
+    org.apache.log4j.Logger.getRootLogger().setLevel(Level.ERROR);
 
     String repoDir = "/Users/symbolk/coding/data/repos/";
-    String resultsDir = "/Users/symbolk/coding/data/results/";
     String tempDir = "/Users/symbolk/coding/data/temp/";
 
     // per project and avg
-    String repoName = "elasticsearch";
+    String repoName = "antlr4";
     String repoPath = repoDir + repoName;
-    //    runRQ1(repoName, repoPath, tempDir + "/RQ1/" + repoName, 5);
-    runRQ2(repoName, repoPath, tempDir + "/RQ2/" + repoName);
+    runRQ1(repoName, repoPath, tempDir + "/RQ1/" + repoName, 5);
+    //    runRQ2(repoName, repoPath, tempDir + "/RQ2/" + repoName);
     //    getAllEmails(repoName);
   }
 
@@ -56,7 +60,13 @@ public class Evaluation {
    * @param repoPath
    */
   private static void runRQ1(String repoName, String repoPath, String dir, int step) {
-    System.out.println("RQ1: " + repoName + " Step: " + step);
+    System.out.println("[RQ1] Repo: " + repoName + " Step: " + step);
+    String csvPath =
+        "/Users/symbolk/coding/dev/visualization/raw/" + repoName + "_" + step + ".csv";
+    Utils.writeStringToFile(
+        "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime"
+            + System.lineSeparator(),
+        csvPath);
     String tempDir = dir + File.separator + step;
     Utils.clearDir(tempDir);
 
@@ -66,116 +76,216 @@ public class Evaluation {
     MongoDatabase db = mongoClient.getDatabase("atomic");
     MongoCollection<Document> col = db.getCollection(repoName);
 
-    // get atomic commits list from mongodb
-    List<String> atomicCommits = new ArrayList<>();
+    // get atomic commitsByEmail list from mongodb, group by authors
+    // use the hash function to simulate random
+    Map<String, List<String>> commitsByEmail = new HashMap<>();
     try (MongoCursor<Document> cursor = col.find().iterator()) {
-      int num = 0;
       while (cursor.hasNext()) {
         Document doc = cursor.next();
+        String email = (String) doc.get("committer_email");
         String commitID = (String) doc.get("commit_id");
-        atomicCommits.add(commitID);
-        num++;
-        if (num >= 100) {
-          break;
+        if (commitsByEmail.containsKey(email)) {
+          commitsByEmail.get(email).add(commitID);
+        } else {
+          List<String> ids = new ArrayList<>();
+          ids.add(commitID);
+          commitsByEmail.put(email, ids);
         }
       }
     }
     mongoClient.close();
 
+    // filter authors whose commits are less than step
+    Map<String, List<String>> commitsByEmailAboveStep =
+        commitsByEmail.entrySet().stream()
+            .filter(a -> a.getValue().size() >= step)
+            .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+
     SmartCommit smartCommit =
         new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
     smartCommit.setDetectRefactorings(true);
-    smartCommit.setProcessNonJavaChanges(true);
+    smartCommit.setProcessNonJavaChanges(false);
+    //    smartCommit.setDistanceThreshold(1);
+    Stopwatch stopwatch = Stopwatch.createStarted();
 
-    // combine consecutive 2~5 commits into a change-set
-    double sumAcc = 0D;
-    for (int i = 0; i < atomicCommits.size(); i += step) {
-      // ordered map
-      Map<String, Set<String>> groundTruth = new LinkedHashMap<>();
-      // union diff hunks in one change set, reorder the file index
-      List<DiffFile> unionDiffFiles = new ArrayList<>();
-      List<DiffHunk> unionDiffHunks = new ArrayList<>();
+    // randomly sample 100 composite commits for each size
+    // combine consecutive 2~5 commitsByEmail into a change-set
+    List<Double> accuracies = new ArrayList<>();
+    int sampleNum = 0;
+    for (Map.Entry<String, List<String>> entry : commitsByEmailAboveStep.entrySet()) {
+      List<String> commits = entry.getValue();
 
-      // collect data for each commit to be combined
-      String resultsDir = tempDir + File.separator + atomicCommits.get(i);
-      DataCollector dataCollector = new DataCollector(repoName, resultsDir);
+      outerloop:
+      for (int i = 0; i < commits.size(); i += step) {
+        if (sampleNum >= 100) {
+          break outerloop;
+        }
+        // ordered map
+        Map<String, Set<String>> groundTruth = new LinkedHashMap<>();
+        // union diff hunks in one change set, reorder the file index
+        List<DiffFile> unionDiffFiles = new ArrayList<>();
+        List<DiffHunk> unionDiffHunks = new ArrayList<>();
+        Map<String, DiffHunk> unionDiffHunkMap = new HashMap<>();
 
-      for (int j = 0; j < step; j++) {
-        if (i + j < atomicCommits.size()) {
-          String commitID = atomicCommits.get(i + j);
-          if (!commitID.isEmpty()) {
-            // get diff hunks and save in groundTruth
-            RepoAnalyzer repoAnalyzer =
-                new RepoAnalyzer(String.valueOf(repoName.hashCode()), repoName, repoPath);
+        // collect data for each commit to be combined
+        String resultsDir = tempDir + File.separator + commits.get(i);
+        String dirNameHash = "";
 
-            List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
+        DataCollector dataCollector = new DataCollector(repoName, resultsDir.toString());
 
-            // collect all base and current files in the same folder
-            dataCollector.collectDiffFilesWorking(diffFiles);
-
-            // assign new index for diffFile and diffHunk
-            int beginIndex = unionDiffFiles.size();
-            for (int k = 0; k < diffFiles.size(); ++k) {
-              int newIndex = beginIndex + k;
-              diffFiles.get(k).setIndex(newIndex);
-              for (DiffHunk diffHunk : diffFiles.get(k).getDiffHunks()) {
-                diffHunk.setFileIndex(newIndex);
+        int LOC = 0;
+        int j; // num of merged commits
+        dirNameHash = "";
+        for (j = 0; j < step; j++) {
+          if (i + j < commits.size()) {
+            String commitID = commits.get(i + j);
+            if (!commitID.isEmpty()) {
+              // short hash, git default 7
+              if (dirNameHash.isEmpty()) {
+                dirNameHash = commitID.substring(0, 7);
+              } else {
+                dirNameHash = dirNameHash + "_" + commitID.substring(0, 7);
               }
+
+              // get diff hunks and save in groundTruth
+              RepoAnalyzer repoAnalyzer =
+                  new RepoAnalyzer(String.valueOf(repoName.hashCode()), repoName, repoPath);
+
+              List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
+
+              // collect all base and current files in the same folder
+              dataCollector.collectDiffFilesWorking(diffFiles);
+
+              // assign new index for diffFile and diffHunk
+              int beginIndex = unionDiffFiles.size();
+              for (int k = 0; k < diffFiles.size(); ++k) {
+                int newIndex = beginIndex + k;
+                diffFiles.get(k).setIndex(newIndex);
+                for (DiffHunk diffHunk : diffFiles.get(k).getDiffHunks()) {
+                  diffHunk.setFileIndex(newIndex);
+                  LOC +=
+                      (diffHunk.getBaseEndLine() - diffHunk.getBaseStartLine() + 1)
+                          + (diffHunk.getCurrentEndLine() - diffHunk.getCurrentStartLine() + 1);
+                }
+              }
+              List<DiffHunk> diffHunks = repoAnalyzer.getDiffHunks();
+              if (diffHunks.isEmpty()) {
+                continue;
+              }
+
+              unionDiffFiles.addAll(diffFiles);
+              unionDiffHunks.addAll(diffHunks);
+
+              unionDiffHunkMap.putAll(repoAnalyzer.getIdToDiffHunkMap());
+
+              groundTruth.put(commitID, repoAnalyzer.getIdToDiffHunkMap().keySet());
             }
-            List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
-
-            unionDiffFiles.addAll(diffFiles);
-            unionDiffHunks.addAll(allDiffHunks);
-
-            groundTruth.put(commitID, repoAnalyzer.getIdToDiffHunkMap().keySet());
+          } else {
+            break;
           }
         }
-      }
-
-      // dirs that keeps the source code of diff files
-      String baseDir = resultsDir + File.separator + Version.BASE.asString() + File.separator;
-      String currentDir = resultsDir + File.separator + Version.CURRENT.asString() + File.separator;
-      // call to get grouping results
-
-      try {
-        Map<String, Group> results =
-            smartCommit.analyze(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
-        smartCommit.exportGroupResults(results, resultsDir);
-
-        // convert the group into map from groupid to diffhunkids
-        Map<String, Set<String>> generatedResults = new LinkedHashMap<>();
-        for (Map.Entry entry : results.entrySet()) {
-          Set<String> ids = new HashSet<>();
-          for (String s : ((Group) entry.getValue()).getDiffHunkIDs()) {
-            ids.add(Utils.parseUUIDs(s).getRight());
-          }
-          generatedResults.put((String) entry.getKey(), ids);
+        if (j < step || unionDiffHunks.size() > step * 100) {
+          // the remaining commits for current committer is not enough
+          FileUtils.deleteQuietly(new File(resultsDir));
+          continue;
         }
 
-        Pair<List<Integer>, Double> res = computeMetrics(groundTruth, generatedResults);
-        int total = res.getLeft().get(0);
-        int correct = res.getLeft().get(1);
-        int orderingSteps = res.getLeft().get(2);
-        System.out.println(
-            "[Batch "
-                + (i / step)
-                + "] (#Incorrect/#Total)= "
-                + (total - correct)
-                + "/"
-                + total
-                + " Accuracy="
-                + res.getRight()
-                + " Reordering="
-                + orderingSteps);
-        sumAcc += res.getRight();
-      } catch (ExecutionException | InterruptedException | TimeoutException e) {
-        e.printStackTrace();
+        resultsDir = Utils.renameDir(resultsDir, dirNameHash);
+        // dirs that keeps the source code of diff files
+        String baseDir = resultsDir + File.separator + Version.BASE.asString() + File.separator;
+        String currentDir =
+            resultsDir + File.separator + Version.CURRENT.asString() + File.separator;
+
+        System.out.print("[Batch " + sampleNum + ":" + dirNameHash + "]");
+        try {
+          stopwatch.reset().start();
+          Map<String, Group> results =
+              smartCommit.analyze(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
+          stopwatch.stop();
+          long timeCost = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+
+          // export for testing
+          smartCommit.exportGroupResults(results, resultsDir);
+          smartCommit.setId2DiffHunkMap(unionDiffHunkMap);
+          Map<String, Group> groundTruthGroups = new HashMap<>();
+          int gid = 0;
+          for (Map.Entry en1 : groundTruth.entrySet()) {
+            Group group =
+                new Group(
+                    "",
+                    repoName,
+                    "group" + (gid++),
+                    new ArrayList<>((Set<String>) en1.getValue()),
+                    GroupLabel.OTHER);
+            group.setCommitID(en1.getKey().toString());
+            groundTruthGroups.put(group.getGroupID(), group);
+          }
+          smartCommit.exportGroupDetails(
+              groundTruthGroups, resultsDir + File.separator + "manual_details");
+          smartCommit.exportGroupDetails(
+              results, resultsDir + File.separator + "generated_details");
+
+          // convert the group into map from groupid to diffhunkids
+          Map<String, Set<String>> generatedResults = new LinkedHashMap<>();
+          for (Map.Entry res : results.entrySet()) {
+            Set<String> ids = new HashSet<>();
+            for (String s : ((Group) res.getValue()).getDiffHunkIDs()) {
+              ids.add(Utils.parseUUIDs(s).getRight());
+            }
+            generatedResults.put((String) res.getKey(), ids);
+          }
+
+          Pair<List<Integer>, Double> res = computeMetrics(groundTruth, generatedResults);
+          int total = res.getLeft().get(0);
+          int correct = res.getLeft().get(1);
+          int reassignSteps = total - correct;
+          int orderingSteps = res.getLeft().get(2);
+          double accuracy = res.getRight();
+          accuracies.add(accuracy);
+          System.out.println(
+              "#diff_hunks="
+                  + unionDiffHunks.size()
+                  + " #LOC="
+                  + LOC
+                  + " (#Incorrect/#Total)="
+                  + reassignSteps
+                  + "/"
+                  + total
+                  + " Reordering="
+                  + orderingSteps
+                  + " Accuracy="
+                  + accuracy
+                  + " Time="
+                  + timeCost
+                  + "ms");
+          // save results
+          Utils.appendStringToFile(
+              csvPath,
+              sampleNum
+                  + ","
+                  + total
+                  + ","
+                  + LOC
+                  + ","
+                  + reassignSteps
+                  + ","
+                  + orderingSteps
+                  + ","
+                  + accuracy
+                  + ","
+                  + (reassignSteps + orderingSteps)
+                  + ","
+                  + timeCost
+                  + System.lineSeparator());
+
+          sampleNum++;
+        } catch (ExecutionException | InterruptedException | TimeoutException e) {
+          e.printStackTrace();
+        }
       }
     }
-    System.out.println(
-        "Average Accuracy: "
-            + Utils.formatDouble(sumAcc / (atomicCommits.size() / step) * 100)
-            + "%");
+
+    System.out.println("Median Accuracy: " + Utils.formatDouble(getMedian(accuracies) * 100) + "%");
   }
 
   /**
@@ -205,17 +315,23 @@ public class Evaluation {
         new DefaultUndirectedWeightedGraph<>(DefaultWeightedEdge.class);
 
     int totalChangesNum = 0;
-    List<Integer> clusterSizes = new ArrayList<>();
-    Set<Pair<String, String>> groundTruthPairs = new HashSet();
-    Set<Pair<String, String>> resultPairs = new HashSet();
 
+    // pairs of diff hunk ids within the same group in the ground truth, generated result
+    Set<Pair<String, String>> groundTruthPairs = new LinkedHashSet();
+    Set<Pair<String, String>> resultPairs = new LinkedHashSet();
+    // pairs across different groups in ground truth
+    Set<Pair<String, String>> crossGroupPairs = new LinkedHashSet();
+
+    // bipartite node id
     int id = 0;
+
+    List<List<String>> groupsInGroundTruth = new ArrayList<>();
     for (Map.Entry entry : groundTruth.entrySet()) {
       BipartiteNode n = new BipartiteNode(id++, (Set<String>) entry.getValue());
       partition1.add(n);
       List<String> temp = new ArrayList<>((Set<String>) entry.getValue());
+      groupsInGroundTruth.add(temp);
       totalChangesNum += temp.size();
-      clusterSizes.add(temp.size());
       for (int i = 0; i < temp.size(); ++i) {
         for (int j = i + 1; j < temp.size(); ++j) {
           groundTruthPairs.add(Pair.of(temp.get(i), temp.get(j)));
@@ -252,14 +368,14 @@ public class Evaluation {
     Set<DefaultWeightedEdge> edges = matcher.getMatching().getEdges();
 
     int correctChangesNum = 0;
-    // dimension 1: distribution
+    // Metric1: operation alpha: assignment
     Map<Integer, Integer> idMap = new HashMap<>();
     for (DefaultWeightedEdge edge : edges) {
       correctChangesNum += bipartite.getEdgeWeight(edge);
       idMap.put(bipartite.getEdgeTarget(edge).id, bipartite.getEdgeSource(edge).id);
     }
 
-    // dimension 2: ordering
+    // Metric2: operation beta: ordering
     List<Integer> list1 = new ArrayList<>(); // ground truth (natural order)
     List<Integer> list2 = new ArrayList<>(); // generatedResult (mapped)
     for (BipartiteNode node : partition1) {
@@ -270,27 +386,48 @@ public class Evaluation {
     }
 
     // since the edit allowed here is moving groups, so edit distance need to be divided by 2
-    int reorderingSteps = editDistance(list1, list2) / 2;
+    // +A and -A is equivalent to move A
+    int reorderingSteps = (int) Math.floor(editDistance(list1, list2) / 2.0);
 
-    // accuracy
-    int rightPairs = 0;
+    // Metric3: Accuracy
+    int correctlyGroupedPairs = 0;
     for (Pair<String, String> p1 : groundTruthPairs) {
       for (Pair<String, String> p2 : resultPairs) {
         if ((p1.getLeft().equals(p2.getLeft()) && p1.getRight().equals(p2.getRight()))
             || (p1.getLeft().equals(p2.getRight()) && p1.getRight().equals(p2.getLeft()))) {
-          rightPairs += 1;
+          correctlyGroupedPairs += 1;
+          continue; // unique in set so find and continue
         }
       }
     }
-    int wrongPairs = 0;
-    for (int i = 0; i < clusterSizes.size() - 1; ++i) {
-      for (int j = i + 1; j < clusterSizes.size(); ++j) {
-        wrongPairs += clusterSizes.get(i) * clusterSizes.get(j);
+
+    for (int i = 0; i < groupsInGroundTruth.size() - 1; ++i) {
+      // select two groups
+      for (int j = i + 1; j < groupsInGroundTruth.size(); ++j) {
+        // select two ids
+        List<String> group1 = groupsInGroundTruth.get(i);
+        List<String> group2 = groupsInGroundTruth.get(j);
+        for (String s1 : group1) {
+          for (String s2 : group2) {
+            crossGroupPairs.add(Pair.of(s1, s2));
+          }
+        }
       }
     }
+    int correctlySeparatedPairs = crossGroupPairs.size();
+
+    for (Pair<String, String> p1 : crossGroupPairs) {
+      for (Pair<String, String> p2 : resultPairs) {
+        if ((p1.getLeft().equals(p2.getLeft()) && p1.getRight().equals(p2.getRight()))) {
+          correctlySeparatedPairs -= 1;
+        }
+      }
+    }
+
     double accuracy =
         Utils.formatDouble(
-            (double) (rightPairs + wrongPairs) / ((totalChangesNum * (totalChangesNum - 1) / 2)));
+            (correctlyGroupedPairs + correctlySeparatedPairs)
+                / ((double) (totalChangesNum * (totalChangesNum - 1) / 2)));
 
     List<Integer> res = new ArrayList<>();
     res.add(totalChangesNum);
@@ -619,6 +756,24 @@ public class Evaluation {
       return 0D;
     } else {
       return (double) intersection.size() / union.size();
+    }
+  }
+
+  private static double getMean(List<Double> numList) {
+    Double average = numList.stream().mapToDouble(val -> val).average().orElse(0.0);
+    return average;
+  }
+
+  private static double getMedian(List<Double> numList) {
+    Double[] numArray = numList.toArray(new Double[0]);
+    Arrays.sort(numArray);
+    int middle = ((numArray.length) / 2);
+    if (numArray.length % 2 == 0) {
+      double medianA = numArray[middle];
+      double medianB = numArray[middle - 1];
+      return (medianA + medianB) / 2;
+    } else {
+      return numArray[middle + 1];
     }
   }
 }

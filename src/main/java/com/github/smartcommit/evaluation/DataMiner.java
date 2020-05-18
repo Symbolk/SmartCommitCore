@@ -39,36 +39,30 @@ public class DataMiner {
     String resultsDir = "/Users/symbolk/coding/data/results/";
     String tempDir = "/Users/symbolk/coding/data/temp/";
 
-    String repoName = "gradle";
+    String repoName = "antlr4";
     String repoPath = repoDir + repoName;
     // number of examined commits
     int numCommits = 0;
-    System.out.println("Mining " + repoName);
     // !merge && fix/close/resolve/issue && #issueid/number
-    // atomic: # == 1 && !bullet list <= 1
-    // composite: (# > 1 || and/also/plus/too/other || bullet list))
+    // composite: (# > 1 || #predicates > 1 || and/also/plus/too/other || bullet list))
 
     GitService gitService = new GitServiceImpl();
     List<RevCommit> atomicCommits = new ArrayList<>();
     List<RevCommit> compositeCommits = new ArrayList<>();
-    Pattern issuePattern = Pattern.compile("#[0-9]+?\\s+");
+    Pattern issuePattern =
+        Pattern.compile("#[0-9]+?\\s+"); // Other special format: jruby-XXX xstr-XXX storm-XXX
     Pattern bulletPattern = Pattern.compile("\\*|-\\s+");
     try (Repository repository = gitService.openRepository(repoPath)) {
       // iterate commits from master:HEAD
       try (RevWalk walk = gitService.createAllRevsWalk(repository, repository.getBranch())) {
+        System.out.println("Mining repo: " + repoName + " on branch: " + repository.getBranch());
         for (RevCommit commit : walk) {
-          numCommits+=1;
+          numCommits += 1;
           // no merge commits
           if (commit.getParentCount() == 1) {
             String msg = commit.getFullMessage().toLowerCase();
-            if (msg.contains("merge") || msg.contains("merging")) {
-              continue;
-            }
-            if (anyMatch(
-                msg,
-                new String[] {
-                  "issue", "#", "fix", "close", "resolve", "solve"
-                })) { // Other format: JRUBY-XXX XSTR-XXX
+            // focused on issues
+            if (anyMatch(msg, new String[] {"issue", "#", "fix", "close", "resolve", "solve"})) {
 
               // extract issue ids
               Set<String> issueIDs = new HashSet<>();
@@ -88,7 +82,7 @@ public class DataMiner {
                   || issueIDs.size() > 1) {
                 compositeCommits.add(commit);
                 System.out.println("[C]" + commit.getName());
-              } else if (issueIDs.size() == 1) {
+              } else {
                 atomicCommits.add(commit);
                 System.out.println("[A]" + commit.getName());
               }
@@ -98,46 +92,22 @@ public class DataMiner {
       }
 
       System.out.println("[Total]: " + numCommits);
-      System.out.println("[Composite]: " + compositeCommits.size() +
-              "("+ Utils.formatDouble((double)compositeCommits.size()*100/numCommits)+"%)");
+      System.out.println(
+          "[Composite]: "
+              + compositeCommits.size()
+              + "("
+              + Utils.formatDouble((double) compositeCommits.size() * 100 / numCommits)
+              + "%)");
       System.out.println("[Atomic]: " + atomicCommits.size());
       // save results into mongodb
-//      saveSamplesInDB(repoName, "atomic", atomicCommits);
-//      saveSamplesInDB(repoName, "composite", compositeCommits);
+      saveSamplesInDB(repoName, "atomic", atomicCommits);
+      //      saveSamplesInDB(repoName, "composite", compositeCommits);
       // write results into csv file
       //      saveSamplesInCSV(atomicCommits, resultsDir + repoName + "_atomic.csv");
       //      saveSamplesInCSV(compositeCommits, resultsDir + repoName + "_composite.csv");
     } catch (Exception e) {
       e.printStackTrace();
     }
-  }
-
-  private static boolean containsMultipleVerbs1(String msg) {
-    String[] verbs =
-        new String[] {
-          "add",
-          "fix",
-          "change",
-          "modif",
-          "remove",
-          "delete",
-          "refactor",
-          "format",
-          "rename",
-          "reformat",
-          "patch"
-        };
-    //    String[] words = msg.split("\\s+");
-    int num = 0;
-    for (String v : verbs) {
-      if (msg.contains(v)) {
-        num += 1;
-        if (num > 1) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   private static boolean containsMultipleVerbs(String msg) {
@@ -160,7 +130,8 @@ public class DataMiner {
           "format",
           "rename",
           "reformat",
-          "patch"
+          "patch",
+          "clean"
         };
     //    String[] words = msg.split("\\s+");
     int num = 0;
