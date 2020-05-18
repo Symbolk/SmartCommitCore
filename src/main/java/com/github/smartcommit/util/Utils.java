@@ -18,6 +18,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -154,6 +155,22 @@ public class Utils {
   }
 
   /**
+   * Append a string to the end of a file
+   *
+   * @param filePath
+   * @param content
+   */
+  public static void appendStringToFile(String filePath, String content) {
+    Path path = Paths.get(filePath);
+    byte[] contentBytes = content.getBytes();
+    try {
+      Files.write(path, contentBytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  /**
    * Write a list of lines into a file
    *
    * @param lines
@@ -205,6 +222,27 @@ public class Utils {
       }
     }
     return true;
+  }
+
+  /**
+   * Rename an existing dir
+   *
+   * @param dirPath
+   * @param newDirName
+   */
+  public static String renameDir(String dirPath, String newDirName) {
+    File dir = new File(dirPath);
+    if (!dir.isDirectory()) {
+      System.err.println("Not a directory: " + dirPath);
+    } else {
+      File newDir = new File(dir.getParent() + File.separator + newDirName);
+      if (dir.renameTo(newDir)) {
+        return newDir.getAbsolutePath();
+      } else {
+        System.err.println("Renaming failed to: " + newDir.getAbsolutePath());
+      }
+    }
+    return dir.getAbsolutePath();
   }
 
   /**
