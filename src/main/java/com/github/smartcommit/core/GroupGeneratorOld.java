@@ -36,6 +36,7 @@ public class GroupGeneratorOld {
 
   private String repoID;
   private String repoName;
+  private Pair<String, String> srcDirs;
   private List<DiffFile> diffFiles;
   private List<DiffHunk> diffHunks;
 
@@ -52,6 +53,7 @@ public class GroupGeneratorOld {
   public GroupGeneratorOld(
       String repoID,
       String repoName,
+      Pair<String, String> srcDirs,
       Double similarityThreshold,
       Integer distanceThreshold,
       List<DiffFile> diffFiles,
@@ -60,6 +62,7 @@ public class GroupGeneratorOld {
       Graph<Node, Edge> currentGraph) {
     this.repoID = repoID;
     this.repoName = repoName;
+    this.srcDirs = srcDirs;
     this.diffFiles = diffFiles;
     this.diffHunks = diffHunks;
 
@@ -426,11 +429,8 @@ public class GroupGeneratorOld {
    */
   public void analyzeRefactorings(String tempDir) {
     try {
-      String baseDir = tempDir + File.separator + Version.BASE.asString() + File.separator;
-      String currentDir = tempDir + File.separator + Version.CURRENT.asString() + File.separator;
-
-      File rootFolder1 = new File(baseDir);
-      File rootFolder2 = new File(currentDir);
+      File rootFolder1 = new File(srcDirs.getLeft());
+      File rootFolder2 = new File(srcDirs.getRight());
 
       UMLModel model1 = new UMLModelASTReader(rootFolder1).getUmlModel();
       UMLModel model2 = new UMLModelASTReader(rootFolder2).getUmlModel();
@@ -548,7 +548,13 @@ public class GroupGeneratorOld {
     }
 
     // individual nodes are sorted by nature
-    createGroup(individuals, GroupLabel.OTHER);
+    if (individuals.size() <= 3) {
+      for (String individual : individuals) {
+        createGroup(new HashSet<>(Arrays.asList(individual)), GroupLabel.OTHER);
+      }
+    } else {
+      createGroup(individuals, GroupLabel.OTHER);
+    }
 
     //    BiconnectivityInspector inspector1 =
     //            new BiconnectivityInspector(diffHunkGraph);

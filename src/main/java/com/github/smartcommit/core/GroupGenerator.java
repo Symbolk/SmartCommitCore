@@ -44,6 +44,9 @@ public class GroupGenerator {
   private Graph<Node, Edge> baseGraph;
   private Graph<Node, Edge> currentGraph;
 
+  // map the grouped diff hunk index to its group id
+  private Map<String, String> indexToGroupMap;
+
   // outputs
   private Graph<DiffNode, DiffEdge> diffGraph;
 
@@ -69,6 +72,7 @@ public class GroupGenerator {
     this.baseGraph = baseGraph;
     this.currentGraph = currentGraph;
 
+    this.indexToGroupMap = new HashMap<>();
     this.diffGraph = initDiffGraph();
   }
 
@@ -266,7 +270,16 @@ public class GroupGenerator {
     return defUseLinks;
   }
 
+  /**
+   * DFS to find all nodes point to the current in diff hunks
+   *
+   * @param graph
+   * @param node
+   * @param visited
+   * @return
+   */
   private List<String> analyzeDef(Graph<Node, Edge> graph, Node node, HashSet<Node> visited) {
+    //    Graphs.predecessorListOf()
     List<String> res = new ArrayList<>();
     Set<Edge> inEdges =
         graph.incomingEdgesOf(node).stream()
@@ -290,6 +303,14 @@ public class GroupGenerator {
     return res;
   }
 
+  /**
+   * DFS to find all nodes that start from the current in diff hunks
+   *
+   * @param graph
+   * @param node
+   * @param visited
+   * @return
+   */
   private List<String> analyzeUse(Graph<Node, Edge> graph, Node node, HashSet<Node> visited) {
     List<String> res = new ArrayList<>();
     Set<Edge> outEdges =
@@ -341,9 +362,9 @@ public class GroupGenerator {
 
     Map<String, Group> generatedGroups = new HashMap<>();
     Set<String> individuals = new LinkedHashSet<>();
+    Map<String, String> idToIndexMap = new HashMap<>();
 
-    // generate group results from connections (order diff hunks topologically)
-    // union-find/disjoint set to generate group
+    // partition of the current level (union-find/disjoint set)
     ConnectivityInspector inspector = new ConnectivityInspector(diffGraph);
     List<Set<DiffNode>> connectedSets = inspector.connectedSets();
     for (Set<DiffNode> diffNodesSet : connectedSets) {
@@ -352,10 +373,11 @@ public class GroupGenerator {
         diffNodesSet.forEach(
             diffNode -> {
               individuals.add(diffNode.getUUID());
+              idToIndexMap.put(diffNode.getUUID(), diffNode.getIndex());
             });
       } else if (diffNodesSet.size() > 1) {
         Set<String> diffHunkIDs = new LinkedHashSet<>();
-        // topo sort
+        // sort and deduplicate
         diffNodesSet =
             diffNodesSet.stream()
                 .sorted(
@@ -369,13 +391,29 @@ public class GroupGenerator {
           diffGraph.outgoingEdgesOf(diffNode).stream()
               .forEach(diffEdge -> edgeTypes.add(diffEdge.getType()));
         }
-        // get the most frequent edge type as the feature
-        createGroup(generatedGroups, diffHunkIDs, getIntentFromEdges(edgeTypes));
+        // get the most frequent edge type as the group label
+        String groupID = createGroup(generatedGroups, diffHunkIDs, getIntentFromEdges(edgeTypes));
+        updateIndexToGroupMap(diffNodesSet, groupID);
       }
     }
 
-    createGroup(generatedGroups, individuals, GroupLabel.OTHER);
+    assignIndividuals(generatedGroups, idToIndexMap, individuals);
+    // the individuals are inter-independent, but only create single groups for user experience
+    if (individuals.size() <= 3) {
+      for (String individual : individuals) {
+        createGroup(generatedGroups, new HashSet<>(Arrays.asList(individual)), GroupLabel.OTHER);
+      }
+    } else {
+      createGroup(generatedGroups, individuals, GroupLabel.OTHER);
+    }
+
     return generatedGroups;
+  }
+
+  private void updateIndexToGroupMap(Set<DiffNode> diffNodesSet, String groupID) {
+    for (DiffNode diffNode : diffNodesSet) {
+      this.indexToGroupMap.put(diffNode.getIndex(), groupID);
+    }
   }
 
   private GroupLabel getIntentFromEdges(List<DiffEdgeType> edgeTypes) {
@@ -401,6 +439,7 @@ public class GroupGenerator {
         return GroupLabel.FEATURE;
     }
   }
+
   /**
    * Create new group by appending after the current generateGroups
    *
@@ -412,6 +451,45 @@ public class GroupGenerator {
       Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs), intent);
       group.setCommitMsg(intent.label);
       groups.put(groupID, group);
+
+  /** Add an individual diff hunk to its nearest group */
+  private void assignIndividuals(
+      Map<String, Group> groups, Map<String, String> idToIndexMap, Set<String> individuals) {
+    Set<String> temp = new HashSet<>(individuals);
+    for (String id : temp) {
+      // find the file index and diff hunk index by id
+      if (idToIndexMap.containsKey(id)) {
+        String index = idToIndexMap.get(id);
+        Pair<Integer, Integer> indices = Utils.parseIndices(index);
+        // find the group of the nearest diff hunk
+        // after sibling
+        String after = indices.getLeft() + ":" + (indices.getRight() + 1);
+        if (this.indexToGroupMap.containsKey(after)) {
+          Group group = groups.get(this.indexToGroupMap.get(after));
+          group.addDiffHunk(id);
+          this.indexToGroupMap.put(index, group.getGroupID());
+          individuals.remove(id);
+          continue;
+        }
+        // before sibling
+        String before = indices.getLeft() + ":" + (indices.getRight() - 1);
+        if (this.indexToGroupMap.containsKey(before)) {
+          Group group = groups.get(this.indexToGroupMap.get(before));
+          group.addDiffHunk(id);
+          this.indexToGroupMap.put(index, group.getGroupID());
+          individuals.remove(id);
+          continue;
+        }
+        // same parent file
+        String parent = indices.getLeft() + ":0";
+        if (this.indexToGroupMap.containsKey(parent)) {
+          Group group = groups.get(this.indexToGroupMap.get(parent));
+          group.addDiffHunk(id);
+          this.indexToGroupMap.put(index, group.getGroupID());
+          individuals.remove(id);
+          continue;
+        }
+      }
     }
   }
 

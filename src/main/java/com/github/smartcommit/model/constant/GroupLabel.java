@@ -1,19 +1,21 @@
 package com.github.smartcommit.model.constant;
 
 public enum GroupLabel {
-  FEATURE("Feature"), // new feature
-  REFACTOR("Refactor"), // refactoring
-  FIX("Fix"), // fix bugs
+  FEATURE("Add or modify feature"), // new feature
+  REFACTOR("Refactor code structure"), // refactoring
+  FIX("Fix bug"), // fix bugs
+  OPT("Optimize code"), // optimization for existing functions
 
-  REFORMAT("Reformat"), // blank character changes
-  DOC("Document"),
-  CONFIG("Config"),
-  SIMILAR("Similar"), // systematic changes
-  CLEAR("Clear"), // clear unused code
-  MOVING("Moving"),
+  REFORMAT("Reformat code"), // blank character changes
+  DOC("Document changes"),
+  CONFIG("Config files"),
+  RESOURCE("Change resource files"),
+  SIMILAR("Change some code systematically"), // systematic changes
+  CLEAR("Clear some code"), // clear unused code
 
-  NONJAVA("Non-Java"),
-  OTHER("Others"); // trivial changes
+  TEST("Modify test cases or methods"),
+  NONJAVA("Change non-java files"),
+  OTHER("Other changes"); // trivial changes
 
   public String label;
 
