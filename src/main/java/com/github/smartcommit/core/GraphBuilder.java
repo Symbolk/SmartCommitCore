@@ -513,7 +513,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               } else {
                 nodeOpt =
                     findNodeByNameAndType(
-                        ((TypeDeclaration) astNode).getName().getIdentifier(),
+                        ((AbstractTypeDeclaration) astNode).getName().getIdentifier(),
                         NodeType.ENUM,
                         false);
               }

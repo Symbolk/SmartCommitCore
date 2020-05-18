@@ -1199,9 +1199,11 @@ public class JDTService {
         if (constructorBinding != null) {
           entityInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
         }
-        List<Expression> arguments = ((ConstructorInvocation) statement).arguments();
-        for (Expression exp : arguments) {
-          parseExpression(entityInfo, exp);
+        if (statement instanceof ConstructorInvocation) {
+          List<Expression> arguments = ((ConstructorInvocation) statement).arguments();
+          for (Expression exp : arguments) {
+            parseExpression(entityInfo, exp);
+          }
         }
       }
     }
