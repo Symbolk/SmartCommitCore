@@ -46,6 +46,8 @@ public class GroupGenerator {
 
   // outputs
   private Graph<DiffNode, DiffEdge> diffGraph;
+  private Map<String, Group> generatedGroups;
+  private Set<String> groupedDiffHunkIDs;
 
   // options
   private boolean processNonJava = false;
@@ -70,6 +72,8 @@ public class GroupGenerator {
     this.currentGraph = currentGraph;
 
     this.diffGraph = initDiffGraph();
+    this.generatedGroups = new HashMap<>();
+    this.groupedDiffHunkIDs = new HashSet<>();
   }
 
   // hard -- topo sort + union find
@@ -152,15 +156,14 @@ public class GroupGenerator {
           others.addAll(diffFile.getDiffHunks());
         }
       }
-      createEdges(doc, DiffEdgeType.DOC, 1.0);
-      createEdges(config, DiffEdgeType.CONFIG, 1.0);
-      createEdges(resource, DiffEdgeType.RESOURCE, 1.0);
-      createEdges(others, DiffEdgeType.OTHERS, 1.0);
+      createGroup(convertDiffHunksToIds(doc), GroupLabel.DOC);
+      createGroup(convertDiffHunksToIds(config), GroupLabel.CONFIG);
+      createGroup(convertDiffHunksToIds(resource), GroupLabel.RESOURCE);
     } else {
       for (DiffFile diffFile : nonJavaDiffFiles) {
         others.addAll(diffFile.getDiffHunks());
       }
-      createEdges(others, DiffEdgeType.NONJAVA, 1.0);
+      createGroup(convertDiffHunksToIds(others), GroupLabel.NONJAVA);
     }
 
     // refactor
@@ -182,7 +185,7 @@ public class GroupGenerator {
         service.shutdown();
       }
       if (!refDiffHunks.isEmpty()) {
-        createEdges(refDiffHunks, DiffEdgeType.REFACTOR, 1.0);
+        createGroup(convertDiffHunksToIds(refDiffHunks), GroupLabel.REFACTOR);
       }
     }
 
@@ -240,7 +243,7 @@ public class GroupGenerator {
         // detect references between configs and java
       }
     }
-    createEdges(reformat, DiffEdgeType.REFORMAT, 1.0);
+    createGroup(convertDiffHunksToIds(reformat), GroupLabel.REFORMAT);
   }
 
   private Map<String, Set<String>> analyzeDefUse(Graph<Node, Edge> graph) {
@@ -337,23 +340,14 @@ public class GroupGenerator {
    * @return
    */
   public Map<String, Group> generateGroups() {
-//    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
-
-    Map<String, Group> generatedGroups = new HashMap<>();
-    Set<String> individuals = new LinkedHashSet<>();
+    //    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
 
     // generate group results from connections (order diff hunks topologically)
     // union-find/disjoint set to generate group
     ConnectivityInspector inspector = new ConnectivityInspector(diffGraph);
     List<Set<DiffNode>> connectedSets = inspector.connectedSets();
     for (Set<DiffNode> diffNodesSet : connectedSets) {
-      if (diffNodesSet.size() == 1) {
-        // individual
-        diffNodesSet.forEach(
-            diffNode -> {
-              individuals.add(diffNode.getUUID());
-            });
-      } else if (diffNodesSet.size() > 1) {
+      if (diffNodesSet.size() > 1) {
         Set<String> diffHunkIDs = new LinkedHashSet<>();
         // topo sort
         diffNodesSet =
@@ -370,11 +364,19 @@ public class GroupGenerator {
               .forEach(diffEdge -> edgeTypes.add(diffEdge.getType()));
         }
         // get the most frequent edge type as the feature
-        createGroup(generatedGroups, diffHunkIDs, getIntentFromEdges(edgeTypes));
+        createGroup(new ArrayList<>(diffHunkIDs), getIntentFromEdges(edgeTypes));
       }
     }
 
-    createGroup(generatedGroups, individuals, GroupLabel.OTHER);
+    // put all ungrouped into OTHER group
+    Set<DiffHunk> others = new TreeSet<>(ascendingByIndexComparator());
+    for (DiffHunk diffHunk : diffHunks) {
+      if (!groupedDiffHunkIDs.contains(diffHunk.getUUID())) {
+        others.add(diffHunk);
+      }
+    }
+
+    createGroup(convertDiffHunksToIds(others), GroupLabel.OTHER);
     return generatedGroups;
   }
 
@@ -386,17 +388,12 @@ public class GroupGenerator {
     switch (edgeType) {
       case SIMILAR:
         return GroupLabel.FIX;
-      case MOVING:
-        return GroupLabel.MOVING;
       case REFORMAT:
         return GroupLabel.REFORMAT;
-      case DOC:
-        return GroupLabel.DOC;
-      case CONFIG:
-        return GroupLabel.CONFIG;
       case NONJAVA:
         return GroupLabel.NONJAVA;
       case CLOSE:
+      case DEPEND:
       default:
         return GroupLabel.FEATURE;
     }
@@ -406,12 +403,19 @@ public class GroupGenerator {
    *
    * @param diffHunkIDs
    */
-  private void createGroup(Map<String, Group> groups, Set<String> diffHunkIDs, GroupLabel intent) {
+  private void createGroup(List<String> diffHunkIDs, GroupLabel intent) {
     if (!diffHunkIDs.isEmpty()) {
-      String groupID = "group" + groups.size();
-      Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs), intent);
+      String groupID = "group" + generatedGroups.size();
+      List<String> filteredIDs = new ArrayList<>();
+      for (String id : diffHunkIDs) {
+        if (!groupedDiffHunkIDs.contains(id)) {
+          filteredIDs.add(id);
+          groupedDiffHunkIDs.add(id);
+        }
+      }
+      Group group = new Group(repoID, repoName, groupID, filteredIDs, intent);
       group.setCommitMsg(intent.label);
-      groups.put(groupID, group);
+      generatedGroups.put(groupID, group);
     }
   }
 
@@ -757,6 +761,16 @@ public class GroupGenerator {
       }
     }
     return Optional.empty();
+  }
+
+  /**
+   * Extract diff hunk ids from a set of diff hunks
+   *
+   * @param diffHunks
+   * @return
+   */
+  private List<String> convertDiffHunksToIds(Set<DiffHunk> diffHunks) {
+    return diffHunks.stream().map(DiffHunk::getUUID).collect(Collectors.toList());
   }
 
   public void enableRefDetection(boolean enable) {
