@@ -377,6 +377,11 @@ public class GroupGenerator {
     }
 
     createGroup(convertDiffHunksToIds(others), GroupLabel.OTHER);
+
+    // check for duplicates or missing
+    if (groupedDiffHunkIDs.size() != diffHunks.size()) {
+      logger.error("Incorrect number of diff hunks");
+    }
     return generatedGroups;
   }
 
