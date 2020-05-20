@@ -78,6 +78,13 @@ public class Group {
     }
   }
 
+  public void removeDiffHunk(String diffID) {
+    if (diffHunkIDs.contains(diffID)) {
+      diffHunkIDs.remove(diffID);
+    }
+  }
+
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();

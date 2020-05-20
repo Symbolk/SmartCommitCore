@@ -10,7 +10,6 @@ import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
 import com.github.smartcommit.model.Hunk;
-import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.GitServiceCGit;
@@ -18,10 +17,10 @@ import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.jgrapht.Graph;
 
 import java.io.File;
@@ -33,7 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
-/** API entry */
+/**
+ * API entry
+ */
 public class SmartCommit {
   private static final Logger logger = Logger.getLogger(SmartCommit.class);
   private String repoID;
@@ -41,8 +42,8 @@ public class SmartCommit {
   private String repoPath;
   private String tempDir;
   private Map<String, DiffHunk> id2DiffHunkMap;
-  private Map<String, String> compileInfos;
-  private List<HunkIndex> hunkIndices;
+  private Map<String, Group> id2GroupMap;
+  private List<HunkIndex> hunkIndexes;
   // options
   private boolean detectRefactorings = false;
   private boolean processNonJavaChanges = false;
@@ -56,14 +57,13 @@ public class SmartCommit {
     this.repoPath = repoPath;
     this.tempDir = tempDir;
     this.id2DiffHunkMap = new HashMap<>();
-    this.compileInfos = new HashMap<>();
-    this.hunkIndices = new ArrayList<>();
+    this.id2GroupMap = new HashMap<>();
+    this.hunkIndexes = new ArrayList<>();
   }
 
   public void setDetectRefactorings(boolean detectRefactorings) {
     this.detectRefactorings = detectRefactorings;
   }
-
 
   public void setProcessNonJavaChanges(boolean processNonJavaChanges) {
     this.processNonJavaChanges = processNonJavaChanges;
@@ -143,7 +143,7 @@ public class SmartCommit {
 
     // save the results on disk
     exportGroupResults(results, tempDir);
-
+    id2GroupMap = results;
     return results;
   }
 
@@ -180,7 +180,7 @@ public class SmartCommit {
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunks(diffFiles, resultsDir);
 
     exportGroupResults(results, resultsDir);
-
+    id2GroupMap = results;
     return results;
   }
 
@@ -367,10 +367,10 @@ public class SmartCommit {
       }
     }
 
-//    CommitMsgGenerator generator = new CommitMsgGenerator(diffHunks);
-//    List<Integer> vectors = generator.generateGroupVector();
-//    MsgClass msgClass = generator.invokeAIModel(vectors);
-//    return generator.generateDetailedMsgs(msgClass, group.getIntentLabel());
+    //    CommitMsgGenerator generator = new CommitMsgGenerator(diffHunks);
+    //    List<Integer> vectors = generator.generateGroupVector();
+    //    MsgClass msgClass = generator.invokeAIModel(vectors);
+    //    return generator.generateDetailedMsgs(msgClass, group.getIntentLabel());
     return new ArrayList<>();
   }
 
@@ -411,38 +411,78 @@ public class SmartCommit {
   }
 
   /**
-   * Invoke maven to compile the version group by group, and return the error message
+   * Step0: Invoke maven to compile the version group by group, and return the error message
    *
    * @return groupID:compilation output
    */
   public Map<String, String> compileWithMaven() {
-    Map<String, String> result = new HashMap<>();
-    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
-    List<DiffFile> diffFiles = repoAnalyzer.analyzeWorkingTree();
-    List<DiffHunk> allDiffHunks = repoAnalyzer.getDiffHunks();
-    if (diffFiles.isEmpty() || allDiffHunks.isEmpty()) {
-      logger.info("Files are unchanged");
-      return null;
-    }
+    Map<String, String> id2MavenOut = new HashMap<>();
 
-    // mvnPath must be specified
+    /*
+    for (Map.Entry<String, Group> entry : id2GroupMap.entrySet()) {
+      String groupId = entry.getKey();
+      Group group = entry.getValue();
+      // TODO: patch workingTree with group
+      String log = Utils.runSystemCommand(repoPath, "mvn", "compile");
+      id2MavenOut.put(groupId, log);
+    }
+     */
+
     String groupId = "Compiling Working Tree";
     String log = Utils.runSystemCommand(repoPath, "mvn", "compile");
+    id2MavenOut.put(groupId, log);
 
-    compileInfos.put(groupId, log);
-    result.put(groupId, log);
-    return result;
+    return id2MavenOut;
   }
 
   /**
-   * Parse errors from maven output
-   *
-   * @return
+   * Step1: get Indexes and Nodes from diffHunk
    */
-  public List<MavenError> parseMavenErrors(String groupID) {
+  public void generateHunkIndexes() {
+    for (Map.Entry<String, DiffHunk> entry : id2DiffHunkMap.entrySet()) {
+      DiffHunk diffHunk = entry.getValue();
+      Integer fileIndex = diffHunk.getFileIndex();
+      Integer index = diffHunk.getIndex();
+      String diffHunkID = diffHunk.getDiffHunkID();
+      String diffHunkUUID = diffHunk.getUUID();
+      List<String> rawDiffs = diffHunk.getRawDiffs();
+
+      // use currentHunk Info
+      Hunk currentHunk = diffHunk.getCurrentHunk();
+      String currentRelativeFilePath = currentHunk.getRelativeFilePath();
+      Integer currentStartLine = currentHunk.getStartLine();
+      Integer currentEndLine = currentHunk.getEndLine();
+
+      String currentPackagePath = null;
+      HunkIndex currentHunkIndex =
+              new HunkIndex(currentRelativeFilePath, currentStartLine, currentEndLine);
+      currentHunkIndex.setFileIndex(fileIndex);
+      currentHunkIndex.setIndex(index);
+      currentHunkIndex.setDiffHunkID(diffHunkID);
+      currentHunkIndex.setUuid(diffHunkUUID);
+      currentHunkIndex.setRawDiffs(rawDiffs);
+
+      List<ASTNode> nodes = null;
+      nodes = diffHunk.getBaseHunk().getCoveredNodes();
+      if (!nodes.isEmpty()) currentHunkIndex.setBaseAstNodes(nodes);
+      nodes = currentHunk.getCoveredNodes();
+      if (!nodes.isEmpty()) currentHunkIndex.setCurrentAstNodes(nodes);
+
+      // TODO: get PackagePath
+      currentHunkIndex.setPackagePath(currentPackagePath);
+
+      hunkIndexes.add(currentHunkIndex);
+    }
+  }
+
+  /**
+   * Step2: Parse errors from maven output
+   *
+   * @param compileOut
+   * @return MavenError
+   */
+  public List<MavenError> parseMavenErrors(String compileOut) {
     List<MavenError> result = new ArrayList<>();
-    if (compileInfos.isEmpty()) return null;
-    String compileOut = compileInfos.get(groupID);
     String[] rows = compileOut.split("\\n");
     for (int i = 0; i < rows.length; i++) {
       String row = rows[i];
@@ -489,47 +529,84 @@ public class SmartCommit {
    */
   public List<MavenError> fixMavenErrors(String groupID, List<MavenError> errors) {
 
-    return new ArrayList<>();
-  }
+    Group group = id2GroupMap.getOrDefault(groupID, null);
+    List<String> diffHunkIDs = group.getDiffHunkIDs();
+    Map<String, String> id2MavenOut = compileWithMaven();
+    List<HunkIndex> hunkIndexes = new ArrayList<>();
 
-  public void generateIndexesFromDiffHunk() {
-    for(Map.Entry<String, DiffHunk> entry : id2DiffHunkMap.entrySet()) {
-      DiffHunk diffHunk = entry.getValue();
-      Integer fileIndex = diffHunk.getFileIndex();
-      Integer index = diffHunk.getIndex();
-      String diffHunkUUID = diffHunk.getUUID();
-
-      Pair baseIndex = diffHunk.getCodeRangeOf(Version.BASE);
-      Pair currentIndex = diffHunk.getCodeRangeOf(Version.CURRENT);
-
-      Hunk currentHunk = diffHunk.getCurrentHunk();
-      String currentRelativeFilePath = currentHunk.getRelativeFilePath();
-      Integer currentStartLine = currentHunk.getStartLine();
-      Integer currentEndLine = currentHunk.getEndLine();
-
-
-      HunkIndex currentHunkIndex = new HunkIndex(currentRelativeFilePath, currentStartLine,currentEndLine);
-      currentHunkIndex.setFileIndex(fileIndex);
-      currentHunkIndex.setIndex(index);
-      currentHunkIndex.setUuid(diffHunkUUID);
-
-      hunkIndices.add(currentHunkIndex);
+    // Step3:
+    for (MavenError error : errors) {
+      List<HunkIndex> tempHunkIndexes = findHunkIndexFromMavenError(error);
+      tempHunkIndexes.removeAll(hunkIndexes);
+      hunkIndexes.addAll(tempHunkIndexes);
+    }
+    // cannot find DiffHunk matched with errors
+    if (hunkIndexes.isEmpty()) return errors;
+    else {
+      // Step 6/7
+      group = adjustHunkesInGroup(hunkIndexes, group);
+      id2GroupMap.put(groupID, group);
+      // no error
+      String compileOut = null;
+      // TODO: compile with this group and get compileOut;
+      // Step 8
+      List<MavenError> mavenErrors = parseMavenErrors(compileOut);
+      if (mavenErrors.isEmpty()) return null;
+      else return fixMavenErrors(groupID, mavenErrors);
     }
   }
 
-  public Pair<Integer, Integer> findIndexPairFromMavenError(MavenError mavenError) {
+  /**
+   * Step 4/5 find Index according to MavenError
+   *
+   * @param mavenError
+   * @return List<HunkIndex>
+   */
+  private List<HunkIndex> findHunkIndexFromMavenError(MavenError mavenError) {
     String filePath = mavenError.getFilePath();
     Integer line = mavenError.getLine();
-    for(HunkIndex hunkIndex : hunkIndices) {
-      if(filePath.contains(hunkIndex.getRelativeFilePath())
-      && line >= hunkIndex.getStartLine()) {
-        Integer fileIndex = hunkIndex.getFileIndex();
-        Integer Index = hunkIndex.getIndex();
-        String uuid = hunkIndex.getUuid();
-        Pair<Integer, Integer> pair = new ImmutablePair<>(fileIndex, Index);
-        return pair;
+    String symbol = mavenError.getSymbol();
+
+    List<HunkIndex> hunkIndexes = new ArrayList<>();
+    for (HunkIndex hunkIndex : hunkIndexes) {
+      if (filePath.contains(hunkIndex.getRelativeFilePath()))
+        if (line >= hunkIndex.getStartLine())
+          for (String rawDiff : hunkIndex.getRawDiffs()) {
+            if (rawDiff.contains(symbol)) hunkIndexes.add(hunkIndex);
+          }
+    }
+    return hunkIndexes;
+  }
+
+  /**
+   * Step 6/7 adjust Hunk in group
+   *
+   * @param hunkIndexes
+   * @param group
+   * @return group
+   */
+  private Group adjustHunkesInGroup(List<HunkIndex> hunkIndexes, Group group) {
+    List<String> groupDiffHunkIDs = group.getDiffHunkIDs();
+    List<String> hunkIndexDiffHunkIDs = new ArrayList<>();
+    for (HunkIndex hunkIndex : hunkIndexes) {
+      hunkIndexDiffHunkIDs.add(hunkIndex.getDiffHunkID());
+    }
+    hunkIndexDiffHunkIDs.removeAll(groupDiffHunkIDs);
+    for (String id : hunkIndexDiffHunkIDs) {
+      for (Map.Entry<String, Group> entry : id2GroupMap.entrySet()) {
+        String groupID = entry.getKey();
+        Group group0 = entry.getValue();
+        List<String> diffHunkIDs = group0.getDiffHunkIDs();
+        if (diffHunkIDs.contains(id)) {
+          diffHunkIDs.remove(id);
+          // remove id in origin group
+          group0.removeDiffHunk(id);
+          id2GroupMap.put(groupID, group0);
+          // add id in current group
+          group.addDiffHunk(id);
+        }
       }
     }
-    return null;
+    return group;
   }
 }
