@@ -5,6 +5,7 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.github.smartcommit.model.Group;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryCache;
@@ -42,6 +43,7 @@ public class CLI {
     //    PropertyConfigurator.configure("log4j.properties");
     // use basic configuration when packaging
     BasicConfigurator.configure();
+    org.apache.log4j.Logger.getRootLogger().setLevel(Level.ERROR);
 
     try {
       CLI cli = new CLI();
