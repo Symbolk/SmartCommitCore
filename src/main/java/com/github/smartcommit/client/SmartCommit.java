@@ -77,7 +77,7 @@ public class SmartCommit {
   private void prepareTempDir(String dir) {
     Utils.clearDir(dir);
     System.setProperty("logs.dir", dir);
-    PropertyConfigurator.configure("log4j.properties");
+//    PropertyConfigurator.configure("log4j.properties");
   }
 
   /**
