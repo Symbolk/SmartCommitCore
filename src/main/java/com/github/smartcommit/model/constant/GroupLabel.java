@@ -7,14 +7,14 @@ public enum GroupLabel {
   OPT("Optimize code"), // optimization for existing functions
 
   REFORMAT("Reformat code"), // blank character changes
-  DOC("Document changes"),
-  CONFIG("Config files"),
-  RESOURCE("Change resource files"),
-  SIMILAR("Change some code systematically"), // systematic changes
-  CLEAR("Clear some code"), // clear unused code
+  DOC("Update document"),
+  CONFIG("Change config file"),
+  RESOURCE("Change resource file"),
+  SIMILAR("Apply some similar changes"), // systematic changes
+  CLEAR("Clear unused code"), // clear dead code or comment
 
-  TEST("Modify test cases or methods"),
-  NONJAVA("Change non-java files"),
+  TEST("Modify test cases or tested methods"),
+  NONJAVA("Modify non-java file"),
   OTHER("Other changes"); // trivial changes
 
   public String label;
