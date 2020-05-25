@@ -5,15 +5,16 @@ public enum GroupLabel {
   REFACTOR("Refactor"), // refactoring
   FIX("Fix"), // fix bugs
 
-  REFORMAT("Reformat"), // blank character changes
-  DOC("Document"),
-  CONFIG("Config"),
-  SIMILAR("Similar"), // systematic changes
-  CLEAR("Clear"), // clear unused code
-  MOVING("Moving"),
+  REFORMAT("Reformat code"), // blank character changes
+  DOC("Update document"),
+  CONFIG("Change config file"),
+  RESOURCE("Change resource file"),
+  SIMILAR("Apply some similar changes"), // systematic changes
+  CLEAR("Clear unused code"), // clear dead code or comment
 
-  NONJAVA("Non-Java"),
-  OTHER("Others"); // trivial changes
+  TEST("Modify test cases or tested methods"),
+  NONJAVA("Modify non-java file"),
+  OTHER("Other changes"); // trivial changes
 
   public String label;
 
