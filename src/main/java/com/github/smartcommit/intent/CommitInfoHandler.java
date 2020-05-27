@@ -37,6 +37,7 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.util.GitServiceImpl;
 
 import java.io.File;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -46,6 +47,7 @@ import java.util.concurrent.*;
 // Main Class: Commit message:  Get, Label and Store
 public class CommitInfoHandler {
   private static final Logger logger = Logger.getLogger(GroupGenerator.class);
+
   public static void main(String[] args) {
     args = new String[] {"/Users/Chuncen/Desktop/Repos/lwjgl3", "commitTrainingSample"};
     String repoPath = args[0];
@@ -66,7 +68,7 @@ public class CommitInfoHandler {
   // Split "git commit"
   public static boolean CommitsCollector(
       String REPO_DIR, List<CommitTrainingSample> commitTrainingSample) {
-    String log = Utils.runSystemCommand(REPO_DIR, "git", "log");
+    String log = Utils.runSystemCommand(REPO_DIR, Charset.defaultCharset(), "git", "log");
     String[] parts = log.split("\\ncommit ");
     parts[0] = parts[0].substring("commit ".length());
     for (String part : parts) {
@@ -103,13 +105,15 @@ public class CommitInfoHandler {
       Future<?> f = null;
       try {
         int finalI = i;
-        Runnable r = () -> {
-          try {
-            analyzeCommitTrainingSample(repoPath, commitTrainingSample, collection, finalI, size);
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
-        };
+        Runnable r =
+            () -> {
+              try {
+                analyzeCommitTrainingSample(
+                    repoPath, commitTrainingSample, collection, finalI, size);
+              } catch (Exception e) {
+                e.printStackTrace();
+              }
+            };
         f = service.submit(r);
         f.get(300, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
@@ -121,15 +125,18 @@ public class CommitInfoHandler {
       } finally {
         service.shutdown();
       }
-
-
     }
 
     return true;
   }
 
-  private static void analyzeCommitTrainingSample(String repoPath, List<CommitTrainingSample> commitTrainingSample,
-                                                    MongoCollection<Document> collection, int i, int size) throws Exception {
+  private static void analyzeCommitTrainingSample(
+      String repoPath,
+      List<CommitTrainingSample> commitTrainingSample,
+      MongoCollection<Document> collection,
+      int i,
+      int size)
+      throws Exception {
     int index = repoPath.lastIndexOf(File.separator);
     String repoName = repoPath.substring(index + 1);
     String repoID = String.valueOf(Math.abs(repoName.hashCode()));
@@ -159,14 +166,14 @@ public class CommitInfoHandler {
 
     // add astActionList using gumtree
     tempCommitTrainingSample =
-            generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
+        generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
     // add DiffHunkActions using DiffHunks
     List<Action> DiffHunkActions =
-            generateActionListFromDiffHunks(tempCommitTrainingSample, dataCollector);
+        generateActionListFromDiffHunks(tempCommitTrainingSample, dataCollector);
     tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
     // add refactorCodeChange using RefactoringMiner
     List<RefactorMinerAction> refactorMinerActions =
-            getRefactorCodeChangesFromCodeChange(repoPath, commitID);
+        getRefactorCodeChangesFromCodeChange(repoPath, commitID);
     tempCommitTrainingSample.setRefactorMinerActions(refactorMinerActions);
 
     // Load into DB

@@ -27,6 +27,7 @@ import org.jgrapht.Graph;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -63,7 +64,6 @@ public class SmartCommit {
   public void setDetectRefactorings(boolean detectRefactorings) {
     this.detectRefactorings = detectRefactorings;
   }
-
 
   public void setProcessNonJavaChanges(boolean processNonJavaChanges) {
     this.processNonJavaChanges = processNonJavaChanges;
@@ -137,7 +137,11 @@ public class SmartCommit {
       for (Map.Entry<String, Group> entry : results.entrySet()) {
         Group group = entry.getValue();
         // generate recommended commit messages
-        group.setRecommendedCommitMsgs(generateCommitMsg(group));
+        List<String> recommendedMsgs = generateCommitMsg(group);
+        if (recommendedMsgs != null && !recommendedMsgs.isEmpty()) {
+          group.setRecommendedCommitMsgs(recommendedMsgs);
+          group.setCommitMsg(recommendedMsgs.get(0));
+        }
       }
     }
 
@@ -367,10 +371,10 @@ public class SmartCommit {
       }
     }
 
-//    CommitMsgGenerator generator = new CommitMsgGenerator(diffHunks);
-//    List<Integer> vectors = generator.generateGroupVector();
-//    MsgClass msgClass = generator.invokeAIModel(vectors);
-//    return generator.generateDetailedMsgs(msgClass, group.getIntentLabel());
+    //    CommitMsgGenerator generator = new CommitMsgGenerator(diffHunks);
+    //    List<Integer> vectors = generator.generateGroupVector();
+    //    MsgClass msgClass = generator.invokeAIModel(vectors);
+    //    return generator.generateDetailedMsgs(msgClass, group.getIntentLabel());
     return new ArrayList<>();
   }
 
@@ -427,7 +431,7 @@ public class SmartCommit {
 
     // mvnPath must be specified
     String groupId = "Compiling Working Tree";
-    String log = Utils.runSystemCommand(repoPath, "mvn", "compile");
+    String log = Utils.runSystemCommand(repoPath, Charset.defaultCharset(), "mvn", "compile");
 
     compileInfos.put(groupId, log);
     result.put(groupId, log);
@@ -493,7 +497,7 @@ public class SmartCommit {
   }
 
   public void generateIndexesFromDiffHunk() {
-    for(Map.Entry<String, DiffHunk> entry : id2DiffHunkMap.entrySet()) {
+    for (Map.Entry<String, DiffHunk> entry : id2DiffHunkMap.entrySet()) {
       DiffHunk diffHunk = entry.getValue();
       Integer fileIndex = diffHunk.getFileIndex();
       Integer index = diffHunk.getIndex();
@@ -507,8 +511,8 @@ public class SmartCommit {
       Integer currentStartLine = currentHunk.getStartLine();
       Integer currentEndLine = currentHunk.getEndLine();
 
-
-      HunkIndex currentHunkIndex = new HunkIndex(currentRelativeFilePath, currentStartLine,currentEndLine);
+      HunkIndex currentHunkIndex =
+          new HunkIndex(currentRelativeFilePath, currentStartLine, currentEndLine);
       currentHunkIndex.setFileIndex(fileIndex);
       currentHunkIndex.setIndex(index);
       currentHunkIndex.setUuid(diffHunkUUID);
@@ -520,9 +524,8 @@ public class SmartCommit {
   public Pair<Integer, Integer> findIndexPairFromMavenError(MavenError mavenError) {
     String filePath = mavenError.getFilePath();
     Integer line = mavenError.getLine();
-    for(HunkIndex hunkIndex : hunkIndices) {
-      if(filePath.contains(hunkIndex.getRelativeFilePath())
-      && line >= hunkIndex.getStartLine()) {
+    for (HunkIndex hunkIndex : hunkIndices) {
+      if (filePath.contains(hunkIndex.getRelativeFilePath()) && line >= hunkIndex.getStartLine()) {
         Integer fileIndex = hunkIndex.getFileIndex();
         Integer Index = hunkIndex.getIndex();
         String uuid = hunkIndex.getUuid();

@@ -10,6 +10,7 @@ import gr.uom.java.xmi.diff.CodeRange;
 import info.debatty.java.stringsimilarity.Cosine;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.mozilla.universalchardet.UniversalDetector;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringType;
 
@@ -32,15 +33,17 @@ public class Utils {
    * @param commands
    * @return
    */
-  public static String runSystemCommand(String dir, String... commands) {
+  public static String runSystemCommand(String dir, Charset charSet, String... commands) {
     StringBuilder builder = new StringBuilder();
     try {
       Runtime rt = Runtime.getRuntime();
       Process proc = rt.exec(commands, null, new File(dir));
 
-      BufferedReader stdInput = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+      BufferedReader stdInput =
+          new BufferedReader(new InputStreamReader(proc.getInputStream(), charSet));
 
-      BufferedReader stdError = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+      BufferedReader stdError =
+          new BufferedReader(new InputStreamReader(proc.getErrorStream(), charSet));
 
       String s = null;
       while ((s = stdInput.readLine()) != null) {
@@ -618,5 +621,22 @@ public class Utils {
    */
   public static double formatDouble(double value) {
     return (double) Math.round(value * 100) / 100;
+  }
+
+  public static Charset detectCharset(String filePath) {
+    try {
+      Path fileLocation = Paths.get(filePath);
+      byte[] content = Files.readAllBytes(fileLocation);
+      UniversalDetector detector = new UniversalDetector(null);
+      detector.handleData(content, 0, content.length);
+      detector.dataEnd();
+      String detectorCode = detector.getDetectedCharset();
+      if (detectorCode != null && detectorCode.startsWith("GB")) {
+        return Charset.forName("GBK");
+      }
+    } catch (Exception ex) {
+      ex.printStackTrace();
+    }
+    return Charset.forName("UTF-8");
   }
 }
