@@ -270,7 +270,7 @@ public class CommitMsgGenerator {
   // get max2Count of Frequency in Actions
   private List<Integer> getTop2IndexTypeFrom(List<Action> Actions, String key) {
     int sizeActions = Actions.size();
-    int count[] = new int[sizeActions];
+    int[] count = new int[sizeActions];
     for (int i = 0; i < sizeActions; i++) {
       String typeFrom = Actions.get(i).getTypeFrom();
       if (typeFrom.equals("Code")) continue;

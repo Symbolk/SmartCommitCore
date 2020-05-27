@@ -121,10 +121,9 @@ public class SmartCommit {
         // generate recommended commit messages
         group.setRecommendedCommitMsgs(generateCommitMsg(group));
       }
+      // save the results on disk
+      exportGroupResults(results, tempDir);
     }
-
-    // save the results on disk
-    exportGroupResults(results, tempDir);
 
     return results;
   }

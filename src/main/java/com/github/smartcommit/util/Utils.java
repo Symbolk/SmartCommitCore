@@ -15,6 +15,7 @@ import org.refactoringminer.api.RefactoringType;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -103,11 +104,9 @@ public class Utils {
       //      reader.readLine(); // skip header
       String line = null;
       while ((line = reader.readLine()) != null) {
-        String items[] = line.split(delimiter);
+        String[] items = line.split(delimiter);
         results.add(items);
       }
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -125,7 +124,7 @@ public class Utils {
     File file = new File(path);
     if (file.exists()) {
       try (BufferedReader reader =
-          Files.newBufferedReader(Paths.get(path), Charset.forName("UTF-8"))) {
+          Files.newBufferedReader(Paths.get(path), StandardCharsets.UTF_8)) {
         lines = reader.lines().collect(Collectors.toList());
       } catch (Exception e) {
         e.printStackTrace();
@@ -193,17 +192,20 @@ public class Utils {
     }
 
     String[] content = file.list();
-    for (String name : content) {
-      File temp = new File(dir, name);
-      if (temp.isDirectory()) {
-        clearDir(temp.getAbsolutePath());
-        temp.delete();
-      } else {
-        if (!temp.delete()) {
-          System.err.println("Failed to delete the directory: " + name);
+    if (content != null) {
+      for (String name : content) {
+        File temp = new File(dir, name);
+        if (temp.isDirectory()) {
+          clearDir(temp.getAbsolutePath());
+          temp.delete();
+        } else {
+          if (!temp.delete()) {
+            System.err.println("Failed to delete the directory: " + name);
+          }
         }
       }
     }
+
     return true;
   }
 
@@ -218,7 +220,7 @@ public class Utils {
     try (Stream<Path> walk = Files.walk(Paths.get(dir))) {
       result =
           walk.filter(Files::isRegularFile)
-              .map(x -> x.toString())
+              .map(Path::toString)
               .filter(f -> f.endsWith(".java"))
               .map(s -> s.substring(dir.length()))
               .collect(Collectors.toList());
@@ -282,7 +284,7 @@ public class Utils {
    * @return
    */
   public static FileType checkFileType(String filePath) {
-    return Arrays.asList(FileType.values()).stream()
+    return Arrays.stream(FileType.values())
         .filter(fileType -> filePath.endsWith(fileType.extension))
         .findFirst()
         .orElse(FileType.OTHER);
@@ -566,13 +568,11 @@ public class Utils {
    * @return
    */
   public static Map<String, Integer> sortMapByValue(Map<String, Integer> original) {
-    final Map<String, Integer> sorted =
-        original.entrySet().stream()
-            .sorted((Map.Entry.<String, Integer>comparingByValue().reversed()))
-            .collect(
-                Collectors.toMap(
-                    Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
-    return sorted;
+    return original.entrySet().stream()
+        .sorted((Map.Entry.<String, Integer>comparingByValue().reversed()))
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
   }
 
   /**

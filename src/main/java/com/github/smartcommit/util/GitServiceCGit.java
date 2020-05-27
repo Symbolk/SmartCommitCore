@@ -40,9 +40,9 @@ public class GitServiceCGit implements GitService {
     // only increment index when creating new diff file
     int fileIndex = 0;
 
-    String lines[] = output.split("\\r?\\n");
+    String[] lines = output.split("\\r?\\n");
     for (int i = 0; i < lines.length; i++) {
-      String temp[] = lines[i].trim().split("\\s+");
+      String[] temp = lines[i].trim().split("\\s+");
       String symbol = temp[0];
       String relativePath = temp[1];
       FileType fileType = Utils.checkFileType(relativePath);
@@ -143,12 +143,12 @@ public class GitServiceCGit implements GitService {
       return new ArrayList<>();
     }
     ArrayList<DiffFile> diffFileList = new ArrayList<>();
-    String lines[] = output.split("\\r?\\n");
+    String[] lines = output.split("\\r?\\n");
     // ! use an independent incremental index to avoid index jump in case of invalid status output
     // only increment index when creating new diff file
     int fileIndex = 0;
     for (int i = 0; i < lines.length; i++) {
-      String temp[] = lines[i].trim().split("\\s+");
+      String[] temp = lines[i].trim().split("\\s+");
       String symbol = temp[0];
       String relativePath = temp[1];
       FileType fileType = Utils.checkFileType(relativePath);
@@ -457,12 +457,8 @@ public class GitServiceCGit implements GitService {
    */
   @Override
   public String getContentAtHEAD(String repoDir, String relativePath) {
-    String output = Utils.runSystemCommand(repoDir, "git", "show", "HEAD:" + relativePath);
-    if (output != null) {
-      return output;
-    } else {
-      return "";
-    }
+    return Utils.runSystemCommand(
+        repoDir, "git", "show", "HEAD:" + relativePath);
   }
 
   /**
@@ -473,12 +469,8 @@ public class GitServiceCGit implements GitService {
    */
   @Override
   public String getContentAtCommit(String repoDir, String relativePath, String commitID) {
-    String output = Utils.runSystemCommand(repoDir, "git", "show", commitID + ":" + relativePath);
-    if (output != null) {
-      return output;
-    } else {
-      return "";
-    }
+    return Utils.runSystemCommand(
+        repoDir, "git", "show", commitID + ":" + relativePath);
   }
 
   /**
@@ -507,13 +499,11 @@ public class GitServiceCGit implements GitService {
    */
   public boolean clearWorkingTree(String repoPath) {
     Utils.runSystemCommand(repoPath, "git", "reset", "--hard");
-    String status = Utils.runSystemCommand(repoPath, "git", "status", "--porcelain", "-uall");
-    if (status.isEmpty()) {
-      // working tree clean
-      return true;
-    } else {
-      return false;
-    }
+    String status =
+        Utils.runSystemCommand(
+            repoPath, "git", "status", "--porcelain", "-uall");
+    // working tree clean if empty
+    return status.isEmpty();
   }
 
   @Override
