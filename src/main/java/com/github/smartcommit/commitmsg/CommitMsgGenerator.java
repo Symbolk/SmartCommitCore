@@ -263,7 +263,7 @@ public class CommitMsgGenerator {
   // get top2Index: Operation and typeFrom both as identifier
   private List<Integer> getTop2Index(List<Action> Actions) {
     int sizeActions = Actions.size();
-    int count[] = new int[sizeActions];
+    int[] count = new int[sizeActions];
     for (int i = 0; i < sizeActions; i++) {
       Operation operation = Actions.get(i).getOperation();
       String typeFrom = Actions.get(i).getTypeFrom();
