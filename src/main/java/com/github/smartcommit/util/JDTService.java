@@ -155,14 +155,18 @@ public class JDTService {
    * @param node
    * @return
    */
-  public InterfaceInfo createInterfaceInfo(TypeDeclaration node) {
+  public InterfaceInfo createInterfaceInfo(Integer fileIndex, TypeDeclaration node) {
     InterfaceInfo interfaceInfo = new InterfaceInfo();
     interfaceInfo.name = node.getName().getFullyQualifiedName();
+    interfaceInfo.fileIndex = fileIndex;
     interfaceInfo.fullName = NameResolver.getFullName(node);
     interfaceInfo.visibility = getVisibility(node);
     List<Type> superInterfaceList = node.superInterfaceTypes();
-    for (Type superInterface : superInterfaceList)
+    for (Type superInterface : superInterfaceList) {
       interfaceInfo.superInterfaceTypeList.add(NameResolver.getFullName(superInterface));
+    }
+
+    interfaceInfo.typeUses.addAll(interfaceInfo.superInterfaceTypeList);
     //    if (node.getJavadoc() != null){
     //      interfaceInfo.comment =
     //          sourceContent.substring(
@@ -201,8 +205,9 @@ public class JDTService {
    * @param node
    * @return
    */
-  public ClassInfo createClassInfo(TypeDeclaration node) {
+  public ClassInfo createClassInfo(Integer fileIndex, TypeDeclaration node) {
     ClassInfo classInfo = new ClassInfo();
+    classInfo.fileIndex = fileIndex;
     classInfo.name = node.getName().getFullyQualifiedName();
     classInfo.fullName = NameResolver.getFullName(node);
     classInfo.visibility = getVisibility(node);
@@ -226,7 +231,10 @@ public class JDTService {
     //          sourceContent.substring(
     //              node.getStartPosition(), node.getStartPosition() + node.getLength());
     List<String> annotationUses = getAnnotationUses(node.modifiers());
+
     classInfo.typeUses.addAll(annotationUses);
+    classInfo.typeUses.add(classInfo.superClassType);
+    classInfo.typeUses.addAll(classInfo.superInterfaceTypeList);
     return classInfo;
   }
 
@@ -236,8 +244,9 @@ public class JDTService {
    * @param node
    * @return
    */
-  public EnumInfo createEnumInfo(EnumDeclaration node) {
+  public EnumInfo createEnumInfo(Integer fileIndex, EnumDeclaration node) {
     EnumInfo enumInfo = new EnumInfo();
+    enumInfo.fileIndex = fileIndex;
     enumInfo.name = node.getName().getFullyQualifiedName();
     enumInfo.fullName = NameResolver.getFullName(node);
     enumInfo.visibility = getVisibility(node);
@@ -371,6 +380,7 @@ public class JDTService {
   public InitializerInfo createInitializerInfo(
       Integer fileIndex, Initializer node, String belongTo) {
     InitializerInfo info = new InitializerInfo();
+    info.fileIndex = fileIndex;
     info.isStatic = isStatic(node);
     info.belongTo = belongTo;
     if (node.getJavadoc() != null) {
@@ -1189,9 +1199,11 @@ public class JDTService {
         if (constructorBinding != null) {
           entityInfo.typeUses.add(constructorBinding.getDeclaringClass().getQualifiedName());
         }
-        List<Expression> arguments = ((ConstructorInvocation) statement).arguments();
-        for (Expression exp : arguments) {
-          parseExpression(entityInfo, exp);
+        if (statement instanceof ConstructorInvocation) {
+          List<Expression> arguments = ((ConstructorInvocation) statement).arguments();
+          for (Expression exp : arguments) {
+            parseExpression(entityInfo, exp);
+          }
         }
       }
     }

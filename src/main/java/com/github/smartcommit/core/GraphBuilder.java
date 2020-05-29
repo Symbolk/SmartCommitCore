@@ -6,6 +6,7 @@ import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.EntityPool;
 import com.github.smartcommit.model.constant.Version;
+import com.github.smartcommit.model.entity.DeclarationInfo;
 import com.github.smartcommit.model.entity.FieldInfo;
 import com.github.smartcommit.model.entity.HunkInfo;
 import com.github.smartcommit.model.entity.MethodInfo;
@@ -157,6 +158,36 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       methodBindingMap.put(methodInfo.methodBinding, methodInfo);
     }
 
+    // 0. edges from type/interface/enum/annotation declaration
+    Map<String, DeclarationInfo> topDecMap = new HashMap<>();
+    topDecMap.putAll(entityPool.classInfoMap);
+    topDecMap.putAll(entityPool.interfaceInfoMap);
+    topDecMap.putAll(entityPool.enumInfoMap);
+    topDecMap.putAll(entityPool.annotationInfoMap);
+    for (DeclarationInfo info : topDecMap.values()) {
+      // method invocation
+      for (IMethodBinding methodCall : info.methodCalls) {
+        MethodInfo targetMethodInfo = methodBindingMap.get(methodCall);
+        if (targetMethodInfo != null) {
+          createEdge(info.node, targetMethodInfo.node, EdgeType.CALL);
+        }
+      }
+
+      // field access
+      for (String fieldUse : info.fieldUses) {
+        FieldInfo targetFieldInfo = fieldDecMap.get(fieldUse);
+        if (targetFieldInfo != null) {
+          createEdge(info.node, targetFieldInfo.node, EdgeType.ACCESS);
+        }
+      }
+      // extends and implements
+      for (String type : info.typeUses) {
+        Optional<Node> typeDecNode = findTypeNode(type, info.fileIndex);
+        typeDecNode.ifPresent(node -> createEdge(info.node, node, EdgeType.INITIALIZE));
+      }
+    }
+
+    // member declarations
     // 1. edges from method declaration
     for (MethodInfo methodInfo : methodDecMap.values()) {
       Node methodDeclNode = methodInfo.node;
@@ -318,6 +349,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
       return Optional.of(entityPool.enumInfoMap.get(type).node);
     }
 
+    // import must be within the same file
     if (entityPool.importInfoMap.containsKey(fileIndex)) {
       // qualified type
       Map<String, HunkInfo> type2HunkMap = entityPool.importInfoMap.get(fileIndex);
@@ -481,7 +513,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
               } else {
                 nodeOpt =
                     findNodeByNameAndType(
-                        ((TypeDeclaration) astNode).getName().getIdentifier(),
+                        ((AbstractTypeDeclaration) astNode).getName().getIdentifier(),
                         NodeType.ENUM,
                         false);
               }

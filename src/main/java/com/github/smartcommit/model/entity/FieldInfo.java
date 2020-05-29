@@ -1,7 +1,5 @@
 package com.github.smartcommit.model.entity;
 
-import com.github.smartcommit.model.graph.Node;
-
 import java.util.Set;
 
 public class FieldInfo extends DeclarationInfo {
@@ -14,9 +12,6 @@ public class FieldInfo extends DeclarationInfo {
   public boolean isStatic;
   public boolean isFinal;
   public String comment = "";
-
-  // corresponding node in the graph
-  public Node node;
 
   public String uniqueName() {
     return belongTo + ":" + name;
