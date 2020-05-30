@@ -418,9 +418,11 @@ public class GroupGenerator {
           groupedDiffHunkIDs.add(id);
         }
       }
-      Group group = new Group(repoID, repoName, groupID, filteredIDs, intent);
-      group.setCommitMsg(intent.label);
-      generatedGroups.put(groupID, group);
+      if (!filteredIDs.isEmpty()) {
+        Group group = new Group(repoID, repoName, groupID, filteredIDs, intent);
+        group.setCommitMsg(intent.label);
+        generatedGroups.put(groupID, group);
+      }
     }
   }
 

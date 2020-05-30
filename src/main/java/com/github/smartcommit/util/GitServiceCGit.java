@@ -274,6 +274,7 @@ public class GitServiceCGit implements GitService {
                 "git",
                 "diff",
                 "-U0",
+                "--",
                 diffFile.getBaseRelativePath()));
       }
     }
