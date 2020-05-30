@@ -3,6 +3,7 @@ package com.github.smartcommit.util;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +46,7 @@ public interface GitService {
    * @param relativePath
    * @return
    */
-  String getContentAtHEAD(String repoDir, String relativePath);
+  String getContentAtHEAD(Charset charset, String repoDir, String relativePath);
 
   /**
    * Get the file content at one specific commit
@@ -53,7 +54,7 @@ public interface GitService {
    * @param relativePath
    * @returnØØ
    */
-  String getContentAtCommit(String repoDir, String relativePath, String commitID);
+  String getContentAtCommit(Charset charset, String repoDir, String relativePath, String commitID);
 
   /**
    * Get the name of the author of a commit

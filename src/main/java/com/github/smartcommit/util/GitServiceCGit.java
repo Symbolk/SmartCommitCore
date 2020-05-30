@@ -64,7 +64,7 @@ public class GitServiceCGit implements GitService {
                   charset,
                   relativePath,
                   relativePath,
-                  getContentAtHEAD(repoPath, relativePath),
+                  getContentAtHEAD(charset, repoPath, relativePath),
                   Utils.readFileToString(absolutePath));
           break;
         case ADDED:
@@ -90,7 +90,7 @@ public class GitServiceCGit implements GitService {
                   Charset.defaultCharset(),
                   relativePath,
                   "",
-                  getContentAtHEAD(repoPath, relativePath),
+                  getContentAtHEAD(charset, repoPath, relativePath),
                   "");
           break;
         case RENAMED:
@@ -109,7 +109,7 @@ public class GitServiceCGit implements GitService {
                     charset,
                     oldPath,
                     newPath,
-                    getContentAtHEAD(repoPath, oldPath),
+                    getContentAtHEAD(charset, repoPath, oldPath),
                     Utils.readFileToString(newAbsPath));
           } else if (temp.length == 3) {
             // CXX/RXX aaa bbb
@@ -125,7 +125,7 @@ public class GitServiceCGit implements GitService {
                     charset,
                     oldPath,
                     newPath,
-                    getContentAtHEAD(repoPath, oldPath),
+                    getContentAtHEAD(charset, repoPath, oldPath),
                     Utils.readFileToString(newAbsPath));
           }
           break;
@@ -186,8 +186,8 @@ public class GitServiceCGit implements GitService {
                   charset,
                   relativePath,
                   relativePath,
-                  getContentAtCommit(repoPath, relativePath, commitID + "~"),
-                  getContentAtCommit(repoPath, relativePath, commitID));
+                  getContentAtCommit(charset, repoPath, relativePath, commitID + "~"),
+                  getContentAtCommit(charset, repoPath, relativePath, commitID));
           break;
         case ADDED:
         case UNTRACKED:
@@ -200,7 +200,7 @@ public class GitServiceCGit implements GitService {
                   "",
                   relativePath,
                   "",
-                  getContentAtCommit(repoPath, relativePath, commitID));
+                  getContentAtCommit(charset, repoPath, relativePath, commitID));
           break;
         case DELETED:
           diffFile =
@@ -211,7 +211,7 @@ public class GitServiceCGit implements GitService {
                   charset,
                   relativePath,
                   "",
-                  getContentAtCommit(repoPath, relativePath, commitID + "~"),
+                  getContentAtCommit(charset, repoPath, relativePath, commitID + "~"),
                   "");
           break;
         case RENAMED:
@@ -228,8 +228,8 @@ public class GitServiceCGit implements GitService {
                     charset,
                     oldPath,
                     newPath,
-                    getContentAtCommit(repoPath, oldPath, commitID + "~"),
-                    getContentAtCommit(repoPath, newPath, commitID));
+                    getContentAtCommit(charset, repoPath, oldPath, commitID + "~"),
+                    getContentAtCommit(charset, repoPath, newPath, commitID));
           } else if (temp.length == 3) {
             // CXX/RXX aaa bbb
             String oldPath = temp[1];
@@ -242,8 +242,8 @@ public class GitServiceCGit implements GitService {
                     charset,
                     oldPath,
                     newPath,
-                    getContentAtCommit(repoPath, oldPath, commitID + "~"),
-                    getContentAtCommit(repoPath, newPath, commitID));
+                    getContentAtCommit(charset, repoPath, oldPath, commitID + "~"),
+                    getContentAtCommit(charset, repoPath, newPath, commitID));
           }
           break;
         default:
@@ -503,9 +503,8 @@ public class GitServiceCGit implements GitService {
    * @return
    */
   @Override
-  public String getContentAtHEAD(String repoDir, String relativePath) {
-    return Utils.runSystemCommand(
-        repoDir, Charset.defaultCharset(), "git", "show", "HEAD:" + relativePath);
+  public String getContentAtHEAD(Charset charset, String repoDir, String relativePath) {
+    return Utils.runSystemCommand(repoDir, charset, "git", "show", "HEAD:" + relativePath);
   }
 
   /**
@@ -515,9 +514,9 @@ public class GitServiceCGit implements GitService {
    * @returnØØ
    */
   @Override
-  public String getContentAtCommit(String repoDir, String relativePath, String commitID) {
-    return Utils.runSystemCommand(
-        repoDir, Charset.defaultCharset(), "git", "show", commitID + ":" + relativePath);
+  public String getContentAtCommit(
+      Charset charset, String repoDir, String relativePath, String commitID) {
+    return Utils.runSystemCommand(repoDir, charset, "git", "show", commitID + ":" + relativePath);
   }
 
   /**
