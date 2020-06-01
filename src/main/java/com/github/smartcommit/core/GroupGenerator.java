@@ -441,16 +441,21 @@ public class GroupGenerator {
   }
 
   /**
-   * Create new group by appending after the current generateGroups
+   * Create a new group to group all diff hunk ids
    *
    * @param diffHunkIDs
    */
-  private void createGroup(Map<String, Group> groups, Set<String> diffHunkIDs, GroupLabel intent) {
+  private String createGroup(
+      Map<String, Group> groups, Set<String> diffHunkIDs, GroupLabel intent) {
     if (!diffHunkIDs.isEmpty()) {
       String groupID = "group" + groups.size();
       Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs), intent);
-      group.setCommitMsg(intent.label);
+      group.setCommitMsg(intent.toString().toLowerCase() + ": " + intent.label + " ...");
       groups.put(groupID, group);
+      return groupID;
+    }
+    return "";
+  }
 
   /** Add an individual diff hunk to its nearest group */
   private void assignIndividuals(
