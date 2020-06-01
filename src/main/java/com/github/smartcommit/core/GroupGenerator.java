@@ -582,7 +582,8 @@ public class GroupGenerator {
    */
   private double estimateSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
     // ignore special cases: imports, empty, blank_lines
-    if (diffHunk.getFileType().equals(FileType.JAVA)) {
+    if (diffHunk.getFileType().equals(FileType.JAVA)
+        && diffHunk1.getFileType().equals(FileType.JAVA)) {
       if (diffHunk.getBaseHunk().getContentType().equals(ContentType.CODE)
           || diffHunk.getCurrentHunk().getContentType().equals(ContentType.CODE)) {
         // TODO check length to early stop, avoid too low similarity computation
