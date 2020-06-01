@@ -14,7 +14,6 @@ import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringType;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -604,7 +603,10 @@ public class Utils {
    * @return
    */
   public static double computeListSimilarity(List<Action> list1, List<Action> list2) {
-    if (list1.size() == 0 || list2.size() == 0) {
+    if (list1.isEmpty() && list2.isEmpty()) {
+      return 1D;
+    }
+    if (list1.isEmpty() || list2.isEmpty()) {
       return 0D;
     }
     return jaccard(new HashSet(list1), new HashSet(list2));
