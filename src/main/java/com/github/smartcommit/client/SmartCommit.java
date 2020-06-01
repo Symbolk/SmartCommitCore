@@ -411,7 +411,7 @@ public class SmartCommit {
   }
 
   /**
-   * Step0: Invoke maven to compile the version group by group, and return the error message
+   * Invoke maven to compile the version group by group, and return the error message
    *
    * @return groupID:compilation output
    */
@@ -435,9 +435,7 @@ public class SmartCommit {
     return id2MavenOut;
   }
 
-  /**
-   * Step1: get Indexes and Nodes from diffHunk
-   */
+  /** Get Indexes and Nodes from diffHunk */
   public void generateHunkIndexes() {
     for (Map.Entry<String, DiffHunk> entry : id2DiffHunkMap.entrySet()) {
       DiffHunk diffHunk = entry.getValue();
@@ -476,7 +474,7 @@ public class SmartCommit {
   }
 
   /**
-   * Step2: Parse errors from maven output
+   * Parse errors from maven output
    *
    * @param compileOut
    * @return MavenError
@@ -557,7 +555,7 @@ public class SmartCommit {
   }
 
   /**
-   * Step 4/5 find Index according to MavenError
+   * Find Index according to MavenError
    *
    * @param mavenError
    * @return List<HunkIndex>
@@ -579,7 +577,7 @@ public class SmartCommit {
   }
 
   /**
-   * Step 6/7 adjust Hunk in group
+   * Adjust Hunk in group
    *
    * @param hunkIndexes
    * @param group

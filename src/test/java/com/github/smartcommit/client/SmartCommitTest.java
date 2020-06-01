@@ -1,11 +1,47 @@
 package com.github.smartcommit.client;
 
 import com.github.smartcommit.compilation.MavenError;
-import org.apache.commons.lang3.tuple.Pair;
+import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 class SmartCommitTest {
+
+  String repoName = "SmartCommitMaven";
+  String repoPath = "/Users/Chuncen/IdeaProjects/SmartCommitMaven";
+  String repoID = String.valueOf(repoName.hashCode());
+  SmartCommit smartCommit = new SmartCommit(repoID, repoName, repoPath, "~/Downloads");
+
+  @Test
+  void testCompileWithMaven() throws Exception {
+    smartCommit.analyzeWorkingFiles();
+    smartCommit.generateHunkIndexes();
+    Map<String, String> id2MavenOut = new HashMap<>();
+    id2MavenOut = smartCommit.compileWithMaven();
+    assertNotNull(id2MavenOut);
+  }
+
+  @Test
+  void testParseMavenErrors() {
+    String compileOut =
+            "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[3,36] package com.github.smartcommit.model does not exist\n"
+                    + "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[5,24] package org.apache.log4j does not exist\n"
+                    + "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[13,24] cannot find symbol\n"
+                    + "  symbol:   class Logger\n"
+                    + "  location: class com.github.smartcommit.util.JDTParser\n"
+                    + "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[28,64] cannot find symbol\n"
+                    + "  symbol:   class DiffFile\n"
+                    + "  location: class com.github.smartcommit.util.JDTParser";
+    List<MavenError> errors = new ArrayList<>();
+    errors = smartCommit.parseMavenErrors(compileOut);
+    assertEquals("Logger", errors.get(0).getSymbol());
+  }
 
   public static void main(String[] args) throws Exception {
 
@@ -14,82 +50,21 @@ class SmartCommitTest {
     String repoID = String.valueOf(repoName.hashCode());
     SmartCommit smartCommit = new SmartCommit(repoID, repoName, repoPath, "~/Downloads");
 
-
     smartCommit.analyzeWorkingTree();
+    smartCommit.generateHunkIndexes();
 
-    // smartCommit.buildTrie();
-
-    smartCommit.generateIndexesFromDiffHunk();
-
-    smartCommit.compileWithMaven();
-    String groupID = "Compiling Working Tree";
-    List<MavenError> mavenErrors = smartCommit.parseMavenErrors(groupID);
-    for(MavenError mavenError : mavenErrors) {
-      System.out.println(mavenError);
-      Pair<Integer, Integer> pair = smartCommit.findIndexPairFromMavenError(mavenError);
-      if(pair == null) System.out.println("Not Found");
-      else {
-        System.out.println("fileIndex " + pair.getLeft());
-        System.out.println("index " + pair.getRight());
-      }
-
-    }
-
-    /*
-    String commands = "mvn compile";
-    try {
-      StringBuilder builder = new StringBuilder();
-      Runtime rt = Runtime.getRuntime();
-      Process proc = rt.exec(commands, null, new File(repoPath));
-      BufferedReader stdInput = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-      BufferedReader stdError = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
-      String s = null;
-      while ((s = stdInput.readLine()) != null) {
-        builder.append(s);
-        builder.append("\n");
-        //                if (verbose) log(s);
-      }
-      while ((s = stdError.readLine()) != null) {
-        builder.append(s);
-        builder.append("\n");
-        //                if (verbose) log(s);
-      }
-      System.out.println(builder.toString());
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-
-     */
-
-/*
-
-// compile with Maven
-    Map<String, String> compileResult = smartCommit.compileWithMaven();
-    System.out.println(compileResult.toString());
-    // parse Maven Errors
-    for (Map.Entry<String, String> entry : compileResult.entrySet()) {
+    Map<String, String> id2MavenOut = smartCommit.compileWithMaven();
+    for (Map.Entry<String, String> entry : id2MavenOut.entrySet()) {
       String groupId = entry.getKey();
-      String groupResult = entry.getValue();
-      System.out.println(groupResult);
+      String mavenOut = entry.getValue();
+      // find errors
+      List<MavenError> errors = smartCommit.parseMavenErrors(mavenOut);
+      // minimize errors
+      errors = smartCommit.fixMavenErrors(groupId, errors);
+      // print errors
       System.out.println("GroupID: " + groupId);
-      System.out.println(smartCommit.parseMavenErrors(groupId).toString());
-      break;
+      if (errors.isEmpty()) System.out.println("No error");
+      else System.out.println(errors.toString());
     }
-     */
-
-
-
-    /*
-    String compileOut ="[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[3,36] package com.github.smartcommit.model does not exist\n" +
-      "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[5,24] package org.apache.log4j does not exist\n" +
-      "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[13,24] cannot find symbol\n" +
-      "  symbol:   class Logger\n" +
-      "  location: class com.github.smartcommit.util.JDTParser\n" +
-      "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[28,64] cannot find symbol\n" +
-      "  symbol:   class DiffFile\n" +
-      "  location: class com.github.smartcommit.util.JDTParser";
-    System.out.println(smartCommit.parseMavenErrors(compileOut).toString());
-
-     */
   }
 }
