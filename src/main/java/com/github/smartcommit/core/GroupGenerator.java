@@ -269,7 +269,16 @@ public class GroupGenerator {
     return defUseLinks;
   }
 
+  /**
+   * DFS to find all nodes point to the current in diff hunks
+   *
+   * @param graph
+   * @param node
+   * @param visited
+   * @return
+   */
   private List<String> analyzeDef(Graph<Node, Edge> graph, Node node, HashSet<Node> visited) {
+    //    Graphs.predecessorListOf()
     List<String> res = new ArrayList<>();
     Set<Edge> inEdges =
         graph.incomingEdgesOf(node).stream()
@@ -293,6 +302,14 @@ public class GroupGenerator {
     return res;
   }
 
+  /**
+   * DFS to find all nodes that start from the current in diff hunks
+   *
+   * @param graph
+   * @param node
+   * @param visited
+   * @return
+   */
   private List<String> analyzeUse(Graph<Node, Edge> graph, Node node, HashSet<Node> visited) {
     List<String> res = new ArrayList<>();
     Set<Edge> outEdges =
@@ -404,7 +421,7 @@ public class GroupGenerator {
     }
   }
   /**
-   * Create new group by appending after the current generateGroups
+   * Create a new group to group all diff hunk ids
    *
    * @param diffHunkIDs
    */
@@ -420,7 +437,7 @@ public class GroupGenerator {
       }
       if (!filteredIDs.isEmpty()) {
         Group group = new Group(repoID, repoName, groupID, filteredIDs, intent);
-        group.setCommitMsg(intent.label);
+        group.setCommitMsg(intent.toString().toLowerCase() + ":" + intent.label + " ...");
         generatedGroups.put(groupID, group);
       }
     }

@@ -27,7 +27,7 @@ import org.jgrapht.Graph;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -430,7 +430,7 @@ public class SmartCommit {
 
     // mvnPath must be specified
     String groupId = "Compiling Working Tree";
-    String log = Utils.runSystemCommand(repoPath, Charset.defaultCharset(), "mvn", "compile");
+    String log = Utils.runSystemCommand(repoPath, StandardCharsets.UTF_8, "mvn", "compile");
 
     compileInfos.put(groupId, log);
     result.put(groupId, log);
