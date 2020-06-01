@@ -697,7 +697,7 @@ public class JDTService {
             // use a temp MethodInfo to collect information
             MethodInfo temp = new MethodInfo();
             temp.name = "CATCH";
-            parseMethodBody(temp, (Block) catchClause.getBody());
+            parseMethodBody(temp, catchClause.getBody());
             info.typeUses.addAll(temp.typeUses);
             info.fieldUses.addAll(temp.fieldUses);
             info.methodCalls.addAll(temp.methodCalls);
@@ -734,6 +734,18 @@ public class JDTService {
         for (Expression exp : arguments) {
           parseExpression(info, exp);
         }
+      }
+
+      if (statement.getNodeType() == ASTNode.SYNCHRONIZED_STATEMENT) {
+        SynchronizedStatement syncSt = ((SynchronizedStatement) statement);
+        parseExpression(info, syncSt.getExpression());
+
+        MethodInfo temp = new MethodInfo();
+        temp.name = "SYNC";
+        parseMethodBody(temp, syncSt.getBody());
+        info.typeUses.addAll(temp.typeUses);
+        info.fieldUses.addAll(temp.fieldUses);
+        info.methodCalls.addAll(temp.methodCalls);
       }
     }
   }
@@ -863,7 +875,7 @@ public class JDTService {
             // use a temp MethodInfo to collect information
             MethodInfo temp = new MethodInfo();
             temp.name = "CATCH";
-            parseMethodBody(temp, (Block) catchClause.getBody());
+            parseMethodBody(temp, catchClause.getBody());
             methodInfo.typeUses.addAll(temp.typeUses);
             methodInfo.fieldUses.addAll(temp.fieldUses);
             methodInfo.methodCalls.addAll(temp.methodCalls);
@@ -900,6 +912,18 @@ public class JDTService {
         for (Expression exp : arguments) {
           parseExpression(methodInfo, exp);
         }
+      }
+
+      if (statement.getNodeType() == ASTNode.SYNCHRONIZED_STATEMENT) {
+        SynchronizedStatement syncSt = ((SynchronizedStatement) statement);
+        parseExpressionInMethod(methodInfo, syncSt.getExpression());
+
+        MethodInfo temp = new MethodInfo();
+        temp.name = "SYNC";
+        parseMethodBody(temp, syncSt.getBody());
+        methodInfo.typeUses.addAll(temp.typeUses);
+        methodInfo.fieldUses.addAll(temp.fieldUses);
+        methodInfo.methodCalls.addAll(temp.methodCalls);
       }
     }
   }
@@ -1166,7 +1190,7 @@ public class JDTService {
             // use a temp MethodInfo to collect information
             MethodInfo methodInfo = new MethodInfo();
             methodInfo.name = "CATCH";
-            parseMethodBody(methodInfo, (Block) catchClause.getBody());
+            parseMethodBody(methodInfo, catchClause.getBody());
             entityInfo.typeUses.addAll(methodInfo.typeUses);
             entityInfo.fieldUses.addAll(methodInfo.fieldUses);
             entityInfo.methodCalls.addAll(methodInfo.methodCalls);
@@ -1205,6 +1229,18 @@ public class JDTService {
             parseExpression(entityInfo, exp);
           }
         }
+      }
+
+      if (statement.getNodeType() == ASTNode.SYNCHRONIZED_STATEMENT) {
+        SynchronizedStatement syncSt = ((SynchronizedStatement) statement);
+        parseExpression(entityInfo, syncSt.getExpression());
+
+        MethodInfo temp = new MethodInfo();
+        temp.name = "SYNC";
+        parseMethodBody(temp, syncSt.getBody());
+        entityInfo.typeUses.addAll(temp.typeUses);
+        entityInfo.fieldUses.addAll(temp.fieldUses);
+        entityInfo.methodCalls.addAll(temp.methodCalls);
       }
     }
   }
