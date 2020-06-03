@@ -37,7 +37,7 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.util.GitServiceImpl;
 
 import java.io.File;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -68,7 +68,7 @@ public class CommitInfoHandler {
   // Split "git commit"
   public static boolean CommitsCollector(
       String REPO_DIR, List<CommitTrainingSample> commitTrainingSample) {
-    String log = Utils.runSystemCommand(REPO_DIR, Charset.defaultCharset(), "git", "log");
+    String log = Utils.runSystemCommand(REPO_DIR, StandardCharsets.UTF_8, "git", "log");
     String[] parts = log.split("\\ncommit ");
     parts[0] = parts[0].substring("commit ".length());
     for (String part : parts) {

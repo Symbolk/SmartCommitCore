@@ -13,6 +13,7 @@ import com.github.smartcommit.util.diffparser.api.model.Line;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,13 +28,13 @@ public class GitServiceCGit implements GitService {
   public ArrayList<DiffFile> getChangedFilesInWorkingTree(String repoPath) {
     // unstage the staged files first
     //    Utils.runSystemCommand(repoPath, "git", "restore", "--staged", ".");
-    Utils.runSystemCommand(repoPath, Charset.defaultCharset(), "git", "reset", "HEAD", ".");
+    Utils.runSystemCommand(repoPath, StandardCharsets.UTF_8, "git", "reset", "HEAD", ".");
 
     ArrayList<DiffFile> diffFileList = new ArrayList<>();
     // run git status --porcelain to get changeset
     String output =
         Utils.runSystemCommand(
-            repoPath, Charset.defaultCharset(), "git", "status", "--porcelain", "-uall");
+            repoPath, StandardCharsets.UTF_8, "git", "status", "--porcelain", "-uall");
     // early return
     if (output.isEmpty()) {
       // working tree clean
@@ -52,7 +53,7 @@ public class GitServiceCGit implements GitService {
       String absolutePath = repoPath + File.separator + relativePath;
       FileStatus status = Utils.convertSymbolToStatus(symbol);
       DiffFile DiffFile = null;
-      Charset charset = Charset.defaultCharset();
+      Charset charset = StandardCharsets.UTF_8;
       switch (status) {
         case MODIFIED:
           charset = Utils.detectCharset(absolutePath);
@@ -87,7 +88,7 @@ public class GitServiceCGit implements GitService {
                   fileIndex++,
                   status,
                   fileType,
-                  Charset.defaultCharset(),
+                  StandardCharsets.UTF_8,
                   relativePath,
                   "",
                   getContentAtHEAD(charset, repoPath, relativePath),
@@ -152,7 +153,7 @@ public class GitServiceCGit implements GitService {
     String output =
         Utils.runSystemCommand(
             repoPath,
-            Charset.defaultCharset(),
+            StandardCharsets.UTF_8,
             "git",
             "diff",
             "--name-status",
@@ -175,7 +176,7 @@ public class GitServiceCGit implements GitService {
       //                        String absolutePath = repoDir + File.separator + relativePath;
       FileStatus status = Utils.convertSymbolToStatus(symbol);
       DiffFile diffFile = null;
-      Charset charset = Charset.defaultCharset();
+      Charset charset = StandardCharsets.UTF_8;
       switch (status) {
         case MODIFIED:
           diffFile =
@@ -261,7 +262,7 @@ public class GitServiceCGit implements GitService {
   public List<DiffHunk> getDiffHunksInWorkingTree(String repoPath, List<DiffFile> diffFiles) {
     // unstage the staged files first
     //    Utils.runSystemCommand(repoPath, "git", "reset", "--mixed");
-    Utils.runSystemCommand(repoPath, Charset.defaultCharset(), "git", "reset", "HEAD", ".");
+    Utils.runSystemCommand(repoPath, StandardCharsets.UTF_8, "git", "reset", "HEAD", ".");
     // git diff + git diff --cached/staged == git diff HEAD (show all the changes since last commit
     // String diffOutput = Utils.runSystemCommand(repoPath, "git", "diff", "HEAD", "-U0");
     StringBuilder diffOutput = new StringBuilder();
@@ -479,14 +480,7 @@ public class GitServiceCGit implements GitService {
     // on Windows the ~ character must be used instead of ^
     String diffOutput =
         Utils.runSystemCommand(
-            repoPath,
-            Charset.defaultCharset(),
-            "git",
-            "diff",
-            "-U0",
-            "-w",
-            commitID + "~",
-            commitID);
+            repoPath, StandardCharsets.UTF_8, "git", "diff", "-U0", "-w", commitID + "~", commitID);
     List<Diff> diffs = new ArrayList<>();
     if (!diffOutput.trim().isEmpty()) {
       // with -U0 (no context lines), the generated patch cannot be applied successfully
@@ -545,10 +539,10 @@ public class GitServiceCGit implements GitService {
    * @param repoPath
    */
   public boolean clearWorkingTree(String repoPath) {
-    Utils.runSystemCommand(repoPath, Charset.defaultCharset(), "git", "reset", "--hard");
+    Utils.runSystemCommand(repoPath, StandardCharsets.UTF_8, "git", "reset", "--hard");
     String status =
         Utils.runSystemCommand(
-            repoPath, Charset.defaultCharset(), "git", "status", "--porcelain", "-uall");
+            repoPath, StandardCharsets.UTF_8, "git", "status", "--porcelain", "-uall");
     // working tree clean if empty
     return status.isEmpty();
   }
@@ -559,7 +553,7 @@ public class GitServiceCGit implements GitService {
     // git log -1 --format='%an' HASH
     // git show -s --format='%an' HASH
     return Utils.runSystemCommand(
-            repoDir, Charset.defaultCharset(), "git", "show", "-s", "--format='%an'", commitID)
+            repoDir, StandardCharsets.UTF_8, "git", "show", "-s", "--format='%an'", commitID)
         .trim()
         .replaceAll("'", "");
   }
@@ -569,7 +563,7 @@ public class GitServiceCGit implements GitService {
     // git log -1 --format='%ae' HASH
     // git show -s --format='%ae' HASH
     return Utils.runSystemCommand(
-            repoDir, Charset.defaultCharset(), "git", "show", "-s", "--format='%ae'", commitID)
+            repoDir, StandardCharsets.UTF_8, "git", "show", "-s", "--format='%ae'", commitID)
         .trim()
         .replaceAll("'", "");
   }

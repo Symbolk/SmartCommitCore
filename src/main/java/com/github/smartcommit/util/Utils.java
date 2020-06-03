@@ -637,6 +637,6 @@ public class Utils {
     } catch (Exception ex) {
       ex.printStackTrace();
     }
-    return Charset.forName("UTF-8");
+    return StandardCharsets.UTF_8;
   }
 }
