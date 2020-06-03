@@ -461,15 +461,18 @@ public class CommitInfoHandler {
               List<List<String>> rawDiffsList = new ArrayList<>();
               for (int i = 0; i < diffHunks.size(); i++) {
                 DiffHunk diffHunk = diffHunks.get(i);
-                Integer num =
-                    diffHunk.getBaseEndLine()
-                        - diffHunk.getBaseStartLine()
-                        + diffHunk.getCurrentEndLine()
-                        - diffHunk.getCurrentStartLine();
-                if (num > 0) SumOfLinesAdded += num;
-                else if (num < 0) SumOfLinesDeleted += num;
-                else SumOfLinesAdded += num;
+                Integer num = diffHunk.getRawDiffs().size();
+                String changeType = diffHunk.getChangeType().label;
+                if (changeType.equals("Add")) {
+                  SumOfLinesAdded += num;
+                } else if (changeType.equals("Delete")) {
+                  SumOfLinesDeleted += num;
+                } else {
+                  num = num / 2;
+                  SumOfLinesModified += num;
+                }
                 SumOfLinesChanged += num;
+
                 if (FileType.equals("Java")) SumOfLinesChangedJava += num;
                 else if (FileType.equals("XML")) SumOfLinesChangedXML += num;
                 else SumOfLinesChangedOthers += num;
@@ -502,7 +505,7 @@ public class CommitInfoHandler {
 
             NumOfDiffFiles = diffFiles.size();
             NumOfDiffHunks = diffHunks.size();
-            AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
+            if (NumOfDiffHunks > 0) AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
 
             Files.add(addrAttr);
           }

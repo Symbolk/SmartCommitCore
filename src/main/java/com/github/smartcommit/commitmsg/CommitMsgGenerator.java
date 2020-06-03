@@ -106,22 +106,26 @@ public class CommitMsgGenerator {
           if (fileType.equals("Java")) NumOfDiffFilesModifiedJAVA += 1;
           else if (fileType.equals("XML")) NumOfDiffFilesModifiedXML += 1;
         }
-        Integer num =
-            diffHunk.getBaseEndLine()
-                - diffHunk.getBaseStartLine()
-                + diffHunk.getCurrentEndLine()
-                - diffHunk.getCurrentStartLine();
-        if (num > 0) SumOfLinesAdded += num;
-        else if (num < 0) SumOfLinesDeleted += num;
-        else SumOfLinesAdded += num;
+
+        Integer num = diffHunk.getRawDiffs().size();
+        String changeType = diffHunk.getChangeType().label;
+        if (changeType.equals("Add")) {
+          SumOfLinesAdded += num;
+        } else if (changeType.equals("Delete")) {
+          SumOfLinesDeleted += num;
+        } else {
+          num = num / 2;
+          SumOfLinesModified += num;
+        }
         SumOfLinesChanged += num;
+
         if (fileType.equals("Java")) SumOfLinesChangedJava += num;
         else if (fileType.equals("XML")) SumOfLinesChangedXML += num;
         else SumOfLinesChangedOthers += num;
       }
       NumOfDiffFiles = fileIDs.size();
       NumOfDiffHunks = diffHunks.size();
-      AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
+      if (NumOfDiffHunks > 0) AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
 
       vectors.set(AstSum + 0, NumOfDiffFiles);
       vectors.set(AstSum + 1, NumOfDiffFilesJava);
@@ -134,10 +138,12 @@ public class CommitMsgGenerator {
       vectors.set(AstSum + 8, NumOfDiffFilesModifiedXML);
       vectors.set(AstSum + 9, NumOfDiffHunks);
       vectors.set(AstSum + 10, AveLinesOfDiffHunks);
+
       vectors.set(AstSum + 11, SumOfLinesAdded);
       vectors.set(AstSum + 12, SumOfLinesDeleted);
       vectors.set(AstSum + 13, SumOfLinesModified);
       vectors.set(AstSum + 14, SumOfLinesChanged);
+
       vectors.set(AstSum + 15, SumOfLinesChangedJava);
       vectors.set(AstSum + 16, SumOfLinesChangedXML);
       vectors.set(AstSum + 17, SumOfLinesChangedOthers);
@@ -221,9 +227,7 @@ public class CommitMsgGenerator {
           else {
             if (!astActions.isEmpty())
               commitMsg +=
-                  astActions.get(0).getOperation().label
-                      + " "
-                      + astActions.get(0).getLabelFrom();
+                      astActions.get(0).getOperation().label + " " + astActions.get(0).getLabelFrom();
             else {
               commitMsg = "Chore - Modify code";
             }
