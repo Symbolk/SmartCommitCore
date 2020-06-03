@@ -86,7 +86,7 @@ public class Group {
   public String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append(intentLabel).append("\n");
-    //    builder.append(commitMsg).append("\n");
+    builder.append(commitMsg).append("\n");
     diffHunkIDs.forEach(diffHunk -> builder.append(diffHunk).append("\n"));
     return builder.toString();
   }
