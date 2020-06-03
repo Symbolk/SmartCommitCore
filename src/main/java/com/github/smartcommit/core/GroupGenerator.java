@@ -437,7 +437,7 @@ public class GroupGenerator {
       }
       if (!filteredIDs.isEmpty()) {
         Group group = new Group(repoID, repoName, groupID, filteredIDs, intent);
-        group.setCommitMsg(intent.toString().toLowerCase() + ":" + intent.label + " ...");
+        group.setCommitMsg(intent.toString().toLowerCase() + ": " + intent.label + " ...");
         generatedGroups.put(groupID, group);
       }
     }
