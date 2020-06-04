@@ -125,6 +125,7 @@ public class SmartCommit {
       }
       // save the results on disk
       exportGroupResults(results, tempDir);
+      exportGroupDetails(results, tempDir + File.separator + "details");
     }
 
     return results;
@@ -188,8 +189,8 @@ public class SmartCommit {
         executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
     Graph<Node, Edge> baseGraph = baseBuilder.get(60 * 10, TimeUnit.SECONDS);
     Graph<Node, Edge> currentGraph = currentBuilder.get(60 * 10, TimeUnit.SECONDS);
-//        String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
-//        String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
+    //        String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
+    //        String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
     executorService.shutdown();
 
     // analyze the diff hunks
@@ -360,10 +361,10 @@ public class SmartCommit {
       }
     }
 
-//    CommitMsgGenerator generator = new CommitMsgGenerator(astActions, refActions);
-//    List<Integer> vectors = generator.generateGroupVector();
-//    MsgClass msgClass = generator.invokeAIModel(vectors);
-//    return generator.generateDetailedMsgs(msgClass, group.getIntentLabel());
+    //    CommitMsgGenerator generator = new CommitMsgGenerator(astActions, refActions);
+    //    List<Integer> vectors = generator.generateGroupVector();
+    //    MsgClass msgClass = generator.invokeAIModel(vectors);
+    //    return generator.generateDetailedMsgs(msgClass, group.getIntentLabel());
     return new ArrayList<>();
   }
 

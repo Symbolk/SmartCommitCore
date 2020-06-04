@@ -421,13 +421,15 @@ public class Utils {
   }
 
   /**
-   * Convert a list of lines to one string without format (to compare)
+   * Convert a list of lines to one string without non-word characters
    *
    * @param list
    * @return
    */
   public static String convertListToStringNoFormat(List<String> list) {
-    return list.stream().map(str -> str.replaceAll("\\s+", "")).collect(Collectors.joining(""));
+    return list.stream()
+        .map(str -> str.replaceAll("\\W|[\\r?\\n]+", ""))
+        .collect(Collectors.joining(""));
   }
 
   /**
