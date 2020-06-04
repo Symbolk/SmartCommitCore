@@ -125,6 +125,7 @@ public class SmartCommit {
       }
       // save the results on disk
       exportGroupResults(results, tempDir);
+      exportGroupDetails(results, tempDir + File.separator + "details");
     }
 
     return results;
@@ -176,7 +177,7 @@ public class SmartCommit {
    * @param srcDirs
    * @return
    */
-  private Map<String, Group> analyze(
+  public Map<String, Group> analyze(
       List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs)
       throws ExecutionException, InterruptedException, TimeoutException {
 
@@ -196,10 +197,11 @@ public class SmartCommit {
         new GroupGenerator(
             repoID, repoName, srcDirs, diffFiles, allDiffHunks, baseGraph, currentGraph);
     generator.setMinSimilarity(similarityThreshold);
+    generator.setMaxDistance(distanceThreshold);
     generator.enableRefDetection(detectRefactorings);
     generator.processNonJavaChanges(processNonJavaChanges);
     generator.buildDiffGraph();
-    return generator.generateGroups(0.618);
+    return generator.generateGroups();
   }
 
   /**
@@ -357,11 +359,12 @@ public class SmartCommit {
         refActions.addAll(diffHunk.getRefActions());
       }
     }
-    return new ArrayList<>();
+
     //    CommitMsgGenerator generator = new CommitMsgGenerator(astActions, refActions);
     //    List<Integer> vectors = generator.generateGroupVector();
     //    MsgClass msgClass = generator.invokeAIModel(vectors);
     //    return generator.generateDetailedMsgs(msgClass, group.getIntentLabel());
+    return new ArrayList<>();
   }
 
   /**

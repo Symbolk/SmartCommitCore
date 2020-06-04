@@ -5,7 +5,7 @@ public enum GroupLabel {
   REFACTOR("Refactor"), // refactoring
   FIX("Fix"), // fix bugs
 
-  REFORMAT("Reformat code"), // blank character changes
+  REFORMAT("Reformat code"), // blank/special character changes
   DOC("Update document"),
   CONFIG("Change config file"),
   RESOURCE("Change resource file"),

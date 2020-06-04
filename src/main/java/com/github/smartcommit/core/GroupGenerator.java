@@ -196,8 +196,7 @@ public class GroupGenerator {
       DiffHunk diffHunk = diffHunks.get(i);
       // changes that does not actually change code and remove
       // reformat
-      if (Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet())
-          .equals(Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()))) {
+      if (checkReformatting(diffHunk)) {
         reformat.add(diffHunk);
         continue;
       }
@@ -358,7 +357,7 @@ public class GroupGenerator {
    * @return
    */
   public Map<String, Group> generateGroups() {
-//    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
+    //    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
 
     Map<String, Group> generatedGroups = new HashMap<>();
     Set<String> individuals = new LinkedHashSet<>();
@@ -848,6 +847,18 @@ public class GroupGenerator {
       }
     }
     return Optional.empty();
+  }
+
+  /**
+   * Check if a diff hunk only contains reformatting changes with whitespace, indentation,
+   * punctuation, etc.
+   *
+   * @param diffHunk
+   * @return
+   */
+  public boolean checkReformatting(DiffHunk diffHunk) {
+    return Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet())
+        .equals(Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()));
   }
 
   public void enableRefDetection(boolean enable) {
