@@ -3,6 +3,7 @@ package com.github.smartcommit.util;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,12 +31,13 @@ public class GitServiceJGit implements GitService {
   }
 
   @Override
-  public String getContentAtHEAD(String repoDir, String relativePath) {
+  public String getContentAtHEAD(Charset charset, String repoDir, String relativePath) {
     return null;
   }
 
   @Override
-  public String getContentAtCommit(String repoDir, String relativePath, String commitID) {
+  public String getContentAtCommit(
+      Charset charset, String repoDir, String relativePath, String commitID) {
     return null;
   }
 
