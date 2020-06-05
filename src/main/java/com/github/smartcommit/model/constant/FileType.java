@@ -12,8 +12,10 @@ public enum FileType {
   H(".h", "C Header"),
   MD(".md", "Markdown"),
   TXT(".txt", "Text"),
+  HTML(".html", "HTML"),
   XML(".xml", "XML"),
-  GRADLE(".gradle", "Groovy"),
+  YML(".yml", "YAML"),
+  GRADLE(".gradle", "Gradle"),
   PROP(".properties", "Properties"),
 
   BIN(".", "Binary"), // binary file
