@@ -1,6 +1,5 @@
 package com.github.smartcommit.util;
 
-import com.github.smartcommit.commitmsg.RefActionType;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.constant.ContentType;
 import com.github.smartcommit.model.constant.FileStatus;
@@ -10,10 +9,12 @@ import gr.uom.java.xmi.diff.CodeRange;
 import info.debatty.java.stringsimilarity.Cosine;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.mozilla.universalchardet.UniversalDetector;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringType;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,15 +33,17 @@ public class Utils {
    * @param commands
    * @return
    */
-  public static String runSystemCommand(String dir, String... commands) {
+  public static String runSystemCommand(String dir, Charset charSet, String... commands) {
     StringBuilder builder = new StringBuilder();
     try {
       Runtime rt = Runtime.getRuntime();
       Process proc = rt.exec(commands, null, new File(dir));
 
-      BufferedReader stdInput = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+      BufferedReader stdInput =
+          new BufferedReader(new InputStreamReader(proc.getInputStream(), charSet));
 
-      BufferedReader stdError = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+      BufferedReader stdError =
+          new BufferedReader(new InputStreamReader(proc.getErrorStream(), charSet));
 
       String s = null;
       while ((s = stdInput.readLine()) != null) {
@@ -278,15 +281,36 @@ public class Utils {
   }
 
   /**
-   * Check the file type by file path
+   * Check the file type by file path. Two ways to determine whether a file is binary: by git diff
+   * or by file -bI, the file must accessible on disk.
    *
    * @return
    */
-  public static FileType checkFileType(String filePath) {
-    return Arrays.stream(FileType.values())
-        .filter(fileType -> filePath.endsWith(fileType.extension))
-        .findFirst()
-        .orElse(FileType.OTHER);
+  public static FileType checkFileType(String repoPath, String filePath) {
+    //    String output = Utils.runSystemCommand(repoPath, StandardCharsets.UTF_8, "file", "-bI",
+    // filePath);
+    //    if(output.trim().endsWith("binary")){
+    //      return FileType.BIN;
+    //    }
+    String output =
+        Utils.runSystemCommand(
+            repoPath,
+            StandardCharsets.UTF_8,
+            "git",
+            "diff",
+            "--no-index",
+            "--numstat",
+            "/dev/null",
+            filePath);
+    if (output.trim().replaceAll("\\s+", "").startsWith("--")) {
+      return FileType.BIN;
+    } else {
+      // match type by extension
+      return Arrays.stream(FileType.values())
+          .filter(fileType -> filePath.endsWith(fileType.extension))
+          .findFirst()
+          .orElse(FileType.OTHER);
+    }
   }
 
   /**
@@ -454,20 +478,6 @@ public class Utils {
     }
     String TypeFrom = "";
     String TypeTo = "";
-    // tell apart from-to via order
-    boolean OnlyOne = true;
-    for (RefActionType refActionType : RefActionType.values()) {
-      if (displayName.contains(refActionType.label)) {
-        TypeFrom = refActionType.label;
-        if (OnlyOne) {
-          TypeTo = TypeFrom;
-          OnlyOne = false;
-        } else {
-          TypeTo = refActionType.label;
-          break;
-        }
-      }
-    }
     if (codeChangesTo.isEmpty()) {
       return new Action(operation, TypeFrom, codeChangeFrom.getCodeElement());
     } else {
@@ -622,5 +632,22 @@ public class Utils {
    */
   public static double formatDouble(double value) {
     return (double) Math.round(value * 100) / 100;
+  }
+
+  public static Charset detectCharset(String filePath) {
+    try {
+      Path fileLocation = Paths.get(filePath);
+      byte[] content = Files.readAllBytes(fileLocation);
+      UniversalDetector detector = new UniversalDetector(null);
+      detector.handleData(content, 0, content.length);
+      detector.dataEnd();
+      String detectorCode = detector.getDetectedCharset();
+      if (detectorCode != null && detectorCode.startsWith("GB")) {
+        return Charset.forName("GBK");
+      }
+    } catch (Exception ex) {
+      ex.printStackTrace();
+    }
+    return StandardCharsets.UTF_8;
   }
 }

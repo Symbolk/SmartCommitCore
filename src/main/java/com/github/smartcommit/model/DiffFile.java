@@ -4,6 +4,7 @@ import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.Version;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -13,7 +14,7 @@ public class DiffFile {
   private String repoID;
   private String repoName;
   private String fileID;
-
+  private Charset charset;
   private Integer index; // the index of the diff file in the current repo, start from 0
   private FileStatus status;
   private FileType fileType;
@@ -23,7 +24,7 @@ public class DiffFile {
   private String currentContent;
   private String description;
   private Map<String, DiffHunk> diffHunksMap;
-   private transient List<DiffHunk> diffHunks;
+  private transient List<DiffHunk> diffHunks;
   // lines from the raw output of git-diff (for patch generation)
   private List<String> rawHeaders = new ArrayList<>();
 
@@ -31,6 +32,7 @@ public class DiffFile {
       Integer index,
       FileStatus status,
       FileType fileType,
+      Charset charset,
       String baseRelativePath,
       String currentRelativePath,
       String baseContent,
@@ -38,6 +40,7 @@ public class DiffFile {
     this.index = index;
     this.status = status;
     this.fileType = fileType;
+    this.charset = charset;
     this.baseRelativePath = baseRelativePath;
     this.currentRelativePath = currentRelativePath;
     this.baseContent = baseContent;
@@ -84,6 +87,10 @@ public class DiffFile {
 
   public String getFileID() {
     return fileID;
+  }
+
+  public Charset getCharset() {
+    return charset;
   }
 
   public void setRepoID(String repoID) {
@@ -165,18 +172,19 @@ public class DiffFile {
    * @return
    */
   public DiffFile shallowClone() {
-    DiffFile diffFile =  new DiffFile(
-        repoID,
-        repoName,
-        fileID,
-        index,
-        status,
-        fileType,
-        baseRelativePath,
-        currentRelativePath,
-        "",
-        "",
-        diffHunksMap);
+    DiffFile diffFile =
+        new DiffFile(
+            repoID,
+            repoName,
+            fileID,
+            index,
+            status,
+            fileType,
+            baseRelativePath,
+            currentRelativePath,
+            "",
+            "",
+            diffHunksMap);
     diffFile.setRawHeaders(this.rawHeaders);
     return diffFile;
   }
