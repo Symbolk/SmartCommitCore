@@ -17,7 +17,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
 import org.jgrapht.Graph;
 
 import java.io.File;
@@ -56,7 +55,6 @@ public class SmartCommit {
     this.detectRefactorings = detectRefactorings;
   }
 
-
   public void setProcessNonJavaChanges(boolean processNonJavaChanges) {
     this.processNonJavaChanges = processNonJavaChanges;
   }
@@ -69,6 +67,10 @@ public class SmartCommit {
     this.distanceThreshold = distanceThreshold;
   }
 
+  public void setId2DiffHunkMap(Map<String, DiffHunk> id2DiffHunkMap) {
+    this.id2DiffHunkMap = id2DiffHunkMap;
+  }
+
   /**
    * Clear the temp dir and create the logs dir
    *
@@ -77,7 +79,7 @@ public class SmartCommit {
   private void prepareTempDir(String dir) {
     Utils.clearDir(dir);
     System.setProperty("logs.dir", dir);
-//    PropertyConfigurator.configure("log4j.properties");
+    //    PropertyConfigurator.configure("log4j.properties");
   }
 
   /**
@@ -161,7 +163,7 @@ public class SmartCommit {
     Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunks(diffFiles, resultsDir);
 
     exportGroupResults(results, resultsDir);
-    exportGroupDetails(results, resultsDir);
+    exportGroupDetails(results, resultsDir + File.separator + "details");
 
     return results;
   }
@@ -232,10 +234,11 @@ public class SmartCommit {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     List<String> groupedDiffHunks = new ArrayList<>();
     for (Map.Entry<String, Group> entry : results.entrySet()) {
-      String path =
-          outputDir + File.separator + "details" + File.separator + entry.getKey() + ".json";
+      String path = outputDir + File.separator + entry.getKey() + ".json";
       StringBuilder builder = new StringBuilder();
-      builder.append(entry.getValue().getIntentLabel().label).append("\n");
+      builder.append(entry.getValue().getIntentLabel()).append("\n");
+      builder.append(entry.getValue().getCommitMsg()).append("\n");
+      // check for duplication
       for (String id : entry.getValue().getDiffHunkIDs()) {
         if (groupedDiffHunks.contains(id)) {
           DiffHunk diffHunk = id2DiffHunkMap.get(id.split(":")[1]);
@@ -243,16 +246,21 @@ public class SmartCommit {
         }
         groupedDiffHunks.add(id);
         String[] pair = id.split(":");
+        String diffHunkID = "";
         if (pair.length == 2) {
-          builder.append("------------").append("\n");
-          DiffHunk diffHunk = id2DiffHunkMap.get(pair[1]);
-          builder.append(diffHunk.getUniqueIndex()).append("\n");
-          builder.append(diffHunk.getDescription()).append("\n");
-          builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
-          builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");
+          diffHunkID = pair[1];
+        } else if (pair.length == 1) {
+          diffHunkID = pair[0];
         } else {
           logger.error("Invalid id: " + id);
+          continue;
         }
+        builder.append("------------").append("\n");
+        DiffHunk diffHunk = id2DiffHunkMap.get(diffHunkID);
+        builder.append(diffHunk.getUniqueIndex()).append("\n");
+        builder.append(diffHunk.getDescription()).append("\n");
+        builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
+        builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");
       }
       Utils.writeStringToFile(builder.toString(), path);
     }
