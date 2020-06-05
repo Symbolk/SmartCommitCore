@@ -1,7 +1,5 @@
 package com.github.smartcommit.intent.model;
 
-import org.omg.CORBA.UNKNOWN;
-
 public enum IntentDescription {
   ADD("Add"),
   CRT("Create"),
