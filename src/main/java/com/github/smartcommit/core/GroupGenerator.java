@@ -425,13 +425,20 @@ public class GroupGenerator {
       case SIMILAR:
         return GroupLabel.FIX;
       case MOVING:
-        return GroupLabel.MOVING;
       case REFORMAT:
         return GroupLabel.REFORMAT;
       case DOC:
-        return GroupLabel.DOC;
+        if (processNonJava) {
+          return GroupLabel.DOC;
+        }
+      case RESOURCE:
+        if (processNonJava) {
+          return GroupLabel.RESOURCE;
+        }
       case CONFIG:
-        return GroupLabel.CONFIG;
+        if (processNonJava) {
+          return GroupLabel.CONFIG;
+        }
       case NONJAVA:
         return GroupLabel.NONJAVA;
       case CLOSE:
