@@ -1,19 +1,20 @@
 package com.github.smartcommit;
 
-import org.apache.log4j.PropertyConfigurator;
-import org.junit.jupiter.api.BeforeAll;
+import com.github.smartcommit.evaluation.Evaluation;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDistance {
-  @BeforeAll
-  public static void setUpBeforeAll() {
-    PropertyConfigurator.configure("log4j.properties");
-  }
+//  @BeforeAll
+//  public static void setUpBeforeAll() {
+//    PropertyConfigurator.configure("log4j.properties");
+//  }
 
   @Test
   public void testHierarchyDis() {
@@ -58,5 +59,20 @@ public class TestDistance {
       }
     }
     return res;
+  }
+
+  @Test
+  public void testEditDistance() {
+    List<Integer> list1 = new ArrayList<>();
+    list1.add(0);
+    list1.add(1);
+    list1.add(2);
+    list1.add(3);
+    List<Integer> list2 = new ArrayList<>();
+    list2.add(1);
+    list2.add(3);
+    list2.add(0);
+    list2.add(2);
+    assertThat(Evaluation.editDistance(list1, list2)).isEqualTo(2);
   }
 }
