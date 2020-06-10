@@ -282,15 +282,36 @@ public class Utils {
   }
 
   /**
-   * Check the file type by file path
+   * Check the file type by file path. Two ways to determine whether a file is binary: by git diff
+   * or by file -bI, the file must accessible on disk.
    *
    * @return
    */
-  public static FileType checkFileType(String filePath) {
-    return Arrays.stream(FileType.values())
-        .filter(fileType -> filePath.endsWith(fileType.extension))
-        .findFirst()
-        .orElse(FileType.OTHER);
+  public static FileType checkFileType(String repoPath, String filePath) {
+    //    String output = Utils.runSystemCommand(repoPath, StandardCharsets.UTF_8, "file", "-bI",
+    // filePath);
+    //    if(output.trim().endsWith("binary")){
+    //      return FileType.BIN;
+    //    }
+    String output =
+        Utils.runSystemCommand(
+            repoPath,
+            StandardCharsets.UTF_8,
+            "git",
+            "diff",
+            "--no-index",
+            "--numstat",
+            "/dev/null",
+            filePath);
+    if (output.trim().replaceAll("\\s+", "").startsWith("--")) {
+      return FileType.BIN;
+    } else {
+      // match type by extension
+      return Arrays.stream(FileType.values())
+          .filter(fileType -> filePath.endsWith(fileType.extension))
+          .findFirst()
+          .orElse(FileType.OTHER);
+    }
   }
 
   /**
@@ -387,13 +408,15 @@ public class Utils {
   }
 
   /**
-   * Convert a list of lines to one string without format (to compare)
+   * Convert a list of lines to one string without non-word characters
    *
    * @param list
    * @return
    */
   public static String convertListToStringNoFormat(List<String> list) {
-    return list.stream().map(str -> str.replaceAll("\\s+", "")).collect(Collectors.joining(""));
+    return list.stream()
+        .map(str -> str.replaceAll("\\W|[\\r?\\n]+", ""))
+        .collect(Collectors.joining(""));
   }
 
   /**

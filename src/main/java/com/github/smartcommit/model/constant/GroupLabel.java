@@ -6,7 +6,7 @@ public enum GroupLabel {
   FIX("Fix bug"), // fix bugs
   OPT("Optimize code"), // optimization for existing functions
 
-  REFORMAT("Reformat code"), // blank character changes
+  REFORMAT("Reformat code"), // blank/special character changes
   DOC("Update document"),
   CONFIG("Change config file"),
   RESOURCE("Change resource file"),

@@ -6,7 +6,8 @@ public enum ContentType {
   COMMENT("Comment"), // pure comment
   CODE("Code"), // actual code (or mixed)
   BLANKLINE("BlankLine"), // blank lines
-  EMPTY("Empty"); // added/deleted
+  EMPTY("Empty"), // added/deleted
+  BINARY("Binary"); // binary content
 
   public String label;
 

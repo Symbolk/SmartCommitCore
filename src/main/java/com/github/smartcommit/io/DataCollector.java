@@ -3,10 +3,7 @@ package com.github.smartcommit.io;
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
-import com.github.smartcommit.model.constant.ChangeType;
-import com.github.smartcommit.model.constant.ContentType;
-import com.github.smartcommit.model.constant.Operation;
-import com.github.smartcommit.model.constant.Version;
+import com.github.smartcommit.model.constant.*;
 import com.github.smartcommit.util.Utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -82,6 +79,10 @@ public class DataCollector {
     Utils.createDir(baseDir);
     Utils.createDir(currentDir);
     for (DiffFile diffFile : diffFiles) {
+      // skip binary files
+      if (diffFile.getFileType().equals(FileType.BIN)) {
+        continue;
+      }
       String basePath, currentPath;
       switch (diffFile.getStatus()) {
         case ADDED:
@@ -244,7 +245,8 @@ public class DataCollector {
    * @param coveredNodes
    * @return
    */
-  private static List<Action> analyzeCoveredNodes(ChangeType changeType, List<ASTNode> coveredNodes) {
+  private static List<Action> analyzeCoveredNodes(
+      ChangeType changeType, List<ASTNode> coveredNodes) {
     List<Action> actions = new ArrayList<>();
     Operation operation = convertChangeTypeToOperation(changeType);
 
