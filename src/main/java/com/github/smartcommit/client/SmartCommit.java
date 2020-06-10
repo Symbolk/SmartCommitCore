@@ -89,16 +89,6 @@ public class SmartCommit {
   }
 
   /**
-   * Analyze the changes and group changed files
-   *
-   * @return
-   * @throws Exception
-   */
-  public Map<String, Group> analyzeWorkingFiles() throws Exception {
-    return null;
-  }
-
-  /**
    * Analyze the current working directory
    *
    * @return
