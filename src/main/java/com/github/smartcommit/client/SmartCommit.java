@@ -1,10 +1,12 @@
 package com.github.smartcommit.client;
 
+import com.github.smartcommit.commitmsg.CommitMsgGenerator;
 import com.github.smartcommit.compilation.HunkIndex;
 import com.github.smartcommit.compilation.MavenError;
 import com.github.smartcommit.core.GraphBuilder;
 import com.github.smartcommit.core.GroupGenerator;
 import com.github.smartcommit.core.RepoAnalyzer;
+import com.github.smartcommit.intent.model.MsgClass;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
@@ -32,9 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
-/**
- * API entry
- */
+/** API entry */
 public class SmartCommit {
   private static final Logger logger = Logger.getLogger(SmartCommit.class);
   private String repoID;
@@ -410,29 +410,8 @@ public class SmartCommit {
     return id2DiffHunkMap;
   }
 
-  /**
-   * Invoke maven to compile the version group by group, and return the error message
-   *
-   * @return groupID:compilation output
-   */
-  public Map<String, String> compileWithMaven() {
-    Map<String, String> id2MavenOut = new HashMap<>();
-
-    /*
-    for (Map.Entry<String, Group> entry : id2GroupMap.entrySet()) {
-      String groupId = entry.getKey();
-      Group group = entry.getValue();
-      // TODO: patch workingTree with group
-      String log = Utils.runSystemCommand(repoPath, "mvn", "compile");
-      id2MavenOut.put(groupId, log);
-    }
-     */
-
-    String groupId = "Compiling Working Tree";
-    String log = Utils.runSystemCommand(repoPath, "mvn", "compile");
-    id2MavenOut.put(groupId, log);
-
-    return id2MavenOut;
+  public Map<String, Group> getId2GroupMap() {
+    return id2GroupMap;
   }
 
   /** Get Indexes and Nodes from diffHunk */
@@ -451,9 +430,8 @@ public class SmartCommit {
       Integer currentStartLine = currentHunk.getStartLine();
       Integer currentEndLine = currentHunk.getEndLine();
 
-      String currentPackagePath = null;
       HunkIndex currentHunkIndex =
-              new HunkIndex(currentRelativeFilePath, currentStartLine, currentEndLine);
+          new HunkIndex(currentRelativeFilePath, currentStartLine, currentEndLine);
       currentHunkIndex.setFileIndex(fileIndex);
       currentHunkIndex.setIndex(index);
       currentHunkIndex.setDiffHunkID(diffHunkID);
@@ -466,7 +444,7 @@ public class SmartCommit {
       nodes = currentHunk.getCoveredNodes();
       if (!nodes.isEmpty()) currentHunkIndex.setCurrentAstNodes(nodes);
 
-      // TODO: get PackagePath
+      String currentPackagePath = null;
       currentHunkIndex.setPackagePath(currentPackagePath);
 
       hunkIndexes.add(currentHunkIndex);
@@ -479,7 +457,7 @@ public class SmartCommit {
    * @param compileOut
    * @return MavenError
    */
-  public List<MavenError> parseMavenErrors(String compileOut) {
+  private List<MavenError> parseMavenErrors(String compileOut) {
     List<MavenError> result = new ArrayList<>();
     String[] rows = compileOut.split("\\n");
     for (int i = 0; i < rows.length; i++) {
@@ -519,20 +497,32 @@ public class SmartCommit {
   }
 
   /**
-   * Adjust the diff hunks in groupX to resolve errors * @return
+   * Invoke maven to compile the version group by group, and return the error message
+   *
+   * @return groupID:compilation output
+   */
+  public List<MavenError> compileWith(String compilor, String groupID) {
+    Group group = id2GroupMap.getOrDefault(groupID, null);
+    if (!group.equals(null)) patch(groupID);
+    String log = Utils.runSystemCommand(repoPath, compilor, "compile");
+    return parseMavenErrors(log);
+  }
+
+  public void patch(String GroupID) {
+    // TODO: add selected group to workingTree
+  }
+
+  /**
+   * Adjust the diff hunks in selected group to resolve errors * @return
    *
    * @param groupID
-   * @param errors the existing errors
    * @return the remaining errors
    */
-  public List<MavenError> fixMavenErrors(String groupID, List<MavenError> errors) {
+  public List<MavenError> fix(String groupID, List<MavenError> errors) {
 
     Group group = id2GroupMap.getOrDefault(groupID, null);
-    List<String> diffHunkIDs = group.getDiffHunkIDs();
-    Map<String, String> id2MavenOut = compileWithMaven();
     List<HunkIndex> hunkIndexes = new ArrayList<>();
 
-    // Step3:
     for (MavenError error : errors) {
       List<HunkIndex> tempHunkIndexes = findHunkIndexFromMavenError(error);
       tempHunkIndexes.removeAll(hunkIndexes);
@@ -541,16 +531,13 @@ public class SmartCommit {
     // cannot find DiffHunk matched with errors
     if (hunkIndexes.isEmpty()) return errors;
     else {
-      // Step 6/7
+      // Adjust Hunks from orgin group to current group
       group = adjustHunkesInGroup(hunkIndexes, group);
       id2GroupMap.put(groupID, group);
-      // no error
-      String compileOut = null;
-      // TODO: compile with this group and get compileOut;
-      // Step 8
-      List<MavenError> mavenErrors = parseMavenErrors(compileOut);
+
+      List<MavenError> mavenErrors = compileWith("mvn", groupID);
       if (mavenErrors.isEmpty()) return null;
-      else return fixMavenErrors(groupID, mavenErrors);
+      else return fix(groupID, mavenErrors);
     }
   }
 

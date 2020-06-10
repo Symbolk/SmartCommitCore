@@ -1,6 +1,7 @@
 package com.github.smartcommit.client;
 
 import com.github.smartcommit.compilation.MavenError;
+import com.github.smartcommit.model.Group;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -12,37 +13,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 class SmartCommitTest {
-
-  String repoName = "SmartCommitMaven";
-  String repoPath = "/Users/Chuncen/IdeaProjects/SmartCommitMaven";
-  String repoID = String.valueOf(repoName.hashCode());
-  SmartCommit smartCommit = new SmartCommit(repoID, repoName, repoPath, "~/Downloads");
-
-  @Test
-  void testCompileWithMaven() throws Exception {
-    smartCommit.analyzeWorkingFiles();
-    smartCommit.generateHunkIndexes();
-    Map<String, String> id2MavenOut = new HashMap<>();
-    id2MavenOut = smartCommit.compileWithMaven();
-    assertNotNull(id2MavenOut);
-  }
-
-  @Test
-  void testParseMavenErrors() {
-    String compileOut =
-            "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[3,36] package com.github.smartcommit.model does not exist\n"
-                    + "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[5,24] package org.apache.log4j does not exist\n"
-                    + "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[13,24] cannot find symbol\n"
-                    + "  symbol:   class Logger\n"
-                    + "  location: class com.github.smartcommit.util.JDTParser\n"
-                    + "[ERROR] /Users/Chuncen/IdeaProjects/SmartCommitMaven/src/main/java/com/github/smartcommit/util/JDTParser.java:[28,64] cannot find symbol\n"
-                    + "  symbol:   class DiffFile\n"
-                    + "  location: class com.github.smartcommit.util.JDTParser";
-    List<MavenError> errors = new ArrayList<>();
-    errors = smartCommit.parseMavenErrors(compileOut);
-    assertEquals("Logger", errors.get(0).getSymbol());
-  }
-
   public static void main(String[] args) throws Exception {
 
     String repoName = "SmartCommitMaven";
@@ -50,21 +20,25 @@ class SmartCommitTest {
     String repoID = String.valueOf(repoName.hashCode());
     SmartCommit smartCommit = new SmartCommit(repoID, repoName, repoPath, "~/Downloads");
 
-    smartCommit.analyzeWorkingTree();
+    Map<String, Group> id2GroupMap = smartCommit.analyzeWorkingTree();
+    System.out.println(id2GroupMap.size());
     smartCommit.generateHunkIndexes();
 
-    Map<String, String> id2MavenOut = smartCommit.compileWithMaven();
-    for (Map.Entry<String, String> entry : id2MavenOut.entrySet()) {
+    for (Map.Entry<String, Group> entry : id2GroupMap.entrySet()) {
       String groupId = entry.getKey();
-      String mavenOut = entry.getValue();
-      // find errors
-      List<MavenError> errors = smartCommit.parseMavenErrors(mavenOut);
-      // minimize errors
-      errors = smartCommit.fixMavenErrors(groupId, errors);
-      // print errors
+      Group group = entry.getValue();
       System.out.println("GroupID: " + groupId);
-      if (errors.isEmpty()) System.out.println("No error");
+      System.out.println("DiffHunkIDs: " + group.getDiffHunkIDs());
+      System.out.println("IntentLabel: " + group.getIntentLabel());
+
+      // find errors
+      List<MavenError> errors = smartCommit.compileWith("mvn", groupId);
+      // minimize errors
+      errors = smartCommit.fix(groupId, errors);
+      // print errors
+      if (errors.isEmpty()) System.out.println("No Error");
       else System.out.println(errors.toString());
+
     }
   }
 }
