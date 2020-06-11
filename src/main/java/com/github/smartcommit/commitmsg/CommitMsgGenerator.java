@@ -114,7 +114,6 @@ public class CommitMsgGenerator {
         } else if (changeType.equals("Delete")) {
           SumOfLinesDeleted += num;
         } else {
-          num = num / 2;
           SumOfLinesModified += num;
         }
         SumOfLinesChanged += num;
