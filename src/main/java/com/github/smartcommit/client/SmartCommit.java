@@ -240,14 +240,15 @@ public class SmartCommit {
    *
    * @param results
    */
-  public void exportGroupDetails(Map<String, Group> results) {
+  public void exportGroupDetails(Map<String, Group> results, String outputDir) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     List<String> groupedDiffHunks = new ArrayList<>();
     for (Map.Entry<String, Group> entry : results.entrySet()) {
-      String path =
-          tempDir + File.separator + "details" + File.separator + entry.getKey() + ".json";
+      String path = outputDir + File.separator + entry.getKey() + ".json";
       StringBuilder builder = new StringBuilder();
       builder.append(entry.getValue().getIntentLabel()).append("\n");
+      builder.append(entry.getValue().getCommitMsg()).append("\n");
+      // check for duplication
       for (String id : entry.getValue().getDiffHunkIDs()) {
         if (groupedDiffHunks.contains(id)) {
           DiffHunk diffHunk = id2DiffHunkMap.get(id.split(":")[1]);
@@ -255,16 +256,21 @@ public class SmartCommit {
         }
         groupedDiffHunks.add(id);
         String[] pair = id.split(":");
+        String diffHunkID = "";
         if (pair.length == 2) {
-          builder.append("------------").append("\n");
-          DiffHunk diffHunk = id2DiffHunkMap.get(pair[1]);
-          builder.append(diffHunk.getUniqueIndex()).append("\n");
-          builder.append(diffHunk.getDescription()).append("\n");
-          builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
-          builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");
+          diffHunkID = pair[1];
+        } else if (pair.length == 1) {
+          diffHunkID = pair[0];
         } else {
           logger.error("Invalid id: " + id);
+          continue;
         }
+        builder.append("------------").append("\n");
+        DiffHunk diffHunk = id2DiffHunkMap.get(diffHunkID);
+        builder.append(diffHunk.getUniqueIndex()).append("\n");
+        builder.append(diffHunk.getDescription()).append("\n");
+        builder.append(gson.toJson(diffHunk.getBaseHunk())).append("\n");
+        builder.append(gson.toJson(diffHunk.getCurrentHunk())).append("\n");
       }
       Utils.writeStringToFile(builder.toString(), path);
     }

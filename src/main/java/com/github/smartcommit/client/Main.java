@@ -2,6 +2,7 @@ package com.github.smartcommit.client;
 
 import com.github.smartcommit.model.Group;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +32,7 @@ public class Main {
           System.out.println(entry.getKey());
           System.out.println(entry.getValue().toString());
         }
-        smartCommit.exportGroupDetails(groups);
+        smartCommit.exportGroupDetails(groups, Config.TEMP_DIR + File.separator + "details");
 
       } else {
         System.out.println("No Changes.");
