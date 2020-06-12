@@ -323,14 +323,31 @@ public class JDTService {
    * @return
    */
   private List<String> getAnnotationUses(List modifiers) {
-    List<String> annotations = new ArrayList<>();
+    List<String> annotationTypes = new ArrayList<>();
     for (int i = 0; i < modifiers.size(); i++) {
-      if (modifiers.get(i) instanceof MarkerAnnotation) {
-        annotations.add(
-            ((MarkerAnnotation) modifiers.get(i)).getTypeName().getFullyQualifiedName());
+      if (modifiers.get(i) instanceof Annotation) {
+        Annotation annotation = (Annotation) modifiers.get(i);
+        annotationTypes.add(annotation.getTypeName().getFullyQualifiedName());
+        // process nested annotations: e.g.
+        // @Table(indexes = {@Index(columnList = "name", name = "premiumlist_name_idx")})
+        if (annotation instanceof NormalAnnotation) {
+          List nested = new ArrayList();
+          for (Object v : ((NormalAnnotation) annotation).values()) {
+            if (v instanceof MemberValuePair) {
+              if (((MemberValuePair) v).getValue() instanceof ArrayInitializer) {
+                ((ArrayInitializer) ((MemberValuePair) v).getValue())
+                    .expressions()
+                    .forEach(exp -> nested.add(exp));
+              }
+            }
+          }
+          if (!nested.isEmpty()) {
+            annotationTypes.addAll(getAnnotationUses(nested));
+          }
+        }
       }
     }
-    return annotations;
+    return annotationTypes;
   }
 
   /**
