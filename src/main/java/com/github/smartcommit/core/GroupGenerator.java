@@ -72,7 +72,7 @@ public class GroupGenerator {
     this.currentGraph = currentGraph;
 
     this.diffGraph = initDiffGraph();
-    this.generatedGroups = new HashMap<>();
+    this.generatedGroups = new LinkedHashMap<>();
     this.groupedDiffHunkIDs = new HashSet<>();
   }
 
@@ -392,6 +392,9 @@ public class GroupGenerator {
       }
     }
 
+    // assign imports and comments to the proper groups, and remove from others
+    assignImports(others);
+//    assignComments(others);
     createGroup(convertDiffHunksToIds(others), GroupLabel.OTHER);
 
     // check for duplicates or missing
@@ -399,6 +402,49 @@ public class GroupGenerator {
       logger.error("Incorrect number of diff hunks");
     }
     return generatedGroups;
+  }
+
+  /**
+   * Assign imports to earliest group
+   *
+   * @param others
+   */
+  private void assignImports(Set<DiffHunk> others) {
+    Iterator<DiffHunk> iterator = others.iterator();
+    while (iterator.hasNext()) {
+      DiffHunk diffHunk = iterator.next();
+      if (diffHunk.getBaseHunk().getContentType().equals(ContentType.IMPORT)
+          || diffHunk.getCurrentHunk().getContentType().equals(ContentType.IMPORT)) {
+        String fileID = diffHunk.getFileID();
+        // find the first group that contains a diff hunk of the same file
+        if (addToEarliestGroup(fileID, diffHunk.getUUID())) {
+          // remove from others
+          iterator.remove();
+        }
+      }
+    }
+  }
+
+  /**
+   * Find the first group that contains a diff hunk of the same file
+   *
+   * @param fileID
+   * @param UUID
+   * @return
+   */
+  private boolean addToEarliestGroup(String fileID, String UUID) {
+    for (Map.Entry entry : generatedGroups.entrySet()) {
+      Group group = (Group) entry.getValue();
+      for (String id : (group.getDiffHunkIDs())) {
+        if (Utils.parseUUIDs(id).getLeft().equals(fileID)) {
+          // add the import into the group
+          group.addDiffHunk(UUID);
+          groupedDiffHunkIDs.add(UUID);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private GroupLabel getIntentFromEdges(List<DiffEdgeType> edgeTypes) {
