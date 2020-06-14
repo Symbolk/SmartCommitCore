@@ -443,7 +443,7 @@ public class Utils {
     if (pair.length == 2) {
       return Pair.of(pair[0], pair[1]);
     }
-    return null;
+    return Pair.of("", "");
   }
 
   /**
