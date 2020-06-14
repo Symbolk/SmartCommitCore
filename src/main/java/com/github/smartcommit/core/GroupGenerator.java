@@ -359,7 +359,7 @@ public class GroupGenerator {
   public Map<String, Group> generateGroups() {
     //    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
 
-    Map<String, Group> generatedGroups = new HashMap<>();
+    Map<String, Group> generatedGroups = new LinkedHashMap<>();
     Set<String> individuals = new LinkedHashSet<>();
     Map<String, String> idToIndexMap = new HashMap<>();
 
