@@ -179,7 +179,6 @@ public class CommitMsgGenerator {
     JSONObject jsonObject = new JSONObject(getTemplate());
     JSONArray jsonArray = jsonObject.getJSONArray(msgClass.label);
     for (int i = 0; i < jsonArray.length(); i++) commitMsgs.add(jsonArray.get(i).toString());
-
     return commitMsgs;
   }
 
@@ -197,9 +196,9 @@ public class CommitMsgGenerator {
           else {
             if (!refactorActions.isEmpty())
               commitMsg +=
-                  refactorActions.get(0).getOperation().label
-                      + " "
-                      + refactorActions.get(0).getLabelFrom();
+                      refactorActions.get(0).getOperation().label
+                              + " "
+                              + refactorActions.get(0).getTypeFrom();
             else {
               commitMsg = "Chore - Modify code";
             }
@@ -226,7 +225,9 @@ public class CommitMsgGenerator {
           else {
             if (!astActions.isEmpty())
               commitMsg +=
-                      astActions.get(0).getOperation().label + " " + astActions.get(0).getLabelFrom();
+                      astActions.get(0).getOperation().label
+                              + " "
+                              + astActions.get(0).getTypeFrom();
             else {
               commitMsg = "Chore - Modify code";
             }
@@ -243,11 +244,15 @@ public class CommitMsgGenerator {
       Action action0 = actions.get(indexes.get(0));
       Action action1 = actions.get(indexes.get(1));
       if (action0.getOperation().equals(action1.getOperation())) {
-        return action0.getOperation().label
-            + " "
-            + action0.getTypeFrom()
-            + " and "
-            + action1.getTypeFrom();
+        if (action0.getTypeFrom().equals(action1.getTypeFrom()))
+          return action0.getOperation().label + " " + action0.getTypeFrom();
+        else {
+          return action0.getOperation().label
+                  + " "
+                  + action0.getTypeFrom()
+                  + " and "
+                  + action1.getTypeFrom();
+        }
       } else {
         return action0.getOperation().label
             + " "
@@ -259,7 +264,7 @@ public class CommitMsgGenerator {
       }
     } else {
       Action action0 = actions.get(indexes.get(0));
-      return action0.getOperation().label + " " + action0.getLabelFrom();
+      return action0.getOperation().label + " " + action0.getTypeFrom();
     }
   }
 

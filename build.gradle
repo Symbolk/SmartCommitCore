@@ -68,7 +68,7 @@ dependencies {
     compile group: 'org.mongodb', name: 'mongo-java-driver', version: '3.10.1'
     compile group: 'com.google.code.gson', name: 'gson', version: '2.8.6'
 
-    compile group: 'org.apache.logging.log4j', name: 'log4j', version: '2.13.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.13.1'
     compile 'org.apache.maven.shared:maven-invoker:3.0.1'
     compile group: 'com.googlecode.juniversalchardet', name: 'juniversalchardet', version: '1.0.3'
 
