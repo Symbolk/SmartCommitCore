@@ -174,16 +174,16 @@ class CommitMsgGeneratorTest {
     DiffHunk diffHunk = new DiffHunk(0, FileType.JAVA, ChangeType.ADDED, bHunk, cHunk);
 
 
-    Action actionA = new Action(Operation.ADD, "ImportStatement", "A");
-    Action actionB = new Action(Operation.ADD, "ImportStatement", "B");
-    Action actionC = new Action(Operation.ADD, "ImportStatement", "C");
-    Action actionD = new Action(Operation.ADD, "ImportStatement", "D");
+    Action actionA = new Action(Operation.ADD, "Package", "A");
+    Action actionB = new Action(Operation.ADD, "Package", "B");
+    Action actionC = new Action(Operation.ADD, "Method", "C");
+    Action actionD = new Action(Operation.ADD, "Method", "D");
 
     List<Action> astActions = new ArrayList<>();
-    astActions.add(actionA);
-    astActions.add(actionC);
     List<Action> refActions = new ArrayList<>();
+    refActions.add(actionA);
     refActions.add(actionB);
+    refActions.add(actionC);
     refActions.add(actionD);
     diffHunk.setAstActions(astActions);
     diffHunk.setRefActions(refActions);
@@ -192,11 +192,11 @@ class CommitMsgGeneratorTest {
 
 
     // expected commitMsg
-    String expected = "Feature - Add ImportStatement";
+    String expected = "Feature - Add Package ";
     // add importStatement and importStatement
 
     CommitMsgGenerator commitMsgGenerator = new CommitMsgGenerator(diffHunks);
-    String received = commitMsgGenerator.generateDetailedMsgs(MsgClass.FEAT, GroupLabel.FEATURE).get(0);
+    String received = commitMsgGenerator.generateDetailedMsgs(MsgClass.FEAT, GroupLabel.REFACTOR).get(0);
     assertEquals(expected, received);
 
 
