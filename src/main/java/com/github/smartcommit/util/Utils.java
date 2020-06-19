@@ -474,20 +474,66 @@ public class Utils {
     for (Operation op : Operation.values()) {
       if (displayName.contains(op.label)) {
         operation = op;
+        break;
       }
     }
-    String TypeFrom = "";
-    String TypeTo = "";
+    String typeFrom = splitAndCapitalize(codeChangeFrom.getCodeElementType().name());
     if (codeChangesTo.isEmpty()) {
-      return new Action(operation, TypeFrom, codeChangeFrom.getCodeElement());
+      return new Action(operation, typeFrom, prettifyCodeElement(codeChangeFrom.getCodeElement()));
     } else {
       CodeRange codeChangeTo = codeChangesTo.get(0);
+      String typeTo = splitAndCapitalize(codeChangeTo.getCodeElementType().name());
       return new Action(
           operation,
-          TypeFrom,
-          codeChangeFrom.getCodeElement(),
-          TypeTo,
-          codeChangeTo.getCodeElement());
+          typeFrom,
+          prettifyCodeElement(codeChangeFrom.getCodeElement()),
+          typeTo,
+          prettifyCodeElement(codeChangeTo.getCodeElement()));
+    }
+  }
+
+  /**
+   * Convert strings like 'AB_CD' to 'Ab Cd'
+   *
+   * @param original
+   * @return
+   */
+  private static String splitAndCapitalize(String original) {
+    String[] words = original.split("_");
+    StringBuilder builder = new StringBuilder();
+    for (int i = 0; i < words.length; ++i) {
+      String w = words[i];
+      builder.append(w.substring(0, 1).toUpperCase()).append(w.substring(1).toLowerCase());
+      if (i != words.length - 1) {
+        builder.append(" ");
+      }
+    }
+    return builder.toString();
+  }
+
+  /**
+   * Convert the code element label by RMiner to more readable style e.g. from private
+   * creationTimestamp : ZonedDateTime to private ZonedDateTime creationTimestamp
+   *
+   * @return
+   */
+  private static String prettifyCodeElement(String original) {
+    if (original.contains(":")) {
+      int colonIndex = original.indexOf(":");
+      String type = original.substring(colonIndex + 1).trim();
+      int spaceIndex = original.substring(0, colonIndex).trim().lastIndexOf(" ");
+      // insert the type before the last word
+      if (spaceIndex < 0) {
+        return type + " " + original.substring(0, colonIndex).trim();
+      } else {
+        return original.substring(0, spaceIndex).trim()
+            + " "
+            + type
+            + " "
+            + original.substring(spaceIndex, colonIndex).trim();
+      }
+    } else {
+      return original;
     }
   }
 

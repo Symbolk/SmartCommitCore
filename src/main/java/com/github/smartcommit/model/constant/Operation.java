@@ -22,8 +22,10 @@ public enum Operation {
   REPLACE("Replace", 15),
   RENAME("Rename", 16),
   SPILT("Split", 17),
+  MODIFY("Modify", 18),
+  REORDER("Reorder", 19),
 
-  UKN("Unknown", 18);
+  UKN("Unknown", 20);
 
   public String label;
   public int index;
