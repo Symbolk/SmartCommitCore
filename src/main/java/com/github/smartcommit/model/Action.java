@@ -35,15 +35,15 @@ public class Action {
     builder.append(operation);
     builder
         .append(typeFrom.isEmpty() ? "" : " " + typeFrom)
-        .append(labelFrom.isEmpty() ? "" : ": " + labelFrom);
+        .append(labelFrom.isEmpty() ? "" : " \"" + labelFrom + "\"");
     if (!typeFrom.equals(typeTo)) {
-      builder.append(typeTo.isEmpty() ? "" : " To: " + typeTo + ":");
+      builder.append(typeTo.isEmpty() ? "" : " To " + typeTo);
       if (!labelFrom.equals(labelTo)) {
-        builder.append(labelTo.isEmpty() ? "" : " " + labelTo);
+        builder.append(labelTo.isEmpty() ? "" : ": \"" + labelTo + "\"");
       }
     } else {
       if (!labelFrom.equals(labelTo)) {
-        builder.append(labelTo.isEmpty() ? "" : " To: " + labelTo);
+        builder.append(labelTo.isEmpty() ? "" : " To: \"" + labelTo + "\"");
       }
     }
 
