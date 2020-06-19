@@ -44,6 +44,9 @@ public class SmartCommit {
   private Map<String, DiffHunk> id2DiffHunkMap;
   private Map<String, String> compileInfos;
   private List<HunkIndex> hunkIndices;
+  private Graph<Node, Edge> baseGraph;
+  private Graph<Node, Edge> currentGraph;
+
   // options
   private boolean detectRefactorings = false;
   private boolean processNonJavaChanges = false;
@@ -195,8 +198,8 @@ public class SmartCommit {
         executorService.submit(new GraphBuilder(srcDirs.getLeft(), diffFiles));
     Future<Graph<Node, Edge>> currentBuilder =
         executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
-    Graph<Node, Edge> baseGraph = baseBuilder.get(60 * 10, TimeUnit.SECONDS);
-    Graph<Node, Edge> currentGraph = currentBuilder.get(60 * 10, TimeUnit.SECONDS);
+    baseGraph = baseBuilder.get(60 * 10, TimeUnit.SECONDS);
+    currentGraph = currentBuilder.get(60 * 10, TimeUnit.SECONDS);
     //    String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
     //    String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
     executorService.shutdown();
@@ -407,6 +410,14 @@ public class SmartCommit {
 
   public Map<String, DiffHunk> getId2DiffHunkMap() {
     return id2DiffHunkMap;
+  }
+
+  public Graph<Node, Edge> getBaseGraph() {
+    return baseGraph;
+  }
+
+  public Graph<Node, Edge> getCurrentGraph() {
+    return currentGraph;
   }
 
   /**
