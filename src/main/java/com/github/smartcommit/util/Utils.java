@@ -477,32 +477,32 @@ public class Utils {
         operation = op;
       }
     }
-    String TypeFrom = "";
-    String TypeTo = "";
+    String typeFrom = "";
+    String typeTo = "";
     // tell apart from-to via order
-    boolean OnlyOne = true;
+    boolean onlyOne = true;
     for (RefActionType refActionType : RefActionType.values()) {
       if (displayName.contains(refActionType.label)) {
-        TypeFrom = refActionType.label;
-        if (OnlyOne) {
-          TypeTo = TypeFrom;
-          OnlyOne = false;
+        typeFrom = refActionType.label;
+        if (onlyOne) {
+          typeTo = typeFrom;
+          onlyOne = false;
         } else {
-          TypeTo = refActionType.label;
+          typeTo = refActionType.label;
           break;
         }
       }
     }
     if (codeChangesTo.isEmpty()) {
-      return new Action(operation, TypeFrom, codeChangeFrom.getCodeElement());
+      return new Action(operation, typeFrom, codeChangeFrom.getCodeElement());
     } else {
       CodeRange codeChangeTo = codeChangesTo.get(0);
       return new Action(
-          operation,
-          TypeFrom,
-          codeChangeFrom.getCodeElement(),
-          TypeTo,
-          codeChangeTo.getCodeElement());
+              operation,
+              typeFrom,
+              codeChangeFrom.getCodeElement(),
+              typeTo,
+              codeChangeTo.getCodeElement());
     }
   }
 

@@ -9,21 +9,28 @@ public enum Operation {
   MOV("Move", 4),
 
   // Refactoring operations
+  // ADD("Add", 1),
   CHANGE("Change", 5),
   CONVERT("Convert", 6),
   EXTRACT("Extract", 7),
   INLINE("Inline", 8),
   INTRODUCE("Introduce", 9),
   MERGE("Merge", 10),
-  MOVE("Move", 11),
-  PARAMETERIZE("Parameterize", 12),
-  PULLUP("Pull up", 13),
-  PULLDOWN("Pull down", 14),
-  REPLACE("Replace", 15),
-  RENAME("Rename", 16),
-  SPILT("Split", 17),
+  MODIFY("Modify", 11),
+  MOVE("Move", 12),
+  MOVEANDINLINE("Move and Rename", 13),
+  MOVEANDRENAME("Move and Rename", 14),
+  PARAMETERIZE("Parameterize", 15),
+  PULLUP("Pull up", 16),
+  PULLDOWN("Pull down", 17),
+  REPLACE("Replace", 18),
+  REORDER("Reorder", 19),
+  RENAME("Rename", 20),
+  REMOVE("Remove", 21),
+  SPILT("Split", 22),
 
-  UKN("Unknown", 18);
+
+  UKN("Unknown", 23);
 
   public String label;
   public int index;
