@@ -11,7 +11,7 @@ public enum RefActionType {
     FIELD_TYPE("Field Type", 8),
     INTERFACE("Interface", 9),
     METHOD("Method", 10),
-    METHOD_ANNOTATION("Mothod Annotation", 11),
+    METHOD_ANNOTATION("Method Annotation", 11),
     METHOD_SIGNATURE("Method Signature", 12),
     PACKAGE("Package", 13),
     PARAMETER("Parameter", 14),
