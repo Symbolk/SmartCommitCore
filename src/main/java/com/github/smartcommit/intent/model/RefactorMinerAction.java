@@ -83,17 +83,41 @@ public class RefactorMinerAction {
                 return "Change";
             case "Change Parameter Type" :
                 return "Change";
-            case "Change Return Type" :
+            case "Change Return Type":
                 return "Change";
-            case "Change Attribute Type" :
+            case "Change Attribute Type":
                 return "Change";
-            case "Extract Attribute" :
+            case "Extract Attribute":
                 return "Extract";
-            case "Move and Rename Method" :
+            case "Move and Rename Method":
                 return "Move and Rename";
-            case "Move and Inline Method" :
+            case "Move and Inline Method":
                 return "Move and Inline";
-            default :
+            case "Add Method Annotation":
+                return "Add";
+            case "Remove Method Annotation":
+                return "Remove";
+            case "Modify Method Annotation":
+                return "Modify";
+            case "Add Attribute Annotation":
+                return "Add";
+            case "Remove Attribute Annotation":
+                return "Remove";
+            case "Modify Attribute Annotation":
+                return "Modify";
+            case "Add Class Annotation":
+                return "Add";
+            case "Remove Class Annotation":
+                return "Remove";
+            case "Modify Class Annotation":
+                return "Modify";
+            case "Add Parameter":
+                return "Add";
+            case "Remove Parameter":
+                return "Remove";
+            case "Reorder Parameter":
+                return "Reorder";
+            default:
                 return "";
         }
     }
@@ -170,17 +194,41 @@ public class RefactorMinerAction {
                 return "Variable Type";
             case "Change Parameter Type" :
                 return "Parameter Type";
-            case "Change Return Type" :
+            case "Change Return Type":
                 return "Return Type";
-            case "Change Attribute Type" :
+            case "Change Attribute Type":
                 return "Attribute Type";
-            case "Extract Attribute" :
+            case "Extract Attribute":
                 return "Attribute";
-            case "Move and Rename Method" :
+            case "Move and Rename Method":
                 return "Method";
-            case "Move and Inline Method" :
+            case "Move and Inline Method":
                 return "Method";
-            default :
+            case "Add Method Annotation":
+                return "Method Annotation";
+            case "Remove Method Annotation":
+                return "Method Annotation";
+            case "Modify Method Annotation":
+                return "Method Annotation";
+            case "Add Attribute Annotation":
+                return "Attribute Annotation";
+            case "Remove Attribute Annotation":
+                return "Attribute Annotation";
+            case "Modify Attribute Annotation":
+                return "Attribute Annotation";
+            case "Add Class Annotation":
+                return "Class Annotation";
+            case "Remove Class Annotation":
+                return "Class Annotation";
+            case "Modify Class Annotation":
+                return "Class Annotation";
+            case "Add Parameter":
+                return "Parameter";
+            case "Remove Parameter":
+                return "Parameter";
+            case "Reorder Parameter":
+                return "Parameter";
+            default:
                 return "";
         }
     }
