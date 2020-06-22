@@ -1,16 +1,28 @@
 package com.github.smartcommit.commitmsg;
 
-import com.github.smartcommit.intent.model.MsgClass;
-import com.github.smartcommit.model.Action;
+import com.github.smartcommit.client.Config;
+import com.github.smartcommit.client.SmartCommit;
 import com.github.smartcommit.model.DiffHunk;
-import com.github.smartcommit.model.Hunk;
-import com.github.smartcommit.model.constant.*;
+import com.github.smartcommit.model.Group;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ResetCommand;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.RepositoryBuilder;
+import org.eclipse.jgit.lib.TextProgressMonitor;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
 
 class CommitMsgGeneratorTest {
 
@@ -31,20 +43,8 @@ class CommitMsgGeneratorTest {
                   + File.separator
                   + "smart_commit";
 
-  public static void main(String[] args) {
-    args =
-            new String[]{
-                    "/Users/Chuncen/Desktop/Repos/nomulus", "nomulus"
-            };
-    String repoPath = args[0];
-    String collectionName = args[1];
 
-    testgenerator();
 
-  }
-
-  // TODO
-  /*
   @BeforeAll
   public static void setUpBeforeAll() {
     //    extractDiffHunkIDs(tempDir);
@@ -107,56 +107,24 @@ class CommitMsgGeneratorTest {
     smartCommit.setDistanceThreshold(Config.DIS_THRESHOLD);
 
     // expected commitMsg
-    String expected = "Add importStatement";
-    // add importStatement and importStatement
+    List<String> expected = new ArrayList<>();
+    expected.add("Feature - Add ImportStatement and Update VariableDeclarationStatement");
+    expected.add("Feature - Add MethodDeclaration and FieldDeclaration");
+    expected.add("Docs - Other file change");
+    expected.add("Style - Code reformat");
+    expected.add("Refactor - Change Type and Rename Method");
 
     try {
-      Map<String, Group> groups = smartCommit.analyzeWorkingTree();
-      smartCommit.exportGroupDetails(groups);
-
-      for (Map.Entry entry : groups.entrySet()) {
-        Group group = groups.get(entry.getKey());
-        String received =  smartCommit.generateCommitMsg(group).get(0);
-
-        assertEquals(expected, received);
-      }
-
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-
-
-  }
-
-
-  @Test
-  void generateDetailedMsgs() {
-    SmartCommit smartCommit =
-            new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
-    smartCommit.setDetectRefactorings(true);
-    smartCommit.setProcessNonJavaChanges(false);
-    smartCommit.setSimilarityThreshold(Config.SIMI_THRESHOLD);
-    smartCommit.setDistanceThreshold(Config.DIS_THRESHOLD);
-
-    try {
-      Map<String, Group> groups = smartCommit.analyzeWorkingTree();
+      Map<String, Group> groups = smartCommit.analyzeCommit("bc7f3546c73631ff241dd4406b2317d1cc1b7a58");
       Map<String, DiffHunk> id2DiffHunkMap = smartCommit.getId2DiffHunkMap();
 
-
-      List<DiffHunk> diffHunks = new ArrayList<>();
-      for (Map.Entry entry : id2DiffHunkMap.entrySet()) {
-        DiffHunk diffHunk = id2DiffHunkMap.get(entry.getKey());
-        diffHunks.add(diffHunk);
+      List<String> commitMsgs = new ArrayList<>();
+      for (Map.Entry entry : groups.entrySet()) {
+        Group group = groups.get(entry.getKey());
+        List<String> msgs = smartCommit.generateCommitMsg(group);
+        commitMsgs.add(msgs.get(0));
       }
-
-      CommitMsgGenerator commitMsgGenerator = new CommitMsgGenerator(diffHunks);
-
-      // expected commitMsg
-      String expected = "Add importStatement";
-      // add importStatement and importStatement
-      String received = commitMsgGenerator.generateDetailedMsgs(MsgClass.FEAT, GroupLabel.FEATURE).get(0);
-
-      assertEquals(expected, received);
+      assertEquals(expected, commitMsgs);
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -164,44 +132,6 @@ class CommitMsgGeneratorTest {
 
 
   }
-
-   */
-
-  public static void testgenerator() {
-    String path = null;
-    Hunk bHunk = new Hunk(Version.BASE, path, 0, 1, ContentType.CODE, null);
-    Hunk cHunk = new Hunk(Version.CURRENT, path, 0, 1, ContentType.CODE, null);
-    DiffHunk diffHunk = new DiffHunk(0, FileType.JAVA, ChangeType.ADDED, bHunk, cHunk);
-
-
-    Action actionA = new Action(Operation.ADD, "Package", "A");
-    Action actionB = new Action(Operation.ADD, "Package", "B");
-    Action actionC = new Action(Operation.ADD, "Method", "C");
-    Action actionD = new Action(Operation.ADD, "Method", "D");
-
-    List<Action> astActions = new ArrayList<>();
-    List<Action> refActions = new ArrayList<>();
-    refActions.add(actionA);
-    refActions.add(actionB);
-    refActions.add(actionC);
-    refActions.add(actionD);
-    diffHunk.setAstActions(astActions);
-    diffHunk.setRefActions(refActions);
-    List<DiffHunk> diffHunks = new ArrayList<>();
-    diffHunks.add(diffHunk);
-
-
-    // expected commitMsg
-    String expected = "Feature - Add Package ";
-    // add importStatement and importStatement
-
-    CommitMsgGenerator commitMsgGenerator = new CommitMsgGenerator(diffHunks);
-    String received = commitMsgGenerator.generateDetailedMsgs(MsgClass.FEAT, GroupLabel.REFACTOR).get(0);
-    assertEquals(expected, received);
-
-
-  }
-
 
 }
 
