@@ -106,22 +106,25 @@ public class CommitMsgGenerator {
           if (fileType.equals("Java")) NumOfDiffFilesModifiedJAVA += 1;
           else if (fileType.equals("XML")) NumOfDiffFilesModifiedXML += 1;
         }
-        Integer num =
-            diffHunk.getBaseEndLine()
-                - diffHunk.getBaseStartLine()
-                + diffHunk.getCurrentEndLine()
-                - diffHunk.getCurrentStartLine();
-        if (num > 0) SumOfLinesAdded += num;
-        else if (num < 0) SumOfLinesDeleted += num;
-        else SumOfLinesAdded += num;
+
+        Integer num = diffHunk.getRawDiffs().size();
+        String changeType = diffHunk.getChangeType().label;
+        if (changeType.equals("Add")) {
+          SumOfLinesAdded += num;
+        } else if (changeType.equals("Delete")) {
+          SumOfLinesDeleted += num;
+        } else {
+          SumOfLinesModified += num;
+        }
         SumOfLinesChanged += num;
+
         if (fileType.equals("Java")) SumOfLinesChangedJava += num;
         else if (fileType.equals("XML")) SumOfLinesChangedXML += num;
         else SumOfLinesChangedOthers += num;
       }
       NumOfDiffFiles = fileIDs.size();
       NumOfDiffHunks = diffHunks.size();
-      AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
+      if (NumOfDiffHunks > 0) AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
 
       vectors.set(AstSum + 0, NumOfDiffFiles);
       vectors.set(AstSum + 1, NumOfDiffFilesJava);
@@ -134,10 +137,12 @@ public class CommitMsgGenerator {
       vectors.set(AstSum + 8, NumOfDiffFilesModifiedXML);
       vectors.set(AstSum + 9, NumOfDiffHunks);
       vectors.set(AstSum + 10, AveLinesOfDiffHunks);
+
       vectors.set(AstSum + 11, SumOfLinesAdded);
       vectors.set(AstSum + 12, SumOfLinesDeleted);
       vectors.set(AstSum + 13, SumOfLinesModified);
       vectors.set(AstSum + 14, SumOfLinesChanged);
+
       vectors.set(AstSum + 15, SumOfLinesChangedJava);
       vectors.set(AstSum + 16, SumOfLinesChangedXML);
       vectors.set(AstSum + 17, SumOfLinesChangedOthers);
@@ -174,7 +179,6 @@ public class CommitMsgGenerator {
     JSONObject jsonObject = new JSONObject(getTemplate());
     JSONArray jsonArray = jsonObject.getJSONArray(msgClass.label);
     for (int i = 0; i < jsonArray.length(); i++) commitMsgs.add(jsonArray.get(i).toString());
-
     return commitMsgs;
   }
 
@@ -185,16 +189,16 @@ public class CommitMsgGenerator {
       case REFACTOR:
         commitMsg = "Refactor - ";
         top2Index = getTop2Index(refactorActions);
-        if (!top2Index.isEmpty()) commitMsg += getObject(top2Index, refactorActions);
+        if (!top2Index.isEmpty()) commitMsg += getType(top2Index, refactorActions);
         else {
           prior4Index = getPrior4Index(refactorActions);
-          if (!prior4Index.isEmpty()) commitMsg += getObject(prior4Index, refactorActions);
+          if (!prior4Index.isEmpty()) commitMsg += getType(prior4Index, refactorActions);
           else {
             if (!refactorActions.isEmpty())
               commitMsg +=
-                  refactorActions.get(0).getOperation().label
-                      + " "
-                      + refactorActions.get(0).getLabelFrom();
+                      refactorActions.get(0).getOperation().label
+                              + " "
+                              + refactorActions.get(0).getTypeFrom();
             else {
               commitMsg = "Chore - Modify code";
             }
@@ -214,16 +218,16 @@ public class CommitMsgGenerator {
       case OTHER:
         commitMsg = msgClass.label + " - ";
         top2Index = getTop2Index(astActions);
-        if (!top2Index.isEmpty()) commitMsg += getObject(top2Index, astActions);
+        if (!top2Index.isEmpty()) commitMsg += getType(top2Index, astActions);
         else {
           prior4Index = getPrior4Index(astActions);
-          if (!prior4Index.isEmpty()) commitMsg += getObject(prior4Index, astActions);
+          if (!prior4Index.isEmpty()) commitMsg += getType(prior4Index, astActions);
           else {
             if (!astActions.isEmpty())
               commitMsg +=
-                  astActions.get(0).getOperation().label
-                      + " "
-                      + astActions.get(0).getLabelFrom();
+                      astActions.get(0).getOperation().label
+                              + " "
+                              + astActions.get(0).getTypeFrom();
             else {
               commitMsg = "Chore - Modify code";
             }
@@ -235,16 +239,20 @@ public class CommitMsgGenerator {
     }
   }
 
-  private String getObject(List<Integer> indexes, List<Action> actions) {
+  private String getType(List<Integer> indexes, List<Action> actions) {
     if (indexes.size() == 2) {
       Action action0 = actions.get(indexes.get(0));
       Action action1 = actions.get(indexes.get(1));
       if (action0.getOperation().equals(action1.getOperation())) {
-        return action0.getOperation().label
-            + " "
-            + action0.getTypeFrom()
-            + " and "
-            + action1.getTypeFrom();
+        if (action0.getTypeFrom().equals(action1.getTypeFrom()))
+          return action0.getOperation().label + " " + action0.getTypeFrom();
+        else {
+          return action0.getOperation().label
+                  + " "
+                  + action0.getTypeFrom()
+                  + " and "
+                  + action1.getTypeFrom();
+        }
       } else {
         return action0.getOperation().label
             + " "
@@ -256,7 +264,7 @@ public class CommitMsgGenerator {
       }
     } else {
       Action action0 = actions.get(indexes.get(0));
-      return action0.getOperation().label + " " + action0.getLabelFrom();
+      return action0.getOperation().label + " " + action0.getTypeFrom();
     }
   }
 

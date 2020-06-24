@@ -29,12 +29,6 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.apache.log4j.Logger;
 import org.bson.Document;
-import org.eclipse.jgit.lib.Repository;
-import org.refactoringminer.api.GitHistoryRefactoringMiner;
-import org.refactoringminer.api.Refactoring;
-import org.refactoringminer.api.RefactoringHandler;
-import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
-import org.refactoringminer.util.GitServiceImpl;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -49,7 +43,10 @@ public class CommitInfoHandler {
   private static final Logger logger = Logger.getLogger(GroupGenerator.class);
 
   public static void main(String[] args) {
-    args = new String[] {"/Users/Chuncen/Desktop/Repos/lwjgl3", "commitTrainingSample"};
+    args =
+            new String[]{
+                    "/Users/Chuncen/Desktop/Repos/refactoring-toy-example", "commitTrainingSample"
+            };
     String repoPath = args[0];
     String collectionName = args[1];
     // CommitTrainingSample
@@ -100,17 +97,17 @@ public class CommitInfoHandler {
 
     // Analyze the Sample List
     Integer size = commitTrainingSample.size();
-    for (int i = 20; i < size; i++) {
+    for (int i = 0; i < size; i++) {
       ExecutorService service = Executors.newSingleThreadExecutor();
       Future<?> f = null;
       try {
         int finalI = i;
         Runnable r =
-            () -> {
-              try {
-                analyzeCommitTrainingSample(
-                    repoPath, commitTrainingSample, collection, finalI, size);
-              } catch (Exception e) {
+                () -> {
+                  try {
+                    analyzeCommitTrainingSample(
+                            repoPath, commitTrainingSample, collection, finalI, size);
+                  } catch (Exception e) {
                 e.printStackTrace();
               }
             };
@@ -149,10 +146,6 @@ public class CommitInfoHandler {
     tempCommitTrainingSample.setRepoName(repoName);
 
     String commitMsg = tempCommitTrainingSample.getCommitMsg().toLowerCase();
-    String tempDir = "~/Downloads/";
-    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
-    DataCollector dataCollector = new DataCollector(repoName, tempDir);
-
     // get Intent from commitMsg
     Intent intent = getIntentFromMsg(commitMsg);
     tempCommitTrainingSample.setIntent(intent);
@@ -160,21 +153,21 @@ public class CommitInfoHandler {
     List<IntentDescription> intentList = getIntentDescriptionFromMsg(commitMsg);
     tempCommitTrainingSample.setIntentDescription(intentList);
 
-    // add DiffFiles, though the same as DiffHunks
+    String tempDir = "~/";
+    RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
+    DataCollector dataCollector = new DataCollector(repoName, tempDir);
+
+    // add DiffFiles
     List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
     tempCommitTrainingSample.setDiffFiles(diffFiles);
 
     // add astActionList using gumtree
     tempCommitTrainingSample =
-        generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
+            generateGumtreeActionsFromCodeChange(tempCommitTrainingSample, repoAnalyzer);
     // add DiffHunkActions using DiffHunks
     List<Action> DiffHunkActions =
-        generateActionListFromDiffHunks(tempCommitTrainingSample, dataCollector);
+            generateDiffHunkActionListFromSmartCommit(tempCommitTrainingSample, dataCollector);
     tempCommitTrainingSample.setDiffHunksActions(DiffHunkActions);
-    // add refactorCodeChange using RefactoringMiner
-    List<RefactorMinerAction> refactorMinerActions =
-        getRefactorCodeChangesFromCodeChange(repoPath, commitID);
-    tempCommitTrainingSample.setRefactorMinerActions(refactorMinerActions);
 
     // Load into DB
     loadTrainSampleToDB(collection, tempCommitTrainingSample);
@@ -182,15 +175,21 @@ public class CommitInfoHandler {
 
   // generate Intent from Message
   private static Intent getIntentFromMsg(String commitMsg) {
+    Integer index0, index;
+    Intent intent0 = Intent.OTHERS;
     String[] parts = commitMsg.toLowerCase().split("\\n");
     for (int i = 0; i < parts.length; i++) {
       for (Intent intent : Intent.values()) {
-        if (parts[i].contains(intent.label)) {
-          return intent;
+        index0 = parts[i].length() + 1;
+        index = parts[i].indexOf(intent.label);
+        if (index.equals(-1)) continue;
+        if (index < index0) {
+          index0 = index;
+          intent0 = intent;
         }
       }
     }
-    return Intent.OTHERS;
+    return intent0;
   }
 
   // generate IntentDescription from Message
@@ -220,7 +219,7 @@ public class CommitInfoHandler {
     return IntentDescriptions;
   }
 
-  // generate Gumtree action list from code changes: diffFile and EditScript
+  // generate Gumtree action list from code changes EditScript
   private static CommitTrainingSample generateGumtreeActionsFromCodeChange(
       CommitTrainingSample tempCommitTrainingSample, RepoAnalyzer repoAnalyzer) {
     try { // if no FileChange
@@ -233,66 +232,50 @@ public class CommitInfoHandler {
         String currentContent = diffFiles.get(j).getCurrentContent();
         // File added or deleted, thus no content
         if (baseContent == null
-            || baseContent.equals("")
-            || currentContent == null
-            || currentContent.equals("")) {
-          tempCommitTrainingSample.addGumtreeCountFileChange();
+                || baseContent.equals("")
+                || currentContent == null
+                || currentContent.equals("")) {
           continue;
         }
-        EditScript editScript = generateEditScript(baseContent, currentContent);
+        // EditScript editScript = generateEditScript(baseContent, currentContent);
+
+        JdtTreeGenerator generator = new JdtTreeGenerator();
+        TreeContext oldContext = generator.generateFrom().string(baseContent);
+        TreeContext newContext = generator.generateFrom().string(currentContent);
+
+        Matcher matcher = Matchers.getInstance().getMatcher();
+        MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
+        EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
+
         if (editScript != null) {
-          List<AstAction> actionList = generateAstActionList(editScript);
+          // List<AstAction> actionList = generateAstActionList(editScript);
+          List<AstAction> actionList = new ArrayList<>();
+          for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
+            com.github.gumtreediff.actions.model.Action action =
+                    (com.github.gumtreediff.actions.model.Action) iter.next();
+            ASTOperation ASTOperation = null;
+            if (action instanceof Insert) {
+              ASTOperation = ASTOperation.ADD;
+            } else if (action instanceof Delete) {
+              ASTOperation = ASTOperation.DEL;
+            } else if (action instanceof Move) {
+              ASTOperation = ASTOperation.MOV;
+            } else if (action instanceof Update) {
+              ASTOperation = ASTOperation.UPD;
+            }
+            AstAction myAction = new AstAction(ASTOperation, action.getNode().getType().toString());
+            actionList.add(myAction);
+          }
           tempActionList.addAll(actionList);
           tempCommitTrainingSample.setGumtreeActionList(tempActionList);
         } else {
-          // Only doc change, thus no CodeChange and AbstractJdtTree generated
-          tempCommitTrainingSample.addGumtreeCountDocChange();
+          logger.warn(String.format("no CodeChange and AbstractJdtTree generated "));
         }
       }
     } catch (Exception e) {
-      // e.printStackTrace();
-      // Lack of File, thus no DiffFiles generated
-      tempCommitTrainingSample.addGumtreeCountFileChange();
+      logger.warn(String.format("no DiffFiles generated "), e);
     }
     return tempCommitTrainingSample;
-  }
-  // generate Edit Script from file contents
-  private static EditScript generateEditScript(String baseContent, String currentContent) {
-    JdtTreeGenerator generator = new JdtTreeGenerator();
-    try {
-      TreeContext oldContext = generator.generateFrom().string(baseContent);
-      TreeContext newContext = generator.generateFrom().string(currentContent);
-
-      Matcher matcher = Matchers.getInstance().getMatcher();
-      MappingStore mappings = matcher.match(oldContext.getRoot(), newContext.getRoot());
-      EditScript editScript = new ChawatheScriptGenerator().computeActions(mappings);
-      return editScript;
-    } catch (Exception e) {
-      // e.printStackTrace();
-      // Failure to generate AbstractJdtTree because of the docChange instead of codeChange
-      return null;
-    }
-  }
-  // generate Commit Info from different file pathway
-  private static List<AstAction> generateAstActionList(EditScript editScript) {
-    List<AstAction> actionList = new ArrayList<>();
-    for (Iterator iter = editScript.iterator(); iter.hasNext(); ) {
-      com.github.gumtreediff.actions.model.Action action =
-          (com.github.gumtreediff.actions.model.Action) iter.next();
-      ASTOperation ASTOperation = null;
-      if (action instanceof Insert) {
-        ASTOperation = ASTOperation.ADD;
-      } else if (action instanceof Delete) {
-        ASTOperation = ASTOperation.DEL;
-      } else if (action instanceof Move) {
-        ASTOperation = ASTOperation.MOV;
-      } else if (action instanceof Update) {
-        ASTOperation = ASTOperation.UPD;
-      }
-      AstAction myAction = new AstAction(ASTOperation, action.getNode().getType().toString());
-      actionList.add(myAction);
-    }
-    return actionList;
   }
 
   private static Action convertAstActionToAction(AstAction astAction) {
@@ -306,14 +289,14 @@ public class CommitInfoHandler {
     return new Action(op, astAction.getASTNodeType(), "");
   }
 
-  // generate DiffHunkActions from diffHunks
-  private static List<Action> generateActionListFromDiffHunks(
-      CommitTrainingSample tempCommitTrainingSample, DataCollector dataCollector) throws Exception {
+  // generate DiffHunkActions from SmartCommit
+  private static List<Action> generateDiffHunkActionListFromSmartCommit(
+          CommitTrainingSample tempCommitTrainingSample, DataCollector dataCollector) throws Exception {
 
     String REPO_ID = tempCommitTrainingSample.getRepoID();
     String REPO_NAME = tempCommitTrainingSample.getRepoName();
     String REPO_PATH = tempCommitTrainingSample.getRepoPath();
-    String TEMP_DIR = "~/Downloads/";
+    String TEMP_DIR = "~/";
     String COMMIT_ID = tempCommitTrainingSample.getCommitID();
     List<Action> AstActions = new ArrayList<>();
 
@@ -339,270 +322,108 @@ public class CommitInfoHandler {
     return AstActions;
   }
 
-  // generate RefactorCodeChangeFromCodeChange
-  private static List<RefactorMinerAction> getRefactorCodeChangesFromCodeChange(
-      String repoPath, String commitID) {
-    GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
-    org.refactoringminer.api.GitService gitService = new GitServiceImpl();
-    List<RefactorMinerAction> refactorMinerActions = new ArrayList<>();
-    try {
-      Repository repo = gitService.openRepository(repoPath);
-      miner.detectAtCommit(
-          repo,
-          commitID,
-          new RefactoringHandler() {
-            @Override
-            public void handle(String commitId, List<Refactoring> refactorings) {
-              // System.out.println("Refactorings at " + commitId);
-              if (refactorings.isEmpty()) {
-                System.out.println("No refactoring generated");
-              } else {
-                for (Refactoring ref : refactorings) {
-                  RefactorMinerAction refactorMinerAction =
-                      new RefactorMinerAction(ref.getRefactoringType(), ref.getName());
-                  refactorMinerActions.add(refactorMinerAction);
-                }
-              }
-            }
-          });
-    } catch (Exception e) {
-      System.out.println("Repo Not Exist");
-      // e.printStackTrace();
-    }
-    return refactorMinerActions;
-  }
-
-  private static Action convertRefactorCodeChangeToAction(RefactorMinerAction refactorMinerAction) {
-    Operation op = Operation.UKN;
-    for (Operation operation : Operation.values()) {
-      if (refactorMinerAction.getName().equals(operation.label)) {
-        op = operation;
-        break;
-      }
-    }
-    return new Action(op, refactorMinerAction.getRefactoringType(), "");
-  }
-
   // Load given commitTrainingSample into given DB collection
   public static void loadTrainSampleToDB(
       MongoCollection<Document> collection, CommitTrainingSample commitTrainingSample) {
     try {
-      Document doc1 = new Document();
-      doc1.put("repoID", commitTrainingSample.getRepoID());
-      doc1.put("repoPath", commitTrainingSample.getRepoPath());
-      doc1.put("repoName", commitTrainingSample.getRepoName());
-      doc1.put("commitID", commitTrainingSample.getCommitID());
-      doc1.put("commitMsg", commitTrainingSample.getCommitMsg());
-      doc1.put("committer", commitTrainingSample.getCommitter());
-      doc1.put("committerEmail", commitTrainingSample.getCommitterEmail());
-      doc1.put("commitTime", commitTrainingSample.getCommitTime());
-      doc1.put("commitIntent", commitTrainingSample.getIntent().get0().getLabel());
-      doc1.put(
-          "commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
-      doc1.put("GumtreeCountFileChange", commitTrainingSample.getGumtreeCountFileChange());
-      doc1.put("GumtreeCountDocChange", commitTrainingSample.getGumtreeCountDocChange());
-
+      Document doc = new Document();
+      // raw
+      Document raw = new Document();
       {
-        Integer NumOfDiffFiles = 0,
-            NumOfDiffFilesJava = 0,
-            NumOfDiffFilesNonJAVA = 0,
-            NumOfDiffFilesAdded = 0,
-            NumOfDiffFilesModified = 0,
-            NumOfDiffFilesAddedJAVA = 0,
-            NumOfDiffFilesModifiedJAVA = 0,
-            NumOfDiffFilesAddedXML = 0,
-            NumOfDiffFilesModifiedXML = 0,
-            NumOfDiffHunks = 0,
-            AveLinesOfDiffHunks = 0,
-            SumOfLinesAdded = 0,
-            SumOfLinesDeleted = 0,
-            SumOfLinesModified = 0,
-            SumOfLinesChanged = 0,
-            SumOfLinesChangedJava = 0,
-            SumOfLinesChangedXML = 0,
-            SumOfLinesChangedOthers = 0;
-        // add DiffFile to DB
+        Document RepoCommit = new Document();
+        RepoCommit.put("repoID", commitTrainingSample.getRepoID());
+        RepoCommit.put("repoPath", commitTrainingSample.getRepoPath());
+        RepoCommit.put("repoName", commitTrainingSample.getRepoName());
+        RepoCommit.put("commitID", commitTrainingSample.getCommitID());
+        RepoCommit.put("commitMsg", commitTrainingSample.getCommitMsg());
+        RepoCommit.put("committer", commitTrainingSample.getCommitter());
+        RepoCommit.put("committerEmail", commitTrainingSample.getCommitterEmail());
+        RepoCommit.put("commitTime", commitTrainingSample.getCommitTime());
+        raw.put("Info", RepoCommit);
+
         List<DiffFile> diffFiles = commitTrainingSample.getDiffFiles();
-        if (diffFiles != null) {
-          List<Document> Files = new ArrayList<>();
-          // diffFile Level
-          for (DiffFile diffFile : diffFiles) {
-            Document addrAttr = new Document();
+        raw.put("NumOfDiffFiles", diffFiles.size());
 
-            String RepoID = diffFile.getRepoID();
-            addrAttr.put("RepoID", RepoID);
-            String RepoName = diffFile.getRepoName();
-            addrAttr.put("RepoName", RepoName);
-            String FileID = diffFile.getFileID();
-            addrAttr.put("FileID", FileID);
-            String RawHeaders = diffFile.getRawHeaders().toString();
-            addrAttr.put("RawHeaders", RawHeaders);
+        for (DiffFile diffFile : diffFiles) {
+          int diffFileIndex = 0;
+          Document diffFileDoc = new Document();
+          diffFileDoc.put("FileType", diffFile.getFileType().toString());
+          diffFileDoc.put("FileStatus", diffFile.getStatus().toString());
+          diffFileDoc.put(
+                  "index",
+                  diffFile.getIndex()); // the index of the diff file in the current repo, start from 0
+          diffFileDoc.put("baseRelativePath", diffFile.getBaseRelativePath());
+          diffFileDoc.put("currentRelativePath", diffFile.getCurrentRelativePath());
 
-            String FileStatus = diffFile.getStatus().label;
-            addrAttr.put("FileStatus", FileStatus);
-            String FileType = diffFile.getFileType().label;
-            addrAttr.put("FileType", FileType);
+          diffFileDoc.put("baseContent", diffFile.getBaseContent());
+          diffFileDoc.put("currentContent", diffFile.getCurrentContent());
 
-            String BaseRelativePath = diffFile.getBaseRelativePath();
-            addrAttr.put("BaseRelativePath", BaseRelativePath);
-            String CurrentRelativePath = diffFile.getCurrentRelativePath();
-            addrAttr.put("CurrentRelativePath", CurrentRelativePath);
-            String BaseContent = diffFile.getBaseContent();
-            addrAttr.put("BaseContent", BaseContent);
-            String CurrentContent = diffFile.getCurrentContent();
-            addrAttr.put("CurrentContent", CurrentContent);
-            Integer Index = diffFile.getIndex();
-            addrAttr.put("Index", Index);
-            List<DiffHunk> diffHunks = diffFile.getDiffHunks();
-            addrAttr.put("NumOfDiffHunks", diffHunks.size());
-            // diffHunk Level
-            if (diffHunks.size() > 1) {
-              List<Integer> nums = new ArrayList<>();
-              List<List<String>> rawDiffsList = new ArrayList<>();
-              for (int i = 0; i < diffHunks.size(); i++) {
-                DiffHunk diffHunk = diffHunks.get(i);
-                Integer num =
-                    diffHunk.getBaseEndLine()
-                        - diffHunk.getBaseStartLine()
-                        + diffHunk.getCurrentEndLine()
-                        - diffHunk.getCurrentStartLine();
-                if (num > 0) SumOfLinesAdded += num;
-                else if (num < 0) SumOfLinesDeleted += num;
-                else SumOfLinesAdded += num;
-                SumOfLinesChanged += num;
-                if (FileType.equals("Java")) SumOfLinesChangedJava += num;
-                else if (FileType.equals("XML")) SumOfLinesChangedXML += num;
-                else SumOfLinesChangedOthers += num;
+          List<DiffHunk> diffHunks = diffFile.getDiffHunks();
+          diffFileDoc.put("NumOfDiffHunks", diffHunks.size());
 
-                nums.add(num);
-                List<String> rawDiffs = diffHunk.getRawDiffs();
-                rawDiffsList.add(rawDiffs);
+          for (DiffHunk diffHunk : diffHunks) {
+            int diffHunkIndex = 0;
+            Document diffHunkDoc = new Document();
+            diffHunkDoc.put("ChangeType", diffHunk.getChangeType().toString());
+            diffHunkDoc.put("baseHunkContentType", diffHunk.getBaseHunk().getContentType().toString());
+            diffHunkDoc.put("currentHunkContentType", diffHunk.getCurrentHunk().getContentType().toString());
+            List<String> RawDiffList = diffHunk.getRawDiffs();
+            diffHunkDoc.put("numOfRawDiffList", RawDiffList.size());
+            if (!RawDiffList.isEmpty()) {
+              Document rawdiffs = new Document();
+              int rawDiffIndex = 0;
+              for (String rawdiff : RawDiffList) {
+                rawdiffs.put("Line " + rawDiffIndex++, rawdiff);
               }
-              addrAttr.put("changedLines", nums.toString());
-              addrAttr.put("RawDiffsList", rawDiffsList);
+              diffHunkDoc.put("RawDiffList", rawdiffs);
             }
-
-            if (FileStatus.equals("modified")) {
-              NumOfDiffFilesModified += 1;
-            } else if (FileStatus.equals("added")) {
-              NumOfDiffFilesAdded += 1;
-            }
-
-            if (FileType.equals("Java")) {
-              NumOfDiffFilesJava += 1;
-              if (FileStatus.equals("modified")) NumOfDiffFilesModifiedJAVA += 1;
-              if (FileStatus.equals("added")) NumOfDiffFilesAddedJAVA += 1;
-            } else {
-              NumOfDiffFilesNonJAVA += 1;
-              if (FileType.equals("XML")) {
-                if (FileStatus.equals("modified")) NumOfDiffFilesModifiedXML += 1;
-                if (FileStatus.equals("added")) NumOfDiffFilesAddedXML += 1;
-              }
-            }
-
-            NumOfDiffFiles = diffFiles.size();
-            NumOfDiffHunks = diffHunks.size();
-            AveLinesOfDiffHunks = SumOfLinesChanged / NumOfDiffHunks;
-
-            Files.add(addrAttr);
+            diffFileDoc.put("DiffHunk " + diffHunkIndex++, diffHunkDoc);
           }
-
-          doc1.put("DiffFiles", Files);
-          Document features = new Document();
-          features.put("NumOfDiffFiles", NumOfDiffFiles);
-          features.put("NumOfDiffFilesJava", NumOfDiffFilesJava);
-          features.put("NumOfDiffFilesNonJAVA", NumOfDiffFilesNonJAVA);
-          features.put("NumOfDiffFilesAdded", NumOfDiffFilesAdded);
-          features.put("NumOfDiffFilesModified", NumOfDiffFilesModified);
-          features.put("NumOfDiffFilesAddedJAVA", NumOfDiffFilesAddedJAVA);
-          features.put("NumOfDiffFilesModifiedNonJAVA", NumOfDiffFilesModifiedJAVA);
-          features.put("NumOfDiffFilesAddedXML", NumOfDiffFilesAddedXML);
-          features.put("NumOfDiffFilesModifiedXML", NumOfDiffFilesModifiedXML);
-          features.put("NumOfDiffHunks", NumOfDiffHunks);
-          features.put("AveLinesOfDiffHunks", AveLinesOfDiffHunks);
-          features.put("SumOfLinesAdded", SumOfLinesAdded);
-          features.put("SumOfLinesDeleted", SumOfLinesDeleted);
-          features.put("SumOfLinesModified", SumOfLinesModified);
-          features.put("SumOfLinesChanged", SumOfLinesChanged);
-          features.put("SumOfLinesChangedJava", SumOfLinesChangedJava);
-          features.put("SumOfLinesChangedXML", SumOfLinesChangedXML);
-          features.put("SumOfLinesOthers", SumOfLinesChangedOthers);
-          doc1.put("18Features", features);
+          raw.put("DiffFile " + diffFileIndex++, diffFileDoc);
         }
+
       }
-
+      // Extraction
+      Document extract = new Document();
       {
-        List<Action> Actions1 = new ArrayList<>();
-        // add ActionList to DB
-        List<AstAction> GumtreeActions = commitTrainingSample.getGumtreeActionList();
-        if (GumtreeActions != null) {
-          List<Document> actions = new ArrayList<>();
-          for (AstAction astAction : GumtreeActions) {
-            Document addrAttr = new Document();
-            Actions1.add(convertAstActionToAction(astAction));
-            addrAttr.put("operation", String.valueOf(astAction.getASTOperation()));
-            addrAttr.put("astNodeType", astAction.getASTNodeType());
-            actions.add(addrAttr);
-          }
-          doc1.put("GumtreeActions", actions);
-        }
+        Document fromMsg = new Document();
+        fromMsg.put("Intent", commitTrainingSample.getIntent().getLabel());
+        fromMsg.put(
+                "commitIntentDescription", String.valueOf(commitTrainingSample.getIntentDescription()));
+        extract.put("fromMsg", fromMsg);
 
-        List<Action> Actions2 = new ArrayList<>();
-        // add DiffHunkActions to DB
-        List<Action> DiffHunkActions = commitTrainingSample.getDiffHunksActions();
-        if (DiffHunkActions != null) {
+        Document fromCommit = new Document();
+        {
+          // add GumtreeAction
+          List<AstAction> GumtreeActions = commitTrainingSample.getGumtreeActionList();
+          if (GumtreeActions != null) {
+            List<Document> actions = new ArrayList<>();
+            for (AstAction astAction : GumtreeActions) {
+              Document addrAttr = new Document();
+              addrAttr.put("operation", String.valueOf(astAction.getASTOperation()));
+              addrAttr.put("astNodeType", astAction.getASTNodeType());
+              actions.add(addrAttr);
+            }
+            fromCommit.put("GumtreeActions", actions);
+          }
+        }
+        {
+          // add DiffHunkActions
+          List<Action> DiffHunkActions = commitTrainingSample.getDiffHunksActions();
           List<Document> actions = new ArrayList<>();
           for (Action DiffHunkAction : DiffHunkActions) {
             Document addrAttr = new Document();
             addrAttr.put("operation", DiffHunkAction.getOperation().toString());
             addrAttr.put("DiffHunkType", DiffHunkAction.getTypeFrom());
             actions.add(addrAttr);
-            Actions2.add(DiffHunkAction);
           }
-          doc1.put("DiffHunkActions", actions);
+          fromCommit.put("DiffHunkActions", actions);
         }
-
-        List<Action> Actions3 = new ArrayList<>();
-        // add refactorCodeChange to DB
-        List<RefactorMinerAction> refactorMinerActions =
-            commitTrainingSample.getRefactorMinerActions();
-        if (refactorMinerActions != null) {
-          List<Document> actions = new ArrayList<>();
-          for (RefactorMinerAction refactorMinerAction : refactorMinerActions) {
-            Document addrAttr = new Document();
-            addrAttr.put("operation", refactorMinerAction.getOperation());
-            addrAttr.put("refactoringType", refactorMinerAction.getRefactoringType());
-            actions.add(addrAttr);
-            Actions3.add(convertRefactorCodeChangeToAction(refactorMinerAction));
-          }
-          doc1.put("refactorMinerActions", actions);
-        }
-        {
-          // add 3in1 to DB
-          List<Document> actions = new ArrayList<>();
-          Integer sizeActions1 = Actions1.size();
-          Integer sizeActions2 = Actions2.size();
-          Integer sizeActions3 = Actions3.size();
-          for (int i = 0; i < sizeActions1; i++) {
-            Document addrAttr = new Document();
-            addrAttr.put("Gumtree", Actions1.get(i).toString());
-            actions.add(addrAttr);
-          }
-          for (int i = 0; i < sizeActions2; i++) {
-            Document addrAttr = new Document();
-            addrAttr.put("DiffHunk", Actions2.get(i).toString());
-            actions.add(addrAttr);
-          }
-          for (int i = 0; i < sizeActions3; i++) {
-            Document addrAttr = new Document();
-            addrAttr.put("RefactorMiner", Actions3.get(i).toString());
-            actions.add(addrAttr);
-          }
-          doc1.put("AllActions", actions);
-        }
+        extract.put("fromCommit", fromCommit);
       }
-
-      collection.insertOne(doc1);
+      doc.put("Raw", raw);
+      doc.put("Extraction", extract);
+      collection.insertOne(doc);
 
     } catch (Exception e) {
       e.printStackTrace();

@@ -2,28 +2,29 @@ package com.github.smartcommit.intent.model;
 
 import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
-import com.github.smartcommit.model.DiffHunk;
 
 import java.util.List;
 
 public class CommitTrainingSample {
+  // raw
   private String repoID;
   private String repoPath;
   private String repoName;
+
   private String commitID;
   private String commitMsg;
   private String committer;
   private String committerEmail;
   private String commitTime;
+
+  private Integer numOfDiffFiles;
+  private List<DiffFile> diffFiles;
+
+  // extraction
   private Intent intent;
   private List<IntentDescription> intentDescriptions;
-  private Integer GumtreeCountFileChange = 0;
-  private Integer GuntreeCountDocChange = 0;
   private List<AstAction> gumtreeActions;
   private List<Action> diffHunksActions;
-  private List<RefactorMinerAction> refactorMinerActions;
-  private List<DiffFile> diffFiles;
-  private List<DiffHunk> diffHunks;
 
   public String getCommitID() {
     return commitID;
@@ -101,33 +102,32 @@ public class CommitTrainingSample {
     this.intentDescriptions.add(intentDescription);
   }
 
-  public Integer getGumtreeCountFileChange() {
-    return GumtreeCountFileChange;
+  public void setCommitterEmail(String committerEmail) {
+    this.committerEmail = committerEmail;
   }
 
-  public void addGumtreeCountFileChange() {
-    this.GumtreeCountFileChange ++;
+  public Integer getNumOfDiffFiles() {
+    return numOfDiffFiles;
   }
 
-  public Integer getGumtreeCountDocChange() {
-    return GuntreeCountDocChange;
+  public void setNumOfDiffFiles(Integer numOfDiffFiles) {
+    this.numOfDiffFiles = numOfDiffFiles;
   }
 
-  public void addGumtreeCountDocChange() {
-    this.GuntreeCountDocChange ++;
+  public List<IntentDescription> getIntentDescriptions() {
+    return intentDescriptions;
   }
 
-
-  public List<RefactorMinerAction> getRefactorMinerActions() {
-    return refactorMinerActions;
+  public void setIntentDescriptions(List<IntentDescription> intentDescriptions) {
+    this.intentDescriptions = intentDescriptions;
   }
 
-  public void setRefactorMinerActions(List<RefactorMinerAction> refactorMinerActions) {
-    this.refactorMinerActions = refactorMinerActions;
+  public List<AstAction> getGumtreeActions() {
+    return gumtreeActions;
   }
 
-  public void addRefactorCodeChange(RefactorMinerAction refactorMinerAction) {
-    this.refactorMinerActions.add(refactorMinerAction);
+  public void setGumtreeActions(List<AstAction> gumtreeActions) {
+    this.gumtreeActions = gumtreeActions;
   }
 
   public void setDiffFiles(List<DiffFile> diffFiles) {
@@ -161,5 +161,4 @@ public class CommitTrainingSample {
   public String getRepoName() {
     return this.repoName;
   }
-
 }
