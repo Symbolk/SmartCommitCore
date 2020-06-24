@@ -556,6 +556,9 @@ public class Utils {
    * @return
    */
   private static String prettifyCodeElement(String original) {
+    if (original == null) {
+      return "";
+    }
     if (original.contains(":")) {
       int colonIndex = original.indexOf(":");
       String type = original.substring(colonIndex + 1).trim();
@@ -570,9 +573,8 @@ public class Utils {
             + " "
             + original.substring(spaceIndex, colonIndex).trim();
       }
-    } else {
-      return original;
     }
+    return original;
   }
 
   private static boolean checkSuffix(String str, String[] suffixes) {
