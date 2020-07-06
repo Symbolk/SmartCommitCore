@@ -119,13 +119,16 @@ public class JDTService {
     String name = type.getName().getIdentifier();
     ASTNode parent = type.getParent();
     // for inner type, resolve full name e.g.: A.B
-    while (parent != null && parent.getClass() == TypeDeclaration.class) {
-      name = ((TypeDeclaration) parent).getName().getIdentifier() + "." + name;
-      parent = parent.getParent();
+    if (!type.isPackageMemberTypeDeclaration()) {
+      while (parent != null && parent instanceof AbstractTypeDeclaration) {
+        name = ((AbstractTypeDeclaration) parent).getName().getIdentifier() + "." + name;
+        parent = parent.getParent();
+      }
     }
+
     // resolve fully qualified name e.g.: some.package.A.B
     // if it is in a package
-    if (type.getRoot().getClass() == CompilationUnit.class) {
+    if (type.getRoot() instanceof CompilationUnit) {
       String packageName = getPackageName(type);
       if (!packageName.isEmpty()) {
         name = packageName + "." + name;
