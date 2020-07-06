@@ -55,28 +55,32 @@ public class MemberVisitor extends ASTVisitor {
     annotationInfo.node = enumNode;
     entityPool.annotationInfoMap.put(annotationInfo.fullName, annotationInfo);
 
-    // suppress the other unusual members in higher Java versions (like TypeDecl, EnumDecl,
-    // FieldDecl, etc.)
-    List<AnnotationTypeMemberDeclaration> bodyDeclarations =
+    // support all child types of BodyDeclaration, including: AnnotationTypeMemberDeclaration,
+    // EnumDeclaration, etc.
+    List<BodyDeclaration> bodyDeclarations =
         ((List<?>) node.bodyDeclarations())
             .stream()
-                .filter(AnnotationTypeMemberDeclaration.class::isInstance)
-                .map(AnnotationTypeMemberDeclaration.class::cast)
+                .filter(BodyDeclaration.class::isInstance)
+                .map(BodyDeclaration.class::cast)
                 .collect(Collectors.toList());
     // annotation type element declarations, which look a lot like methods
-    for (AnnotationTypeMemberDeclaration declaration : bodyDeclarations) {
-      AnnotationMemberInfo memberInfo =
-          jdtService.createAnnotationMemberInfo(fileIndex, declaration, qualifiedName);
-      Node memberNode =
-          new Node(
-              generateNodeID(),
-              NodeType.ANNOTATION_MEMBER,
-              memberInfo.name,
-              memberInfo.uniqueName());
-      graph.addVertex(memberNode);
-      graph.addEdge(enumNode, memberNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
-
-      memberInfo.node = memberNode;
+    for (BodyDeclaration member : bodyDeclarations) {
+      if (member instanceof AnnotationTypeMemberDeclaration) {
+        AnnotationMemberInfo memberInfo =
+            jdtService.createAnnotationMemberInfo(
+                fileIndex, (AnnotationTypeMemberDeclaration) member, qualifiedName);
+        Node memberNode =
+            new Node(
+                generateNodeID(),
+                NodeType.ANNOTATION_MEMBER,
+                memberInfo.name,
+                memberInfo.uniqueName());
+        graph.addVertex(memberNode);
+        graph.addEdge(enumNode, memberNode, new Edge(generateEdgeID(), EdgeType.DEFINE));
+        memberInfo.node = memberNode;
+      } else if (member instanceof EnumDeclaration) {
+        visit((EnumDeclaration) member);
+      }
     }
 
     return true;
