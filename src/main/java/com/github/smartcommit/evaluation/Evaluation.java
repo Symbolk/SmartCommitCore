@@ -4,6 +4,7 @@ import com.github.smartcommit.client.SmartCommit;
 import com.github.smartcommit.core.RepoAnalyzer;
 import com.github.smartcommit.io.DataCollector;
 import com.github.smartcommit.model.*;
+import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.GroupLabel;
 import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.util.GitService;
@@ -41,17 +42,17 @@ public class Evaluation {
 
   public static void main(String[] args) {
     BasicConfigurator.configure();
-    org.apache.log4j.Logger.getRootLogger().setLevel(Level.ERROR);
+    org.apache.log4j.Logger.getRootLogger().setLevel(Level.INFO);
 
     String repoDir = "/Users/symbolk/coding/data/repos/";
     String tempDir = "/Users/symbolk/coding/data/temp/";
 
     // per project and avg
-    String repoName = "antlr4";
+    String repoName = "jruby";
     String repoPath = repoDir + repoName;
-    runRQ1(repoName, repoPath, tempDir + "/RQ1/" + repoName, 5);
-    //    runRQ2(repoName, repoPath, tempDir + "/RQ2/" + repoName);
-    //    getAllEmails(repoName);
+    runRQ1(repoName, repoPath, tempDir + "/test/" + repoName, 2);
+    //        debugBatch(repoName, repoPath, tempDir + "/test/debug", "65e4dc4_790994f_2be74da");
+    //            runRQ2(repoName, repoPath, tempDir + "/RQ2/" + repoName);
   }
 
   /**
@@ -59,18 +60,31 @@ public class Evaluation {
    *
    * @param repoPath
    */
-  private static void runRQ1(String repoName, String repoPath, String dir, int step) {
+  private static void runRQ1(String repoName, String repoPath, String outputDir, int step) {
     System.out.println("[RQ1] Repo: " + repoName + " Step: " + step);
-    String csvPath =
-        "/Users/symbolk/coding/dev/visualization/raw/" + repoName + "_" + step + ".csv";
+    String resultsCSV =
+        "/Users/symbolk/coding/dev/visualization/raw2/" + repoName + "_" + step + "_sc.csv";
+    String baseline1CSV =
+        "/Users/symbolk/coding/dev/visualization/raw2/" + repoName + "_" + step + "_all.csv";
+    String baseline2CSV =
+        "/Users/symbolk/coding/dev/visualization/raw2/" + repoName + "_" + step + "_file.csv";
     Utils.writeStringToFile(
         "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime"
             + System.lineSeparator(),
-        csvPath);
-    String tempDir = dir + File.separator + step;
+        resultsCSV);
+    Utils.writeStringToFile(
+        "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime"
+            + System.lineSeparator(),
+        baseline1CSV);
+    Utils.writeStringToFile(
+        "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime"
+            + System.lineSeparator(),
+        baseline2CSV);
+    String tempDir = outputDir + File.separator + step;
     Utils.clearDir(tempDir);
 
     // read samples from db
+    // mongod --dbpath /Users/symbolk/database/mongo
     MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
     MongoClient mongoClient = new MongoClient(connectionString);
     MongoDatabase db = mongoClient.getDatabase("atomic");
@@ -105,19 +119,22 @@ public class Evaluation {
         new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
     smartCommit.setDetectRefactorings(true);
     smartCommit.setProcessNonJavaChanges(false);
-    //    smartCommit.setDistanceThreshold(1);
+    //        smartCommit.setDistanceThreshold(2);
+    //    smartCommit.setSimilarityThreshold(0.8);
     Stopwatch stopwatch = Stopwatch.createStarted();
 
     // randomly sample 100 composite commits for each size
-    // combine consecutive 2~5 commitsByEmail into a change-set
-    List<Double> accuracies = new ArrayList<>();
+    // combine consecutive 2/3/5 commitsByEmail into a change-set
+    List<Double> resultAccs = new ArrayList<>();
+    List<Double> baselineAccs1 = new ArrayList<>();
+    List<Double> baselineAccs2 = new ArrayList<>();
     int sampleNum = 0;
     for (Map.Entry<String, List<String>> entry : commitsByEmailAboveStep.entrySet()) {
       List<String> commits = entry.getValue();
 
       outerloop:
       for (int i = 0; i < commits.size(); i += step) {
-        if (sampleNum >= 100) {
+        if (sampleNum >= 50) {
           break outerloop;
         }
         // ordered map
@@ -129,13 +146,12 @@ public class Evaluation {
 
         // collect data for each commit to be combined
         String resultsDir = tempDir + File.separator + commits.get(i);
-        String dirNameHash = "";
 
-        DataCollector dataCollector = new DataCollector(repoName, resultsDir.toString());
+        DataCollector dataCollector = new DataCollector(repoName, resultsDir);
 
         int LOC = 0;
         int j; // num of merged commits
-        dirNameHash = "";
+        String dirNameHash = "";
         for (j = 0; j < step; j++) {
           if (i + j < commits.size()) {
             String commitID = commits.get(i + j);
@@ -158,6 +174,7 @@ public class Evaluation {
 
               // assign new index for diffFile and diffHunk
               int beginIndex = unionDiffFiles.size();
+
               for (int k = 0; k < diffFiles.size(); ++k) {
                 int newIndex = beginIndex + k;
                 diffFiles.get(k).setIndex(newIndex);
@@ -169,6 +186,7 @@ public class Evaluation {
                 }
               }
               List<DiffHunk> diffHunks = repoAnalyzer.getDiffHunks();
+              //              if (diffHunks.isEmpty() || checkPureNoJavaChanges(diffHunks)) {
               if (diffHunks.isEmpty()) {
                 continue;
               }
@@ -184,7 +202,9 @@ public class Evaluation {
             break;
           }
         }
-        if (j < step || unionDiffHunks.size() > step * 100) {
+        if (j < step
+            || unionDiffHunks.size() > step * 100
+            || checkPureNoJavaChanges(unionDiffHunks)) {
           // the remaining commits for current committer is not enough
           FileUtils.deleteQuietly(new File(resultsDir));
           continue;
@@ -202,7 +222,19 @@ public class Evaluation {
           Map<String, Group> results =
               smartCommit.analyze(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
           stopwatch.stop();
+
           long timeCost = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+          System.out.println(
+              " Time="
+                  + timeCost
+                  + "ms"
+                  + " #diff_hunks="
+                  + unionDiffHunks.size()
+                  + " #LOC="
+                  + LOC);
+
+          // generate "diffs" and "file_ids.json", which keeps diff info
+          dataCollector.collectDiffHunks(unionDiffFiles, resultsDir);
 
           // export for testing
           smartCommit.exportGroupResults(results, resultsDir);
@@ -234,49 +266,59 @@ public class Evaluation {
             }
             generatedResults.put((String) res.getKey(), ids);
           }
+          // smartcommit results
+          Pair<List<Integer>, Double> resultMetrics = computeMetrics(groundTruth, generatedResults);
+          exportMetrics(
+              "SmartCommit", resultsCSV, resultMetrics, results.size(), LOC, sampleNum, timeCost);
+          resultAccs.add(resultMetrics.getRight());
 
-          Pair<List<Integer>, Double> res = computeMetrics(groundTruth, generatedResults);
-          int total = res.getLeft().get(0);
-          int correct = res.getLeft().get(1);
-          int reassignSteps = total - correct;
-          int orderingSteps = res.getLeft().get(2);
-          double accuracy = res.getRight();
-          accuracies.add(accuracy);
-          System.out.println(
-              "#diff_hunks="
-                  + unionDiffHunks.size()
-                  + " #LOC="
-                  + LOC
-                  + " (#Incorrect/#Total)="
-                  + reassignSteps
-                  + "/"
-                  + total
-                  + " Reordering="
-                  + orderingSteps
-                  + " Accuracy="
-                  + accuracy
-                  + " Time="
-                  + timeCost
-                  + "ms");
-          // save results
-          Utils.appendStringToFile(
-              csvPath,
-              sampleNum
-                  + ","
-                  + total
-                  + ","
-                  + LOC
-                  + ","
-                  + reassignSteps
-                  + ","
-                  + orderingSteps
-                  + ","
-                  + accuracy
-                  + ","
-                  + (reassignSteps + orderingSteps)
-                  + ","
-                  + timeCost
-                  + System.lineSeparator());
+          // baseline1: all diff hunks in one group
+          Map<String, Set<String>> baselineResult1 = new LinkedHashMap<>();
+          Set<String> allDiffHunkIDs = unionDiffHunkMap.keySet();
+          baselineResult1.put("group0", allDiffHunkIDs);
+          Pair<List<Integer>, Double> baselineMetrics1 =
+              computeMetrics(groundTruth, baselineResult1);
+          exportMetrics(
+              "All in one Group",
+              baseline1CSV,
+              baselineMetrics1,
+              baselineResult1.size(),
+              LOC,
+              sampleNum,
+              0L);
+          baselineAccs1.add(baselineMetrics1.getRight());
+
+          // baseline2: group according to file
+          Map<String, Set<String>> baselineResult2 = new LinkedHashMap<>();
+          for (DiffFile diffFile : unionDiffFiles) {
+            Set<String> diffHunkIDs =
+                diffFile.getDiffHunks().stream()
+                    .map(DiffHunk::getDiffHunkID)
+                    .collect(Collectors.toSet());
+            // use path as the group id
+            String groupID =
+                diffFile.getBaseRelativePath().isEmpty()
+                    ? diffFile.getCurrentRelativePath()
+                    : diffFile.getBaseRelativePath();
+            if (baselineResult2.containsKey(groupID)) {
+              baselineResult2.get(groupID).addAll(diffHunkIDs);
+            } else {
+              baselineResult2.put(groupID, diffHunkIDs);
+            }
+          }
+
+          Pair<List<Integer>, Double> baselineMetrics2 =
+              computeMetrics(groundTruth, baselineResult2);
+
+          exportMetrics(
+              "One file one Group",
+              baseline2CSV,
+              baselineMetrics2,
+              baselineResult2.size(),
+              LOC,
+              sampleNum,
+              0L);
+          baselineAccs2.add(baselineMetrics2.getRight());
 
           sampleNum++;
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
@@ -285,7 +327,78 @@ public class Evaluation {
       }
     }
 
-    System.out.println("Median Accuracy: " + Utils.formatDouble(getMedian(accuracies) * 100) + "%");
+    System.out.println(
+        "SmartCommit: Median Accuracy: " + Utils.formatDouble(getMedian(resultAccs)) + "%");
+    System.out.println(
+        "All in one Group: Median Accuracy: " + Utils.formatDouble(getMedian(baselineAccs1)) + "%");
+    System.out.println(
+        "One File One Group: Median Accuracy: "
+            + Utils.formatDouble(getMedian(baselineAccs2))
+            + "%");
+  }
+
+  private static void exportMetrics(
+      String title,
+      String csvPath,
+      Pair<List<Integer>, Double> metrics,
+      int groupsNum,
+      int LOC,
+      int sampleNum,
+      long timeCost) {
+    int total = metrics.getLeft().get(0);
+    int correct = metrics.getLeft().get(1);
+    int reassignSteps = total - correct;
+    int orderingSteps = metrics.getLeft().get(2);
+    double accuracy = metrics.getRight();
+    System.out.println(
+        title
+            + ": \t"
+            + "#groups="
+            + groupsNum
+            + " (#Incorrect/#Total)="
+            + reassignSteps
+            + "/"
+            + total
+            + " Reordering="
+            + orderingSteps
+            + " Accuracy="
+            + accuracy
+            + "%");
+
+    // save metrics (for visualization)
+    Utils.appendStringToFile(
+        csvPath,
+        sampleNum
+            + ","
+            + total
+            + ","
+            + LOC
+            + ","
+            + reassignSteps
+            + ","
+            + orderingSteps
+            + ","
+            + accuracy
+            + ","
+            + (reassignSteps + orderingSteps)
+            + ","
+            + timeCost
+            + System.lineSeparator());
+  }
+
+  /**
+   * Check if the diff hunk list only contains NonJava changes
+   *
+   * @param diffHunks
+   * @return true: only contains non java changes; false: else
+   */
+  private static boolean checkPureNoJavaChanges(List<DiffHunk> diffHunks) {
+    Optional<DiffHunk> javaDiffHunk =
+        diffHunks.stream()
+            .filter(diffHunk -> diffHunk.getFileType().equals(FileType.JAVA))
+            .findAny();
+    // if not present, return true
+    return !javaDiffHunk.isPresent();
   }
 
   /**
@@ -416,9 +529,10 @@ public class Evaluation {
     }
     int correctlySeparatedPairs = crossGroupPairs.size();
 
-    for (Pair<String, String> p1 : crossGroupPairs) {
-      for (Pair<String, String> p2 : resultPairs) {
-        if ((p1.getLeft().equals(p2.getLeft()) && p1.getRight().equals(p2.getRight()))) {
+    for (Pair<String, String> p1 : resultPairs) {
+      for (Pair<String, String> p2 : crossGroupPairs) {
+        if ((p1.getLeft().equals(p2.getLeft()) && p1.getRight().equals(p2.getRight()))
+            || (p1.getLeft().equals(p2.getRight()) && p1.getRight().equals(p2.getLeft()))) {
           correctlySeparatedPairs -= 1;
         }
       }
@@ -427,6 +541,7 @@ public class Evaluation {
     double accuracy =
         Utils.formatDouble(
             (correctlyGroupedPairs + correctlySeparatedPairs)
+                * 100
                 / ((double) (totalChangesNum * (totalChangesNum - 1) / 2)));
 
     List<Integer> res = new ArrayList<>();
@@ -464,7 +579,7 @@ public class Evaluation {
     smartCommit.setDistanceThreshold(0); // default
     smartCommit.setSimilarityThreshold(0.618D); // default
     smartCommit.setDetectRefactorings(true);
-    smartCommit.setProcessNonJavaChanges(true);
+    smartCommit.setProcessNonJavaChanges(false);
 
     int cnt = 1;
     try {
@@ -634,6 +749,7 @@ public class Evaluation {
                 + total
                 + " Accuracy="
                 + res.getRight()
+                + "%"
                 + " Reordering="
                 + orderingSteps);
       }
@@ -774,6 +890,242 @@ public class Evaluation {
       return (medianA + medianB) / 2;
     } else {
       return numArray[middle + 1];
+    }
+  }
+
+  private static void debugBatch(
+      String repoName, String repoPath, String tempDir, String commitString) {
+
+    String[] commitIDs = commitString.split("_");
+
+    SmartCommit smartCommit =
+        new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
+    smartCommit.setDetectRefactorings(true);
+    smartCommit.setProcessNonJavaChanges(false);
+    //    smartCommit.setDistanceThreshold(1);
+    Stopwatch stopwatch = Stopwatch.createStarted();
+
+    // randomly sample 100 composite commits for each size
+    // combine consecutive 2/3/5 commitsByEmail into a change-set
+    List<Double> resultAccs = new ArrayList<>();
+    // All in one Group
+    List<Double> baselineAccs1 = new ArrayList<>();
+    // One file one Group
+    List<Double> baselineAccs2 = new ArrayList<>();
+
+    // ordered map
+    Map<String, Set<String>> groundTruth = new LinkedHashMap<>();
+    // union diff hunks in one change set, reorder the file index
+    List<DiffFile> unionDiffFiles = new ArrayList<>();
+    List<DiffHunk> unionDiffHunks = new ArrayList<>();
+    Map<String, DiffHunk> unionDiffHunkMap = new HashMap<>();
+
+    // collect data for each commit to be combined
+    String resultsDir = tempDir + File.separator + commitString;
+    Utils.clearDir(resultsDir);
+
+    DataCollector dataCollector = new DataCollector(repoName, resultsDir);
+
+    int LOC = 0;
+    int j; // num of merged commits
+    for (j = 0; j < commitIDs.length; j++) {
+      String commitID = commitIDs[j];
+      if (!commitID.isEmpty()) {
+
+        // get diff hunks and save in groundTruth
+        RepoAnalyzer repoAnalyzer =
+            new RepoAnalyzer(String.valueOf(repoName.hashCode()), repoName, repoPath);
+
+        List<DiffFile> diffFiles = repoAnalyzer.analyzeCommit(commitID);
+
+        // collect all base and current files in the same folder
+        dataCollector.collectDiffFilesWorking(diffFiles);
+
+        // assign new index for diffFile and diffHunk
+        int beginIndex = unionDiffFiles.size();
+        diffFiles =
+            diffFiles.stream()
+                .filter(diffFile -> diffFile.getFileType().equals(FileType.JAVA))
+                .collect(Collectors.toList());
+        for (int k = 0; k < diffFiles.size(); ++k) {
+          int newIndex = beginIndex + k;
+          diffFiles.get(k).setIndex(newIndex);
+          for (DiffHunk diffHunk : diffFiles.get(k).getDiffHunks()) {
+            diffHunk.setFileIndex(newIndex);
+            LOC +=
+                (diffHunk.getBaseEndLine() - diffHunk.getBaseStartLine() + 1)
+                    + (diffHunk.getCurrentEndLine() - diffHunk.getCurrentStartLine() + 1);
+          }
+        }
+        List<DiffHunk> diffHunks = repoAnalyzer.getDiffHunks();
+        if (diffHunks.isEmpty()) {
+          continue;
+        }
+
+        unionDiffFiles.addAll(diffFiles);
+        unionDiffHunks.addAll(diffHunks);
+
+        unionDiffHunkMap.putAll(repoAnalyzer.getIdToDiffHunkMap());
+
+        groundTruth.put(commitID, repoAnalyzer.getIdToDiffHunkMap().keySet());
+      } else {
+        break;
+      }
+    }
+
+    // dirs that keeps the source code of diff files
+    String baseDir = resultsDir + File.separator + Version.BASE.asString() + File.separator;
+    String currentDir = resultsDir + File.separator + Version.CURRENT.asString() + File.separator;
+
+    System.out.println("[Batch X" + ":" + commitString + "]");
+    try {
+      stopwatch.reset().start();
+      Map<String, Group> results =
+          smartCommit.analyze(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
+      stopwatch.stop();
+
+      // generate "diffs" and "file_ids.json", which keeps diff info
+      dataCollector.collectDiffHunks(unionDiffFiles, resultsDir);
+
+      long timeCost = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+
+      // export for testing
+      smartCommit.exportGroupResults(results, resultsDir);
+      smartCommit.setId2DiffHunkMap(unionDiffHunkMap);
+      Map<String, Group> groundTruthGroups = new HashMap<>();
+      int gid = 0;
+      for (Map.Entry en1 : groundTruth.entrySet()) {
+        Group group =
+            new Group(
+                "",
+                repoName,
+                "group" + (gid++),
+                new ArrayList<>((Set<String>) en1.getValue()),
+                GroupLabel.OTHER);
+        group.setCommitID(en1.getKey().toString());
+        //        group.setCommitMsg(); // original commit msg
+        groundTruthGroups.put(group.getGroupID(), group);
+      }
+      smartCommit.exportGroupDetails(
+          groundTruthGroups, resultsDir + File.separator + "manual_details");
+      smartCommit.exportGroupDetails(results, resultsDir + File.separator + "generated_details");
+
+      // convert the group into map from groupid to diffhunkids
+      Map<String, Set<String>> generatedResults = new LinkedHashMap<>();
+      for (Map.Entry res : results.entrySet()) {
+        Set<String> ids = new HashSet<>();
+        for (String s : ((Group) res.getValue()).getDiffHunkIDs()) {
+          ids.add(Utils.parseUUIDs(s).getRight());
+        }
+        generatedResults.put((String) res.getKey(), ids);
+      }
+      // smartcommit results
+      Pair<List<Integer>, Double> resultMetrics = computeMetrics(groundTruth, generatedResults);
+
+      int total = resultMetrics.getLeft().get(0);
+      int correct = resultMetrics.getLeft().get(1);
+      int reassignSteps = total - correct;
+      int orderingSteps = resultMetrics.getLeft().get(2);
+      double accuracy = resultMetrics.getRight();
+      resultAccs.add(accuracy);
+      System.out.println(
+          "SmartCommit: \t"
+              + "#groups="
+              + results.size()
+              + " #diff_hunks="
+              + unionDiffHunks.size()
+              + " #LOC="
+              + LOC
+              + " (#Incorrect/#Total)="
+              + reassignSteps
+              + "/"
+              + total
+              + " Reordering="
+              + orderingSteps
+              + " Accuracy="
+              + accuracy
+              + "%"
+              + " Time="
+              + timeCost
+              + "ms");
+
+      // baseline1: all diff hunks in one group
+      Map<String, Set<String>> baselineResult1 = new LinkedHashMap<>();
+      Set<String> allDiffHunkIDs = unionDiffHunkMap.keySet();
+      baselineResult1.put("group0", allDiffHunkIDs);
+      Pair<List<Integer>, Double> baselineMetrics1 = computeMetrics(groundTruth, baselineResult1);
+
+      total = baselineMetrics1.getLeft().get(0);
+      correct = baselineMetrics1.getLeft().get(1);
+      reassignSteps = total - correct;
+      orderingSteps = baselineMetrics1.getLeft().get(2);
+      accuracy = baselineMetrics1.getRight();
+      baselineAccs1.add(accuracy);
+      System.out.println(
+          "All in one Group: \t"
+              + "#groups="
+              + baselineResult1.size()
+              + " #diff_hunks="
+              + unionDiffHunks.size()
+              + " #LOC="
+              + LOC
+              + " (#Incorrect/#Total)="
+              + reassignSteps
+              + "/"
+              + total
+              + " Reordering="
+              + orderingSteps
+              + " Accuracy="
+              + accuracy
+              + "%");
+
+      // baseline2: group according to file
+      Map<String, Set<String>> baselineResult2 = new LinkedHashMap<>();
+      for (DiffFile diffFile : unionDiffFiles) {
+        Set<String> diffHunkIDs =
+            diffFile.getDiffHunks().stream()
+                .map(DiffHunk::getDiffHunkID)
+                .collect(Collectors.toSet());
+        // use path as the group id
+        String groupID =
+            diffFile.getBaseRelativePath().isEmpty()
+                ? diffFile.getCurrentRelativePath()
+                : diffFile.getBaseRelativePath();
+        if (baselineResult2.containsKey(groupID)) {
+          baselineResult2.get(groupID).addAll(diffHunkIDs);
+        } else {
+          baselineResult2.put(groupID, diffHunkIDs);
+        }
+      }
+
+      Pair<List<Integer>, Double> baselineMetrics2 = computeMetrics(groundTruth, baselineResult2);
+
+      total = baselineMetrics2.getLeft().get(0);
+      correct = baselineMetrics2.getLeft().get(1);
+      reassignSteps = total - correct;
+      orderingSteps = baselineMetrics2.getLeft().get(2);
+      accuracy = baselineMetrics2.getRight();
+      baselineAccs2.add(accuracy);
+      System.out.println(
+          "One File One Group: \t"
+              + "#groups="
+              + baselineResult2.size()
+              + " #diff_hunks="
+              + unionDiffHunks.size()
+              + " #LOC="
+              + LOC
+              + " (#Incorrect/#Total)="
+              + reassignSteps
+              + "/"
+              + total
+              + " Reordering="
+              + orderingSteps
+              + " Accuracy="
+              + accuracy
+              + "%");
+
+    } catch (ExecutionException | InterruptedException | TimeoutException e) {
+      e.printStackTrace();
     }
   }
 }
