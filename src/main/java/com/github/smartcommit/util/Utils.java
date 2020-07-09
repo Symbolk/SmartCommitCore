@@ -6,9 +6,9 @@ import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.Operation;
 import gr.uom.java.xmi.diff.CodeRange;
-import info.debatty.java.stringsimilarity.Cosine;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.text.similarity.JaccardSimilarity;
 import org.mozilla.universalchardet.UniversalDetector;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringType;
@@ -454,8 +454,15 @@ public class Utils {
    * @return
    */
   public static double computeStringSimilarity(String s1, String s2) {
-    Cosine cosine = new Cosine();
-    return cosine.similarity(s1, s2);
+    // from apache common text
+    JaccardSimilarity jaccard = new JaccardSimilarity();
+    return jaccard.apply(s1, s2);
+
+    // from stringsimilarity
+    //    Cosine cosine = new Cosine();
+    //    return cosine.similarity(s1, s2);
+    //    Jaccard jaccard = new Jaccard();
+    //    return jaccard.similarity(s1, s2);
   }
 
   /**
@@ -697,5 +704,20 @@ public class Utils {
       ex.printStackTrace();
     }
     return StandardCharsets.UTF_8;
+  }
+
+  /**
+   * Return the file extension given a file path
+   *
+   * @param path
+   * @return
+   */
+  public static String getFileExtension(String path) {
+    int index = path.lastIndexOf(".");
+    if (index == -1) {
+      return path;
+    } else {
+      return path.substring(index);
+    }
   }
 }
