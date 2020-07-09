@@ -1,12 +1,10 @@
 package com.github.smartcommit.core;
 
+import com.github.smartcommit.io.DiffGraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
-import com.github.smartcommit.model.constant.ContentType;
-import com.github.smartcommit.model.constant.FileType;
-import com.github.smartcommit.model.constant.GroupLabel;
-import com.github.smartcommit.model.constant.Version;
+import com.github.smartcommit.model.constant.*;
 import com.github.smartcommit.model.diffgraph.DiffEdge;
 import com.github.smartcommit.model.diffgraph.DiffEdgeType;
 import com.github.smartcommit.model.diffgraph.DiffNode;
@@ -43,8 +41,7 @@ public class GroupGenerator {
   private List<DiffHunk> diffHunks;
   private Graph<Node, Edge> baseGraph;
   private Graph<Node, Edge> currentGraph;
-
-  // map the grouped diff hunk index to its group id
+  // map from the grouped diff hunk index to its group id
   private Map<String, String> indexToGroupMap;
 
   // outputs
@@ -122,8 +119,6 @@ public class GroupGenerator {
 
   /** Build edges in the diff graph */
   public void buildDiffGraph() {
-    // if no topo order, order by index
-    //    Set<DiffHunk> moving = new TreeSet<>(ascendingByIndexComparator());
 
     // cache all links from base/current graph as a top order
     Map<String, Set<String>> hardLinks =
@@ -161,10 +156,21 @@ public class GroupGenerator {
       createEdges(resource, DiffEdgeType.RESOURCE, 1.0);
       createEdges(others, DiffEdgeType.OTHERS, 1.0);
     } else {
+      Map<String, Set<DiffHunk>> diffHunksByFileType = new HashMap<>();
       for (DiffFile diffFile : nonJavaDiffFiles) {
-        others.addAll(diffFile.getDiffHunks());
+        String fileType =
+            diffFile.getBaseRelativePath().isEmpty()
+                ? Utils.getFileExtension(diffFile.getBaseRelativePath())
+                : Utils.getFileExtension(diffFile.getCurrentRelativePath());
+        if (!diffHunksByFileType.containsKey(fileType)) {
+          diffHunksByFileType.put(fileType, new HashSet<>());
+        }
+        diffHunksByFileType.get(fileType).addAll(diffFile.getDiffHunks());
       }
-      createEdges(others, DiffEdgeType.NONJAVA, 1.0);
+      for (Map.Entry<String, Set<DiffHunk>> entry : diffHunksByFileType.entrySet()) {
+        // group file according to file type
+        createEdges(entry.getValue(), DiffEdgeType.NONJAVA, 1.0);
+      }
     }
 
     // refactor
@@ -178,10 +184,10 @@ public class GroupGenerator {
         f.get(300, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
         f.cancel(true);
-        logger.warn(String.format("Ignore refactoring detection due to timeout: "), e);
+        logger.warn(String.format("Ignore refactoring detection due to RM timeout: "), e);
       } catch (ExecutionException | InterruptedException e) {
         logger.warn(String.format("Ignore refactoring detection due to RM error: "), e);
-        //        e.printStackTrace();
+        e.printStackTrace();
       } finally {
         service.shutdown();
       }
@@ -371,7 +377,7 @@ public class GroupGenerator {
     //    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
 
     Map<String, Group> generatedGroups = new LinkedHashMap<>();
-    Set<String> individuals = new LinkedHashSet<>();
+    Set<DiffNode> individuals = new LinkedHashSet<>();
     Map<String, String> idToIndexMap = new HashMap<>();
 
     // partition of the current level (union-find/disjoint set)
@@ -382,7 +388,7 @@ public class GroupGenerator {
         // individual
         diffNodesSet.forEach(
             diffNode -> {
-              individuals.add(diffNode.getUUID());
+              individuals.add(diffNode);
               idToIndexMap.put(diffNode.getUUID(), diffNode.getIndex());
             });
       } else if (diffNodesSet.size() > 1) {
@@ -408,15 +414,26 @@ public class GroupGenerator {
     }
 
     assignIndividuals(generatedGroups, idToIndexMap, individuals);
-    // the individuals are inter-independent, but only create single groups for user experience
-    if (individuals.size() <= 3) {
-      for (String individual : individuals) {
-        createGroup(generatedGroups, new HashSet<>(Arrays.asList(individual)), GroupLabel.OTHER);
+    // group individuals with file type centrality
+    Map<String, Set<String>> diffHunksByFileType = new HashMap<>();
+    for (DiffNode node : individuals) {
+      DiffFile file =
+          diffFiles.stream()
+              .filter(diffFile -> diffFile.getIndex().equals(node.getFileIndex()))
+              .findFirst()
+              .get();
+      String fileType =
+          file.getBaseRelativePath().isEmpty()
+              ? Utils.getFileExtension(file.getBaseRelativePath())
+              : Utils.getFileExtension(file.getCurrentRelativePath());
+      if (!diffHunksByFileType.containsKey(fileType)) {
+        diffHunksByFileType.put(fileType, new HashSet<>());
       }
-    } else {
-      createGroup(generatedGroups, individuals, GroupLabel.OTHER);
+      diffHunksByFileType.get(fileType).add(node.getUUID());
     }
-
+    for (Map.Entry<String, Set<String>> entry : diffHunksByFileType.entrySet()) {
+      createGroup(generatedGroups, entry.getValue(), GroupLabel.OTHER);
+    }
     return generatedGroups;
   }
 
@@ -476,39 +493,39 @@ public class GroupGenerator {
 
   /** Add an individual diff hunk to its nearest group */
   private void assignIndividuals(
-      Map<String, Group> groups, Map<String, String> idToIndexMap, Set<String> individuals) {
-    Set<String> temp = new HashSet<>(individuals);
-    for (String id : temp) {
-      // find the file index and diff hunk index by id
-      if (idToIndexMap.containsKey(id)) {
-        String index = idToIndexMap.get(id);
+      Map<String, Group> groups, Map<String, String> idToIndexMap, Set<DiffNode> individuals) {
+    Set<DiffNode> temp = new HashSet<>(individuals);
+    for (DiffNode node : temp) {
+      // find the file index and diff hunk index by node
+      if (idToIndexMap.containsKey(node)) {
+        String index = idToIndexMap.get(node);
         Pair<Integer, Integer> indices = Utils.parseIndices(index);
         // find the group of the nearest diff hunk
         // after sibling
         String after = indices.getLeft() + ":" + (indices.getRight() + 1);
         if (this.indexToGroupMap.containsKey(after)) {
           Group group = groups.get(this.indexToGroupMap.get(after));
-          group.addDiffHunk(id);
+          group.addDiffHunk(node.getUUID());
           this.indexToGroupMap.put(index, group.getGroupID());
-          individuals.remove(id);
+          individuals.remove(node);
           continue;
         }
         // before sibling
         String before = indices.getLeft() + ":" + (indices.getRight() - 1);
         if (this.indexToGroupMap.containsKey(before)) {
           Group group = groups.get(this.indexToGroupMap.get(before));
-          group.addDiffHunk(id);
+          group.addDiffHunk(node.getUUID());
           this.indexToGroupMap.put(index, group.getGroupID());
-          individuals.remove(id);
+          individuals.remove(node);
           continue;
         }
         // same parent file
         String parent = indices.getLeft() + ":0";
         if (this.indexToGroupMap.containsKey(parent)) {
           Group group = groups.get(this.indexToGroupMap.get(parent));
-          group.addDiffHunk(id);
+          group.addDiffHunk(node.getUUID());
           this.indexToGroupMap.put(index, group.getGroupID());
-          individuals.remove(id);
+          individuals.remove(node);
           continue;
         }
       }
