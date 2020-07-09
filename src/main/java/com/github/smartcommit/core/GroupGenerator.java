@@ -219,7 +219,7 @@ public class GroupGenerator {
         if (!diffHunk1.getUniqueIndex().equals(diffHunk.getUniqueIndex())) {
           // similarity (textual+action)
           double similarity = estimateSimilarity(diffHunk, diffHunk1);
-          if (similarity > minSimilarity) {
+          if (similarity >= minSimilarity) {
             createEdge(
                 diffHunk.getUniqueIndex(),
                 diffHunk1.getUniqueIndex(),
@@ -235,11 +235,22 @@ public class GroupGenerator {
                 DiffEdgeType.CLOSE,
                 Utils.formatDouble((double) 1 / distance));
           }
-          // moving
-          // if removed content equals added content, and in the same parent, it should be a moving
-
+          // cross-version but similar (moving or refactoring)
+          // condition: same parent scope (file level for now), delete and add
+          if (diffHunk.getFileIndex().equals(diffHunk1.getFileIndex())
+              && !diffHunk.getChangeType().equals(ChangeType.MODIFIED)
+              && !diffHunk1.getChangeType().equals(ChangeType.MODIFIED)) {
+            similarity = estimateCrossVersionSimilarity(diffHunk, diffHunk1);
+            if (similarity >= minSimilarity) {
+              createEdge(
+                  diffHunk.getUniqueIndex(),
+                  diffHunk1.getUniqueIndex(),
+                  DiffEdgeType.SIMILAR,
+                  similarity);
+            }
+          }
         }
-        // cross-lang ref (through literal string in code)
+        // TODO: cross-lang dependency
         // detect references between configs and java
       }
     }
@@ -665,15 +676,16 @@ public class GroupGenerator {
       if (diffHunk.getBaseHunk().getContentType().equals(ContentType.CODE)
           || diffHunk.getCurrentHunk().getContentType().equals(ContentType.CODE)) {
         // TODO check length to early stop, avoid too low similarity computation
+        // TODO use tokens to compute instead of whole string
         // textual similarity
         double baseText =
             Utils.computeStringSimilarity(
-                Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet()),
-                Utils.convertListToStringNoFormat(diffHunk1.getBaseHunk().getCodeSnippet()));
+                Utils.convertListLinesToString(diffHunk.getBaseHunk().getCodeSnippet()),
+                Utils.convertListLinesToString(diffHunk1.getBaseHunk().getCodeSnippet()));
         double currentText =
             Utils.computeStringSimilarity(
-                Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()),
-                Utils.convertListToStringNoFormat(diffHunk1.getCurrentHunk().getCodeSnippet()));
+                Utils.convertListLinesToString(diffHunk.getCurrentHunk().getCodeSnippet()),
+                Utils.convertListLinesToString(diffHunk1.getCurrentHunk().getCodeSnippet()));
         // change action similarity
         double astSimi =
             Utils.computeListSimilarity(diffHunk.getAstActions(), diffHunk1.getAstActions());
@@ -683,6 +695,21 @@ public class GroupGenerator {
       }
     }
     return 0D;
+  }
+
+  private double estimateCrossVersionSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
+    // TODO: use token similarity instead
+    String left =
+        Utils.convertListLinesToString(
+            diffHunk.getChangeType().equals(ChangeType.ADDED)
+                ? diffHunk.getCurrentHunk().getCodeSnippet()
+                : diffHunk.getBaseHunk().getCodeSnippet());
+    String right =
+        Utils.convertListLinesToString(
+            diffHunk1.getChangeType().equals(ChangeType.ADDED)
+                ? diffHunk1.getCurrentHunk().getCodeSnippet()
+                : diffHunk1.getBaseHunk().getCodeSnippet());
+    return Utils.formatDouble(Utils.computeStringSimilarity(left, right));
   }
 
   /**
