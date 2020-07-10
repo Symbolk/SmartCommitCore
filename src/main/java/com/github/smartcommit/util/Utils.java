@@ -6,6 +6,7 @@ import com.github.smartcommit.model.constant.FileStatus;
 import com.github.smartcommit.model.constant.FileType;
 import com.github.smartcommit.model.constant.Operation;
 import gr.uom.java.xmi.diff.CodeRange;
+import info.debatty.java.stringsimilarity.Cosine;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.text.similarity.JaccardSimilarity;
@@ -453,16 +454,23 @@ public class Utils {
    * @param s2
    * @return
    */
-  public static double computeStringSimilarity(String s1, String s2) {
-    // from apache common text
-    JaccardSimilarity jaccard = new JaccardSimilarity();
-    return jaccard.apply(s1, s2);
-
-    // from stringsimilarity
-    //    Cosine cosine = new Cosine();
-    //    return cosine.similarity(s1, s2);
+  public static double cosineStringSimilarity(String s1, String s2) {
+    Cosine cosine = new Cosine();
+    return cosine.similarity(s1, s2);
     //    Jaccard jaccard = new Jaccard();
     //    return jaccard.similarity(s1, s2);
+  }
+
+  /**
+   * Compute the string similarity between 2 strings
+   *
+   * @param s1
+   * @param s2
+   * @return
+   */
+  public static double tokenStringSimilarity(String s1, String s2) {
+    JaccardSimilarity jaccard = new JaccardSimilarity();
+    return jaccard.apply(s1, s2);
   }
 
   /**
