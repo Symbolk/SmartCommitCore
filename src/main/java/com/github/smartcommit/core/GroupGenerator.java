@@ -241,18 +241,29 @@ public class GroupGenerator {
                 DiffEdgeType.CLOSE,
                 Utils.formatDouble((double) 1 / distance));
           }
-          // cross-version but similar (moving or refactoring)
-          // condition: same parent scope (file level for now), delete and add
-          if (diffHunk.getFileIndex().equals(diffHunk1.getFileIndex())
-              && !diffHunk.getChangeType().equals(ChangeType.MODIFIED)
-              && !diffHunk1.getChangeType().equals(ChangeType.MODIFIED)) {
-            similarity = estimateCrossVersionSimilarity(diffHunk, diffHunk1);
-            if (similarity >= minSimilarity) {
-              createEdge(
-                  diffHunk.getUniqueIndex(),
-                  diffHunk1.getUniqueIndex(),
-                  DiffEdgeType.SIMILAR,
-                  similarity);
+          if (diffHunk.getFileIndex().equals(diffHunk1.getFileIndex())) {
+            // cross-version but similar (moving or refactoring)
+            // condition: same parent scope (file level for now), delete and add
+            if (!diffHunk.getChangeType().equals(ChangeType.MODIFIED)
+                && !diffHunk1.getChangeType().equals(ChangeType.MODIFIED)) {
+              similarity = estimateCrossVersionSimilarity(diffHunk, diffHunk1);
+              if (similarity >= minSimilarity) {
+                createEdge(
+                    diffHunk.getUniqueIndex(),
+                    diffHunk1.getUniqueIndex(),
+                    DiffEdgeType.SIMILAR,
+                    similarity);
+              }
+            }
+          } else {
+            // test and tested classes (in case no explicit hard link captured)
+            // condition: file name differs only with ending "Test"
+            if (diffHunk.getFileType().equals(FileType.JAVA)
+                && diffHunk1.getFileType().equals(FileType.JAVA)) {
+              Pair<String, String> pair = checkIfTest(diffHunk, diffHunk1);
+              if (pair != null) {
+                createEdge(pair.getLeft(), pair.getRight(), DiffEdgeType.TEST, 1.0);
+              }
             }
           }
         }
@@ -260,7 +271,7 @@ public class GroupGenerator {
         // detect references between configs and java
       }
     }
-    createEdges(reformat, DiffEdgeType.REFORMAT, 1.0);
+    //    createEdges(reformat, DiffEdgeType.REFORMAT, 1.0);
   }
 
   private Map<String, Set<String>> analyzeDefUse(Graph<Node, Edge> graph) {
@@ -772,6 +783,35 @@ public class GroupGenerator {
       }
     }
     return distance;
+  }
+
+  /**
+   * Check if the given two diff hunks are in a pair of tested class and test case by file path
+   *
+   * @param diffHunk
+   * @param diffHunk1
+   * @return <source (test file), target>
+   */
+  private Pair<String, String> checkIfTest(DiffHunk diffHunk, DiffHunk diffHunk1) {
+    String leftPath =
+        Utils.getFileNameFromPath(
+                diffHunk.getChangeType().equals(ChangeType.ADDED)
+                    ? diffHunk.getCurrentHunk().getRelativeFilePath()
+                    : diffHunk.getBaseHunk().getRelativeFilePath())
+            .replace(".java", "");
+    String rightPath =
+        Utils.getFileNameFromPath(
+                diffHunk1.getChangeType().equals(ChangeType.DELETED)
+                    ? diffHunk1.getBaseHunk().getRelativeFilePath()
+                    : diffHunk1.getCurrentHunk().getRelativeFilePath())
+            .replace(".java", "");
+    if (rightPath.equals(leftPath + "Test")) {
+      // right test left
+      return Pair.of(diffHunk1.getUniqueIndex(), diffHunk.getUniqueIndex());
+    } else if (leftPath.equals(rightPath + "Test")) {
+      return Pair.of(diffHunk.getUniqueIndex(), diffHunk1.getUniqueIndex());
+    }
+    return null;
   }
 
   /**
