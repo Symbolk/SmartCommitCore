@@ -497,8 +497,8 @@ public class GroupGenerator {
     Set<DiffNode> temp = new HashSet<>(individuals);
     for (DiffNode node : temp) {
       // find the file index and diff hunk index by node
-      if (idToIndexMap.containsKey(node)) {
-        String index = idToIndexMap.get(node);
+      if (idToIndexMap.containsKey(node.getUUID())) {
+        String index = idToIndexMap.get(node.getUUID());
         Pair<Integer, Integer> indices = Utils.parseIndices(index);
         // find the group of the nearest diff hunk
         // after sibling
@@ -696,11 +696,11 @@ public class GroupGenerator {
         // TODO use tokens to compute instead of whole string
         // textual similarity
         double baseText =
-            Utils.computeStringSimilarity(
+            Utils.cosineStringSimilarity(
                 Utils.convertListLinesToString(diffHunk.getBaseHunk().getCodeSnippet()),
                 Utils.convertListLinesToString(diffHunk1.getBaseHunk().getCodeSnippet()));
         double currentText =
-            Utils.computeStringSimilarity(
+            Utils.cosineStringSimilarity(
                 Utils.convertListLinesToString(diffHunk.getCurrentHunk().getCodeSnippet()),
                 Utils.convertListLinesToString(diffHunk1.getCurrentHunk().getCodeSnippet()));
         // change action similarity
@@ -726,7 +726,7 @@ public class GroupGenerator {
             diffHunk1.getChangeType().equals(ChangeType.ADDED)
                 ? diffHunk1.getCurrentHunk().getCodeSnippet()
                 : diffHunk1.getBaseHunk().getCodeSnippet());
-    return Utils.formatDouble(Utils.computeStringSimilarity(left, right));
+    return Utils.formatDouble(Utils.tokenStringSimilarity(left, right));
   }
 
   /**

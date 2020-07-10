@@ -282,11 +282,11 @@ public class GroupGeneratorOld {
     if (diffHunk.getBaseHunk().getContentType().equals(ContentType.CODE)
         || diffHunk.getCurrentHunk().getContentType().equals(ContentType.CODE)) {
       double baseSimi =
-          Utils.computeStringSimilarity(
+          Utils.cosineStringSimilarity(
               Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet()),
               Utils.convertListToStringNoFormat(diffHunk1.getBaseHunk().getCodeSnippet()));
       double currentSimi =
-          Utils.computeStringSimilarity(
+          Utils.cosineStringSimilarity(
               Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()),
               Utils.convertListToStringNoFormat(diffHunk1.getCurrentHunk().getCodeSnippet()));
       return (double) Math.round((baseSimi + currentSimi) / 2 * 100) / 100;
