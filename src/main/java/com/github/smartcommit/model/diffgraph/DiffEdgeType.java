@@ -8,6 +8,7 @@ public enum DiffEdgeType {
 
   MOVING(true, "moving"),
   REFORMAT(true, "reformat"),
+  TEST(false, "test"),
   DOC(false, "doc"),
   CONFIG(false, "config"),
   RESOURCE(false, "resource"),
