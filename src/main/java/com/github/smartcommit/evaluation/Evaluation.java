@@ -11,6 +11,8 @@ import com.github.smartcommit.util.GitService;
 import com.github.smartcommit.util.GitServiceCGit;
 import com.github.smartcommit.util.Utils;
 import com.google.common.base.Stopwatch;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
@@ -45,13 +47,14 @@ public class Evaluation {
     org.apache.log4j.Logger.getRootLogger().setLevel(Level.INFO);
 
     String repoDir = "/Users/symbolk/coding/data/repos/";
-    String tempDir = "/Users/symbolk/coding/data/temp/";
+    String tempDir = "/Users/symbolk/coding/data/results/";
 
-    // per project and avg
-    String repoName = "jruby";
+    // netty, nomulus, rocketmq, realm-java, glide, storm, elasticsearch, cassandra, antlr4, deeplearning4j
+    // jruby, error-prone, RxJava
+    String repoName = "ksql";
     String repoPath = repoDir + repoName;
-    runRQ1(repoName, repoPath, tempDir + "/test/" + repoName, 2);
-    //        debugBatch(repoName, repoPath, tempDir + "/test/debug", "65e4dc4_790994f_2be74da");
+    runOpenSrc(repoName, repoPath, tempDir + "/" + repoName, 3);
+//                debug(repoName, repoPath, tempDir + "/test/debug", "ada07cb_4bac044");
     //            runRQ2(repoName, repoPath, tempDir + "/RQ2/" + repoName);
   }
 
@@ -60,26 +63,13 @@ public class Evaluation {
    *
    * @param repoPath
    */
-  private static void runRQ1(String repoName, String repoPath, String outputDir, int step) {
-    System.out.println("[RQ1] Repo: " + repoName + " Step: " + step);
-    String resultsCSV =
-        "/Users/symbolk/coding/dev/visualization/raw2/" + repoName + "_" + step + "_sc.csv";
-    String baseline1CSV =
-        "/Users/symbolk/coding/dev/visualization/raw2/" + repoName + "_" + step + "_all.csv";
-    String baseline2CSV =
-        "/Users/symbolk/coding/dev/visualization/raw2/" + repoName + "_" + step + "_file.csv";
-    Utils.writeStringToFile(
-        "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime"
-            + System.lineSeparator(),
-        resultsCSV);
-    Utils.writeStringToFile(
-        "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime"
-            + System.lineSeparator(),
-        baseline1CSV);
-    Utils.writeStringToFile(
-        "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime"
-            + System.lineSeparator(),
-        baseline2CSV);
+  private static void runOpenSrc(String repoName, String repoPath, String outputDir, int step) {
+    System.out.println("Open Source Repo: " + repoName + " Step: " + step);
+    String smartCommitOutput = initOutputCSV("SmartCommit", repoName, step);
+    String clusterChangesOutput = initOutputCSV("DefUse", repoName, step);
+    String allInOneOutput = initOutputCSV("All", repoName, step);
+    String fileInOneOutput = initOutputCSV("File", repoName, step);
+
     String tempDir = outputDir + File.separator + step;
     Utils.clearDir(tempDir);
 
@@ -113,28 +103,30 @@ public class Evaluation {
     Map<String, List<String>> commitsByEmailAboveStep =
         commitsByEmail.entrySet().stream()
             .filter(a -> a.getValue().size() >= step)
-            .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
     SmartCommit smartCommit =
         new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
     smartCommit.setDetectRefactorings(true);
     smartCommit.setProcessNonJavaChanges(false);
-    //        smartCommit.setDistanceThreshold(2);
-    //    smartCommit.setSimilarityThreshold(0.8);
+    smartCommit.setWeightThreshold(0.6D);
+    smartCommit.setMinSimilarity(0.8D);
+    smartCommit.setMaxDistance(1);
     Stopwatch stopwatch = Stopwatch.createStarted();
 
     // randomly sample 100 composite commits for each size
     // combine consecutive 2/3/5 commitsByEmail into a change-set
-    List<Double> resultAccs = new ArrayList<>();
-    List<Double> baselineAccs1 = new ArrayList<>();
-    List<Double> baselineAccs2 = new ArrayList<>();
+    List<Double> scAccuracies = new ArrayList<>();
+    List<Double> ccAccuracies = new ArrayList<>();
+    List<Double> allAccuracies = new ArrayList<>();
+    List<Double> fileAccuracies = new ArrayList<>();
     int sampleNum = 0;
     for (Map.Entry<String, List<String>> entry : commitsByEmailAboveStep.entrySet()) {
       List<String> commits = entry.getValue();
 
       outerloop:
       for (int i = 0; i < commits.size(); i += step) {
-        if (sampleNum >= 50) {
+        if (sampleNum >= 100) {
           break outerloop;
         }
         // ordered map
@@ -219,7 +211,7 @@ public class Evaluation {
         System.out.print("[Batch " + sampleNum + ":" + dirNameHash + "]");
         try {
           stopwatch.reset().start();
-          Map<String, Group> results =
+          Map<String, Group> scGroups =
               smartCommit.analyze(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
           stopwatch.stop();
 
@@ -236,9 +228,11 @@ public class Evaluation {
           // generate "diffs" and "file_ids.json", which keeps diff info
           dataCollector.collectDiffHunks(unionDiffFiles, resultsDir);
 
-          // export for testing
-          smartCommit.exportGroupResults(results, resultsDir);
+          // export intermediate data of SC
+          smartCommit.exportGroupResults(scGroups, resultsDir);
           smartCommit.setId2DiffHunkMap(unionDiffHunkMap);
+
+          // export ground truth
           Map<String, Group> groundTruthGroups = new HashMap<>();
           int gid = 0;
           for (Map.Entry en1 : groundTruth.entrySet()) {
@@ -252,44 +246,87 @@ public class Evaluation {
             group.setCommitID(en1.getKey().toString());
             groundTruthGroups.put(group.getGroupID(), group);
           }
+
+          // override the copy
+          FileUtils.deleteQuietly(new File(resultsDir + File.separator + "manual_groups"));
+          Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+          for (Map.Entry<String, Group> ent : groundTruthGroups.entrySet()) {
+            Utils.writeStringToFile(
+                gson.toJson(ent.getValue()),
+                resultsDir
+                    + File.separator
+                    + "manual_groups"
+                    + File.separator
+                    + ent.getKey()
+                    + ".json");
+          }
           smartCommit.exportGroupDetails(
               groundTruthGroups, resultsDir + File.separator + "manual_details");
+
           smartCommit.exportGroupDetails(
-              results, resultsDir + File.separator + "generated_details");
+                  scGroups, resultsDir + File.separator + "generated_details");
 
           // convert the group into map from groupid to diffhunkids
-          Map<String, Set<String>> generatedResults = new LinkedHashMap<>();
-          for (Map.Entry res : results.entrySet()) {
+          Map<String, Set<String>> scResults = new LinkedHashMap<>();
+          for (Map.Entry res : scGroups.entrySet()) {
             Set<String> ids = new HashSet<>();
             for (String s : ((Group) res.getValue()).getDiffHunkIDs()) {
               ids.add(Utils.parseUUIDs(s).getRight());
             }
-            generatedResults.put((String) res.getKey(), ids);
+            scResults.put((String) res.getKey(), ids);
           }
-          // smartcommit results
-          Pair<List<Integer>, Double> resultMetrics = computeMetrics(groundTruth, generatedResults);
+          // smartcommit
+          Pair<List<Integer>, Double> scMetrics = computeMetrics(groundTruth, scResults);
           exportMetrics(
-              "SmartCommit", resultsCSV, resultMetrics, results.size(), LOC, sampleNum, timeCost);
-          resultAccs.add(resultMetrics.getRight());
+              "SmartCommit",
+              smartCommitOutput,
+              scMetrics,
+              scGroups.size(),
+              LOC,
+              sampleNum,
+              timeCost);
+          scAccuracies.add(scMetrics.getRight());
 
-          // baseline1: all diff hunks in one group
-          Map<String, Set<String>> baselineResult1 = new LinkedHashMap<>();
-          Set<String> allDiffHunkIDs = unionDiffHunkMap.keySet();
-          baselineResult1.put("group0", allDiffHunkIDs);
-          Pair<List<Integer>, Double> baselineMetrics1 =
-              computeMetrics(groundTruth, baselineResult1);
+          /* ---------------------baselines------------------------ */
+          Map<String, Group> ccGroups =
+              smartCommit.analyzeWithCC(
+                  unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
+          Map<String, Set<String>> ccResults = new LinkedHashMap<>();
+          for (Map.Entry res : ccGroups.entrySet()) {
+            Set<String> ids = new HashSet<>();
+            for (String s : ((Group) res.getValue()).getDiffHunkIDs()) {
+              ids.add(Utils.parseUUIDs(s).getRight());
+            }
+            ccResults.put((String) res.getKey(), ids);
+          }
+          Pair<List<Integer>, Double> ccMetrics = computeMetrics(groundTruth, ccResults);
           exportMetrics(
-              "All in one Group",
-              baseline1CSV,
-              baselineMetrics1,
-              baselineResult1.size(),
+              "ClusterChanges",
+              clusterChangesOutput,
+              ccMetrics,
+              ccResults.size(),
               LOC,
               sampleNum,
               0L);
-          baselineAccs1.add(baselineMetrics1.getRight());
+          ccAccuracies.add(ccMetrics.getRight());
+
+          // baseline1: all diff hunks in one group
+          Map<String, Set<String>> allResults = new LinkedHashMap<>();
+          Set<String> allDiffHunkIDs = unionDiffHunkMap.keySet();
+          allResults.put("group0", allDiffHunkIDs);
+          Pair<List<Integer>, Double> allMetrics = computeMetrics(groundTruth, allResults);
+          exportMetrics(
+              "All in one Group",
+              allInOneOutput,
+              allMetrics,
+              allResults.size(),
+              LOC,
+              sampleNum,
+              0L);
+          allAccuracies.add(allMetrics.getRight());
 
           // baseline2: group according to file
-          Map<String, Set<String>> baselineResult2 = new LinkedHashMap<>();
+          Map<String, Set<String>> fileResults = new LinkedHashMap<>();
           for (DiffFile diffFile : unionDiffFiles) {
             Set<String> diffHunkIDs =
                 diffFile.getDiffHunks().stream()
@@ -300,25 +337,24 @@ public class Evaluation {
                 diffFile.getBaseRelativePath().isEmpty()
                     ? diffFile.getCurrentRelativePath()
                     : diffFile.getBaseRelativePath();
-            if (baselineResult2.containsKey(groupID)) {
-              baselineResult2.get(groupID).addAll(diffHunkIDs);
+            if (fileResults.containsKey(groupID)) {
+              fileResults.get(groupID).addAll(diffHunkIDs);
             } else {
-              baselineResult2.put(groupID, diffHunkIDs);
+              fileResults.put(groupID, diffHunkIDs);
             }
           }
 
-          Pair<List<Integer>, Double> baselineMetrics2 =
-              computeMetrics(groundTruth, baselineResult2);
+          Pair<List<Integer>, Double> fileMetrics = computeMetrics(groundTruth, fileResults);
 
           exportMetrics(
               "One file one Group",
-              baseline2CSV,
-              baselineMetrics2,
-              baselineResult2.size(),
+              fileInOneOutput,
+              fileMetrics,
+              fileResults.size(),
               LOC,
               sampleNum,
               0L);
-          baselineAccs2.add(baselineMetrics2.getRight());
+          fileAccuracies.add(fileMetrics.getRight());
 
           sampleNum++;
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
@@ -328,15 +364,44 @@ public class Evaluation {
     }
 
     System.out.println(
-        "SmartCommit: Median Accuracy: " + Utils.formatDouble(getMedian(resultAccs)) + "%");
+        "SmartCommit: Median Accuracy: " + Utils.formatDouble(getMedian(scAccuracies)) + "%");
     System.out.println(
-        "All in one Group: Median Accuracy: " + Utils.formatDouble(getMedian(baselineAccs1)) + "%");
+        "ClusterChanges: Median Accuracy: " + Utils.formatDouble(getMedian(ccAccuracies)) + "%");
+    System.out.println(
+        "All in one Group: Median Accuracy: " + Utils.formatDouble(getMedian(allAccuracies)) + "%");
     System.out.println(
         "One File One Group: Median Accuracy: "
-            + Utils.formatDouble(getMedian(baselineAccs2))
+            + Utils.formatDouble(getMedian(fileAccuracies))
             + "%");
   }
 
+  private static String initOutputCSV(String methodName, String repoName, int step) {
+    String path =
+        "/Users/symbolk/coding/dev/visualization/"
+            + methodName
+            + "/"
+            + repoName
+            + "_"
+            + step
+            + ".csv";
+    Utils.writeStringToFile(
+        "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime"
+            + System.lineSeparator(),
+        path);
+    return path;
+  }
+
+  /**
+   * Print metrics to terminal and csv file
+   *
+   * @param title
+   * @param csvPath
+   * @param metrics
+   * @param groupsNum
+   * @param LOC
+   * @param sampleNum
+   * @param timeCost
+   */
   private static void exportMetrics(
       String title,
       String csvPath,
@@ -529,8 +594,8 @@ public class Evaluation {
     }
     int correctlySeparatedPairs = crossGroupPairs.size();
 
-    for (Pair<String, String> p1 : resultPairs) {
-      for (Pair<String, String> p2 : crossGroupPairs) {
+    for (Pair<String, String> p1 : crossGroupPairs) {
+      for (Pair<String, String> p2 : resultPairs) {
         if ((p1.getLeft().equals(p2.getLeft()) && p1.getRight().equals(p2.getRight()))
             || (p1.getLeft().equals(p2.getRight()) && p1.getRight().equals(p2.getLeft()))) {
           correctlySeparatedPairs -= 1;
@@ -553,19 +618,22 @@ public class Evaluation {
   }
 
   /**
-   * RQ2: acceptance rate/comment from the original author
+   * Run statistics collected through online evaluation from the original author of synthetic
+   * composite commits
    *
+   * @param repoName
    * @param repoPath
+   * @param tempDir
    */
-  private static void runRQ2(String repoName, String repoPath, String tempDir) {
-    System.out.println("RQ2: " + repoName);
+  private static void runOnlineEva(String repoName, String repoPath, String tempDir) {
+    System.out.println("Online evaluation: " + repoName);
 
     // read samples from db
     MongoClientURI local = new MongoClientURI("mongodb://localhost:27017");
     // !product env
     MongoClientURI server =
         new MongoClientURI("mongodb://symbol:98eukk5age@47.113.179.146:29107/smartcommit");
-    String tempFilesDir = "/root/data/temp/RQ2/" + repoName;
+    String tempFilesDir = "/root/data/temp/RQ1/" + repoName;
     //         !local test env
     //    MongoClientURI server = new MongoClientURI("mongodb://localhost:27017/smartcommit");
     //    String tempFilesDir = tempDir + File.separator;
@@ -576,8 +644,8 @@ public class Evaluation {
     GitService gitService = new GitServiceCGit();
     SmartCommit smartCommit =
         new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
-    smartCommit.setDistanceThreshold(0); // default
-    smartCommit.setSimilarityThreshold(0.618D); // default
+    smartCommit.setMaxDistance(0); // default
+    smartCommit.setMinSimilarity(0.618D); // default
     smartCommit.setDetectRefactorings(true);
     smartCommit.setProcessNonJavaChanges(false);
 
@@ -710,12 +778,14 @@ public class Evaluation {
   }
 
   /**
-   * Read and compare results collected stored in mongodb
+   * Industrial field study: Read and compare results collected recoreded in mongodb
    *
    * @param repoName
    * @param repoPath
    */
-  private static void runRQ3(String repoName, String repoPath) {
+  private static void runUsageStatistics(String repoName, String repoPath) {
+    System.out.println("Industrial Statistics: " + repoName);
+
     // read data from db
     MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
     MongoClient mongoClient = new MongoClient(connectionString);
@@ -893,8 +963,7 @@ public class Evaluation {
     }
   }
 
-  private static void debugBatch(
-      String repoName, String repoPath, String tempDir, String commitString) {
+  private static void debug(String repoName, String repoPath, String tempDir, String commitString) {
 
     String[] commitIDs = commitString.split("_");
 
@@ -902,7 +971,9 @@ public class Evaluation {
         new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
     smartCommit.setDetectRefactorings(true);
     smartCommit.setProcessNonJavaChanges(false);
-    //    smartCommit.setDistanceThreshold(1);
+    smartCommit.setWeightThreshold(0.6D);
+    smartCommit.setMinSimilarity(0.8D);
+    smartCommit.setMaxDistance(1);
     Stopwatch stopwatch = Stopwatch.createStarted();
 
     // randomly sample 100 composite commits for each size
@@ -943,10 +1014,10 @@ public class Evaluation {
 
         // assign new index for diffFile and diffHunk
         int beginIndex = unionDiffFiles.size();
-        diffFiles =
-            diffFiles.stream()
-                .filter(diffFile -> diffFile.getFileType().equals(FileType.JAVA))
-                .collect(Collectors.toList());
+        //        diffFiles =
+        //            diffFiles.stream()
+        //                .filter(diffFile -> diffFile.getFileType().equals(FileType.JAVA))
+        //                .collect(Collectors.toList());
         for (int k = 0; k < diffFiles.size(); ++k) {
           int newIndex = beginIndex + k;
           diffFiles.get(k).setIndex(newIndex);
@@ -977,6 +1048,7 @@ public class Evaluation {
     String baseDir = resultsDir + File.separator + Version.BASE.asString() + File.separator;
     String currentDir = resultsDir + File.separator + Version.CURRENT.asString() + File.separator;
 
+    System.out.println("Repo: " + repoName + " Step: " + commitIDs.length);
     System.out.println("[Batch X" + ":" + commitString + "]");
     try {
       stopwatch.reset().start();
