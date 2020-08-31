@@ -18,9 +18,9 @@ public class Main {
           new SmartCommit(Config.REPO_ID, Config.REPO_NAME, Config.REPO_PATH, Config.TEMP_DIR);
       smartCommit.setDetectRefactorings(true);
       smartCommit.setProcessNonJavaChanges(false);
-      smartCommit.setSimilarityThreshold(Config.SIMI_THRESHOLD);
-      smartCommit.setDistanceThreshold(Config.DIS_THRESHOLD);
-
+      smartCommit.setWeightThreshold(Config.WEIGHT_THRESHOLD);
+      smartCommit.setMinSimilarity(Config.MIN_SIMILARITY);
+      smartCommit.setMaxDistance(Config.MAX_DISTANCE);
       Map<String, Group> groups = smartCommit.analyzeWorkingTree();
       //      Map<String, Group> groups = smartCommit.analyzeCommit(Config.COMMIT_ID);
       if (groups != null && !groups.isEmpty()) {

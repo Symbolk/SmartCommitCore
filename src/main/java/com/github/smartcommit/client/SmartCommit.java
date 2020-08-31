@@ -36,12 +36,14 @@ public class SmartCommit {
   private String repoPath;
   private String tempDir;
   private Map<String, DiffHunk> id2DiffHunkMap;
-  // options
+
+  // options and default
   private boolean detectRefactorings = false;
   private boolean processNonJavaChanges = false;
-  private double similarityThreshold = 0.618D;
+  private double weightThreshold = 1.0D;
+  private double minSimilarity = 0.8D;
   // {hunk: 0 (default), member: 1, class: 2, package: 3}
-  private int distanceThreshold = 0;
+  private int maxDistance = 0;
 
   public SmartCommit(String repoID, String repoName, String repoPath, String tempDir) {
     this.repoID = repoID;
@@ -59,16 +61,24 @@ public class SmartCommit {
     this.processNonJavaChanges = processNonJavaChanges;
   }
 
-  public void setSimilarityThreshold(double similarityThreshold) {
-    this.similarityThreshold = similarityThreshold;
+  public void setWeightThreshold(Double weightThreshold) {
+    this.weightThreshold = weightThreshold;
   }
 
-  public void setDistanceThreshold(int distanceThreshold) {
-    this.distanceThreshold = distanceThreshold;
+  public void setMinSimilarity(double minSimilarity) {
+    this.minSimilarity = minSimilarity;
+  }
+
+  public void setMaxDistance(int maxDistance) {
+    this.maxDistance = maxDistance;
   }
 
   public void setId2DiffHunkMap(Map<String, DiffHunk> id2DiffHunkMap) {
     this.id2DiffHunkMap = id2DiffHunkMap;
+  }
+
+  public Map<String, DiffHunk> getId2DiffHunkMap() {
+    return id2DiffHunkMap;
   }
 
   /**
@@ -189,19 +199,54 @@ public class SmartCommit {
         executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
     Graph<Node, Edge> baseGraph = baseBuilder.get(60 * 10, TimeUnit.SECONDS);
     Graph<Node, Edge> currentGraph = currentBuilder.get(60 * 10, TimeUnit.SECONDS);
-    //    String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
-    //    String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
+    //            String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
+    //            String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
     executorService.shutdown();
 
     GroupGenerator generator =
         new GroupGenerator(
             repoID, repoName, srcDirs, diffFiles, allDiffHunks, baseGraph, currentGraph);
-    generator.setMinSimilarity(similarityThreshold);
-    generator.setMaxDistance(distanceThreshold);
+    generator.setMinSimilarity(minSimilarity);
+    generator.setMaxDistance(maxDistance);
     generator.enableRefDetection(detectRefactorings);
-    generator.processNonJavaChanges(processNonJavaChanges);
+    generator.enableNonJavaChanges(processNonJavaChanges);
     generator.buildDiffGraph();
-    return generator.generateGroups();
+    return generator.generateGroups(weightThreshold);
+  }
+
+  /**
+   * Solely for evaluation with ClusterChanges
+   *
+   * @param diffFiles
+   * @param allDiffHunks
+   * @param srcDirs
+   * @return
+   * @throws ExecutionException
+   * @throws InterruptedException
+   * @throws TimeoutException
+   */
+  public Map<String, Group> analyzeWithCC(
+      List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs)
+      throws ExecutionException, InterruptedException, TimeoutException {
+
+    // build the change semantic graph
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    Future<Graph<Node, Edge>> baseBuilder =
+        executorService.submit(new GraphBuilder(srcDirs.getLeft(), diffFiles));
+    Future<Graph<Node, Edge>> currentBuilder =
+        executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
+    Graph<Node, Edge> baseGraph = baseBuilder.get(60 * 10, TimeUnit.SECONDS);
+    Graph<Node, Edge> currentGraph = currentBuilder.get(60 * 10, TimeUnit.SECONDS);
+    //            String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
+    //            String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
+    executorService.shutdown();
+
+    // analyze the diff hunks
+    GroupGenerator generator =
+        new GroupGenerator(
+            repoID, repoName, srcDirs, diffFiles, allDiffHunks, baseGraph, currentGraph);
+    generator.buildDiffGraph();
+    return generator.clusterChanges();
   }
 
   /**
@@ -220,7 +265,7 @@ public class SmartCommit {
               + File.separator
               + entry.getKey()
               + ".json");
-      // the copy to accept the user feedback
+      // any manual adjustments will be made on this copy
       Utils.writeStringToFile(
           gson.toJson(entry.getValue()),
           outputDir + File.separator + "manual_groups" + File.separator + entry.getKey() + ".json");
@@ -397,9 +442,5 @@ public class SmartCommit {
       logger.error("Failed to clear the working tree.");
       return false;
     }
-  }
-
-  public Map<String, DiffHunk> getId2DiffHunkMap() {
-    return id2DiffHunkMap;
   }
 }
