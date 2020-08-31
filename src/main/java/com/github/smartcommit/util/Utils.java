@@ -415,7 +415,8 @@ public class Utils {
    */
   public static String convertListToStringNoFormat(List<String> list) {
     return list.stream()
-        .map(str -> str.replaceAll("\\W|[\\r?\\n]+", ""))
+        .map(str -> str.replaceAll("\\W|[\\t\\r?\\n]+", ""))
+        //        .map(str -> str.replaceAll("\\\\t|[\\\\r?\\\\n]+|\\s+", ""))
         .collect(Collectors.joining(""));
   }
 

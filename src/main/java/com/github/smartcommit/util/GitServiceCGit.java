@@ -562,7 +562,7 @@ public class GitServiceCGit implements GitService {
     // on Windows the ~ character must be used instead of ^
     String diffOutput =
         Utils.runSystemCommand(
-            repoPath, StandardCharsets.UTF_8, "git", "diff", "-U0", "-w", commitID + "~", commitID);
+            repoPath, StandardCharsets.UTF_8, "git", "diff", "-U0", commitID + "~", commitID);
     List<Diff> diffs = new ArrayList<>();
     if (!diffOutput.trim().isEmpty()) {
       // with -U0 (no context lines), the generated patch cannot be applied successfully
