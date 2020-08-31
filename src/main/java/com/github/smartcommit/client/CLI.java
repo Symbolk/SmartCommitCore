@@ -71,8 +71,8 @@ public class CLI {
           new SmartCommit(generateRepoID(repoName), repoName, repoPath, outputPath);
       smartCommit.setDetectRefactorings(true);
       smartCommit.setProcessNonJavaChanges(false);
-      smartCommit.setSimilarityThreshold(Config.SIMI_THRESHOLD);
-      smartCommit.setDistanceThreshold(Config.DIS_THRESHOLD);
+      smartCommit.setMinSimilarity(Config.MIN_SIMILARITY);
+      smartCommit.setMaxDistance(Config.MAX_DISTANCE);
 
       if (commitID.isEmpty()) {
         Map<String, Group> groups = smartCommit.analyzeWorkingTree();
