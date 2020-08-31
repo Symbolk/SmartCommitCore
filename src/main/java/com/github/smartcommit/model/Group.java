@@ -10,6 +10,8 @@ public class Group {
   private String repoID;
   private String repoName;
   private String groupID;
+  // fileIndex:diffHunkIndex
+  private List<String> diffHunkIndices;
   // fileID:diffHunkID
   // if fileID==diffHunkID, status is UNTRACKED, the whole file is a diff hunk
   private List<String> diffHunkIDs;
@@ -26,6 +28,22 @@ public class Group {
     this.repoID = repoID;
     this.repoName = repoName;
     this.groupID = groupID;
+    this.diffHunkIndices = new ArrayList<>();
+    this.diffHunkIDs = diffHunkIDs;
+    this.intentLabel = label;
+  }
+
+  public Group(
+      String repoID,
+      String repoName,
+      String groupID,
+      List<String> diffHunkIndices,
+      List<String> diffHunkIDs,
+      GroupLabel label) {
+    this.repoID = repoID;
+    this.repoName = repoName;
+    this.groupID = groupID;
+    this.diffHunkIndices = diffHunkIndices;
     this.diffHunkIDs = diffHunkIDs;
     this.intentLabel = label;
   }
@@ -36,6 +54,10 @@ public class Group {
 
   public List<String> getDiffHunkIDs() {
     return diffHunkIDs;
+  }
+
+  public List<String> getDiffHunkIndices() {
+    return diffHunkIndices;
   }
 
   public GroupLabel getIntentLabel() {
@@ -70,11 +92,19 @@ public class Group {
     this.commitMsg = commitMsg;
   }
 
-  public void addDiffHunk(String diffID) {
+  public void addByID(String diffID) {
     if (diffHunkIDs.contains(diffID)) {
       return;
     } else {
       diffHunkIDs.add(diffID);
+    }
+  }
+
+  public void addByIndex(String diffIndex) {
+    if (diffHunkIndices.contains(diffIndex)) {
+      return;
+    } else {
+      diffHunkIndices.add(diffIndex);
     }
   }
 

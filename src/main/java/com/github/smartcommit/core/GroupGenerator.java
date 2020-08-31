@@ -1,6 +1,5 @@
 package com.github.smartcommit.core;
 
-import com.github.smartcommit.io.DiffGraphExporter;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
@@ -41,7 +40,7 @@ public class GroupGenerator {
   private List<DiffHunk> diffHunks;
   private Graph<Node, Edge> baseGraph;
   private Graph<Node, Edge> currentGraph;
-  // map from the grouped diff hunk index to its group id
+  // map from the grouped diff hunk index to its group id (for quick-find)
   private Map<String, String> indexToGroupMap;
 
   // outputs
@@ -119,7 +118,6 @@ public class GroupGenerator {
 
   /** Build edges in the diff graph */
   public void buildDiffGraph() {
-
     // cache all links from base/current graph as a top order
     Map<String, Set<String>> hardLinks =
         Utils.mergeTwoMaps(analyzeDefUse(baseGraph), analyzeDefUse(currentGraph));
@@ -128,13 +126,13 @@ public class GroupGenerator {
         diffFiles.stream()
             .filter(diffFile -> !diffFile.getFileType().equals(FileType.JAVA))
             .collect(Collectors.toList());
-    Set<DiffHunk> others = new TreeSet<>(ascendingByIndexComparator());
+    Set<DiffHunk> others = new TreeSet<>(diffHunkComparator());
 
     if (processNonJava) {
       // use tree set to keep unique and ordered
-      Set<DiffHunk> doc = new TreeSet<>(ascendingByIndexComparator());
-      Set<DiffHunk> config = new TreeSet<>(ascendingByIndexComparator());
-      Set<DiffHunk> resource = new TreeSet<>(ascendingByIndexComparator());
+      Set<DiffHunk> doc = new TreeSet<>(diffHunkComparator());
+      Set<DiffHunk> config = new TreeSet<>(diffHunkComparator());
+      Set<DiffHunk> resource = new TreeSet<>(diffHunkComparator());
       for (DiffFile diffFile : nonJavaDiffFiles) {
         // classify non-java changes into doc/config/resources/others
         String filePath =
@@ -175,11 +173,11 @@ public class GroupGenerator {
 
     // refactor
     if (detectRefs) {
-      Set<DiffHunk> refDiffHunks = new TreeSet<>(ascendingByIndexComparator());
+      Set<DiffHunk> refDiffHunks = new TreeSet<>(diffHunkComparator());
       ExecutorService service = Executors.newSingleThreadExecutor();
       Future<?> f = null;
       try {
-        Runnable r = () -> groupRefactorings(refDiffHunks);
+        Runnable r = () -> detectRefactorings(refDiffHunks);
         f = service.submit(r);
         f.get(300, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
@@ -196,17 +194,18 @@ public class GroupGenerator {
       }
     }
 
-    Set<DiffHunk> reformat = new TreeSet<>(ascendingByIndexComparator());
+    Set<DiffHunk> reformat = new TreeSet<>(diffHunkComparator());
 
     for (int i = 0; i < diffHunks.size(); ++i) {
       DiffHunk diffHunk = diffHunks.get(i);
       // changes that does not actually change code and remove
       // reformat
-      if (checkReformatting(diffHunk)) {
-        reformat.add(diffHunk);
-        continue;
+      if (diffHunk.getFileType().equals(FileType.JAVA)) {
+        if (detectReformatting(diffHunk)) {
+          reformat.add(diffHunk);
+          continue;
+        }
       }
-
       // create edge according to hard links (that depends on the current)
       // in topo order
       if (diffHunk.getFileType().equals(FileType.JAVA)) {
@@ -224,7 +223,7 @@ public class GroupGenerator {
         DiffHunk diffHunk1 = diffHunks.get(j);
         if (!diffHunk1.getUniqueIndex().equals(diffHunk.getUniqueIndex())) {
           // similarity (textual+action)
-          double similarity = estimateSimilarity(diffHunk, diffHunk1);
+          double similarity = detectSimilarity(diffHunk, diffHunk1);
           if (similarity >= minSimilarity) {
             createEdge(
                 diffHunk.getUniqueIndex(),
@@ -233,7 +232,7 @@ public class GroupGenerator {
                 similarity);
           }
           // distance (1/n)
-          int distance = estimateDistance(diffHunk, diffHunk1);
+          int distance = detectProxmity(diffHunk, diffHunk1);
           if (distance > 0 && distance <= maxDistance) {
             createEdge(
                 diffHunk.getUniqueIndex(),
@@ -246,7 +245,7 @@ public class GroupGenerator {
             // condition: same parent scope (file level for now), delete and add
             if (!diffHunk.getChangeType().equals(ChangeType.MODIFIED)
                 && !diffHunk1.getChangeType().equals(ChangeType.MODIFIED)) {
-              similarity = estimateCrossVersionSimilarity(diffHunk, diffHunk1);
+              similarity = detectCrossVersionSimilarity(diffHunk, diffHunk1);
               if (similarity >= minSimilarity) {
                 createEdge(
                     diffHunk.getUniqueIndex(),
@@ -260,7 +259,7 @@ public class GroupGenerator {
             // condition: file name differs only with ending "Test"
             if (diffHunk.getFileType().equals(FileType.JAVA)
                 && diffHunk1.getFileType().equals(FileType.JAVA)) {
-              Pair<String, String> pair = checkIfTest(diffHunk, diffHunk1);
+              Pair<String, String> pair = detectTesting(diffHunk, diffHunk1);
               if (pair != null) {
                 createEdge(pair.getLeft(), pair.getRight(), DiffEdgeType.TEST, 1.0);
               }
@@ -271,7 +270,7 @@ public class GroupGenerator {
         // detect references between configs and java
       }
     }
-    //    createEdges(reformat, DiffEdgeType.REFORMAT, 1.0);
+    createEdges(reformat, DiffEdgeType.REFORMAT, 1.0);
   }
 
   private Map<String, Set<String>> analyzeDefUse(Graph<Node, Edge> graph) {
@@ -363,35 +362,152 @@ public class GroupGenerator {
   }
 
   /**
-   * Accept a threshold to adjust and regenerate the result
-   *
-   * @param threshold
-   */
-  public Map<String, Group> generateGroups(Double threshold) {
-    // remove edges under threshold from the diff graph
-    Set<DiffEdge> edges = new HashSet<>(diffGraph.edgeSet());
-    for (DiffEdge edge : edges) {
-      if (edge.getWeight() < threshold) {
-        diffGraph.removeEdge(edge);
-      }
-    }
-    //    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
-    return generateGroups();
-  }
-
-  /**
    * Generate groups of related changes from the graph
    *
    * @return
    */
   public Map<String, Group> generateGroups() {
+    return generateGroups(0.6D); // default threshold
+  }
+
+  /**
+   * Accept a threshold to adjust and regenerate the result
+   *
+   * @param threshold
+   */
+  public Map<String, Group> generateGroups(Double threshold) {
     //    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
 
-    Map<String, Group> generatedGroups = new LinkedHashMap<>();
+    Map<String, Group> result = new LinkedHashMap<>(); // generated groups, id:Group
+
+    // add edges to priority queue
+    Comparator<DiffEdge> comparator =
+        new Comparator<DiffEdge>() {
+          public int compare(DiffEdge o1, DiffEdge o2) {
+            if (o1.getWeight() < o2.getWeight()) {
+              return 1;
+            } else if (o1.getWeight() > o2.getWeight()) {
+              return -1;
+            } else {
+              return 0;
+            }
+          }
+        };
+    Queue<DiffEdge> pq = new PriorityQueue<DiffEdge>(11, comparator);
+    for (DiffEdge edge : diffGraph.edgeSet()) {
+      pq.offer(edge);
+    }
+
+    while (!pq.isEmpty()) {
+      DiffEdge edge = pq.poll();
+      if (edge.getWeight() < threshold) {
+        break;
+      }
+      DiffNode source = diffGraph.getEdgeSource(edge);
+      DiffNode target = diffGraph.getEdgeTarget(edge);
+      if (indexToGroupMap.containsKey(source.getIndex())
+          && indexToGroupMap.containsKey(target.getIndex())) {
+        String gID1 = indexToGroupMap.get(source.getIndex());
+        String gID2 = indexToGroupMap.get(target.getIndex());
+        if (gID1.equals(gID2)) {
+          continue;
+        } else {
+          // merge the later to the former group
+          Group g1 = result.get(indexToGroupMap.get(source.getIndex()));
+          Group g2 = result.get(indexToGroupMap.get(target.getIndex()));
+          if (Integer.parseInt(gID1.substring(5)) > Integer.parseInt(gID2.substring(5))) {
+            mergeGroups(result, g1, g2);
+          } else {
+            mergeGroups(result, g2, g1);
+          }
+        }
+      } else {
+        // add the later to the former group
+        if (indexToGroupMap.containsKey(source.getIndex())) {
+          addToGroup(target, result.get(indexToGroupMap.get(source.getIndex())));
+        } else if (indexToGroupMap.containsKey(target.getIndex())) {
+          addToGroup(source, result.get(indexToGroupMap.get(target.getIndex())));
+        } else {
+          // both not exist, create new group
+          Set<DiffNode> nodes = new TreeSet<>(diffNodeComparator());
+          nodes.add(source);
+          nodes.add(target);
+          createGroup(result, nodes, GroupLabel.OTHER);
+        }
+      }
+    }
+
+    Set<DiffNode> individuals = new TreeSet<>(diffNodeComparator());
+    for (DiffHunk diffHunk : diffHunks) {
+      if (!indexToGroupMap.containsKey(diffHunk.getUniqueIndex())) {
+        individuals.add(findNodeByIndex(diffHunk.getUniqueIndex()));
+      }
+    }
+    assignIndividuals(result, individuals);
+    Map<String, Set<DiffNode>> groupByFile = new HashMap<>();
+    for (DiffNode node : individuals) {
+      String fileIndex = node.getFileIndex().toString();
+      groupByFile.putIfAbsent(fileIndex, new HashSet<>());
+      groupByFile.get(fileIndex).add(node);
+    }
+    for (Map.Entry<String, Set<DiffNode>> entry : groupByFile.entrySet()) {
+      createGroup(result, entry.getValue(), GroupLabel.OTHER);
+    }
+
+    return result;
+  }
+
+  /**
+   * Baseline: cluster changes only according to def-use and use-use !WARN!: will remove other edges
+   * except hard constraints, so must be called after generateGroups()
+   *
+   * @return
+   */
+  public Map<String, Group> clusterChanges() {
+    Map<String, Group> result = new LinkedHashMap<>();
+
+    // remove non-def-use edges from the diff hunk graph
+    Set<DiffEdge> edges = new HashSet<>(diffGraph.edgeSet());
+    for (DiffEdge edge : edges) {
+      if (!edge.getType().equals(DiffEdgeType.DEPEND)
+          && !edge.getType().equals(DiffEdgeType.TEST)) {
+        diffGraph.removeEdge(edge);
+      }
+    }
+
+    Set<DiffNode> individuals = new LinkedHashSet<>();
+    ConnectivityInspector inspector = new ConnectivityInspector(diffGraph);
+    List<Set<DiffNode>> connectedSets = inspector.connectedSets();
+    for (Set<DiffNode> diffNodesSet : connectedSets) {
+      if (diffNodesSet.size() == 1) {
+        // individual
+        individuals.addAll(diffNodesSet);
+      } else if (diffNodesSet.size() > 1) {
+        // sort and deduplicate
+        Set<DiffNode> diffNodes =
+            diffNodesSet.stream()
+                .sorted(diffNodeComparator())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        createGroup(result, diffNodes, GroupLabel.OTHER);
+      }
+    }
+
+    assignIndividuals(result, individuals);
+    createGroup(result, individuals, GroupLabel.OTHER);
+    return result;
+  }
+
+  /**
+   * Simply decompose from connected components
+   *
+   * @deprecated
+   * @return
+   */
+  public Map<String, Group> decomposeByConnectivity() {
+    Map<String, Group> result = new LinkedHashMap<>();
     Set<DiffNode> individuals = new LinkedHashSet<>();
     Map<String, String> idToIndexMap = new HashMap<>();
-
-    // partition of the current level (union-find/disjoint set)
     ConnectivityInspector inspector = new ConnectivityInspector(diffGraph);
     List<Set<DiffNode>> connectedSets = inspector.connectedSets();
     for (Set<DiffNode> diffNodesSet : connectedSets) {
@@ -403,55 +519,52 @@ public class GroupGenerator {
               idToIndexMap.put(diffNode.getUUID(), diffNode.getIndex());
             });
       } else if (diffNodesSet.size() > 1) {
-        Set<String> diffHunkIDs = new LinkedHashSet<>();
+        Set<DiffNode> diffNodes = new LinkedHashSet<>();
         // sort and deduplicate
         diffNodesSet =
             diffNodesSet.stream()
-                .sorted(
-                    Comparator.comparing(DiffNode::getFileIndex)
-                        .thenComparing(DiffNode::getDiffHunkIndex))
+                .sorted(diffNodeComparator())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
         List<DiffEdgeType> edgeTypes = new ArrayList<>();
         for (DiffNode diffNode : diffNodesSet) {
-          diffHunkIDs.add(diffNode.getUUID());
+          diffNodes.add(diffNode);
           diffGraph.outgoingEdgesOf(diffNode).stream()
               .forEach(diffEdge -> edgeTypes.add(diffEdge.getType()));
         }
         // get the most frequent edge type as the group label
-        String groupID = createGroup(generatedGroups, diffHunkIDs, getIntentFromEdges(edgeTypes));
-        updateIndexToGroupMap(diffNodesSet, groupID);
+        createGroup(result, diffNodes, getIntentFromEdges(edgeTypes));
       }
     }
 
-    assignIndividuals(generatedGroups, idToIndexMap, individuals);
+    assignIndividuals(result, individuals);
     // group individuals with file type centrality
-    Map<String, Set<String>> diffHunksByFileType = new HashMap<>();
-    for (DiffNode node : individuals) {
-      DiffFile file =
-          diffFiles.stream()
-              .filter(diffFile -> diffFile.getIndex().equals(node.getFileIndex()))
-              .findFirst()
-              .get();
-      String fileType =
-          file.getBaseRelativePath().isEmpty()
-              ? Utils.getFileExtension(file.getBaseRelativePath())
-              : Utils.getFileExtension(file.getCurrentRelativePath());
-      if (!diffHunksByFileType.containsKey(fileType)) {
-        diffHunksByFileType.put(fileType, new HashSet<>());
+    if (individuals.size() <= 3) {
+      for (DiffNode node : individuals) {
+        createGroup(result, new HashSet<>(Arrays.asList(node)), GroupLabel.OTHER);
       }
-      diffHunksByFileType.get(fileType).add(node.getUUID());
+    } else {
+      Map<String, Set<DiffNode>> groupByFileType = new HashMap<>();
+      for (DiffNode node : individuals) {
+        DiffFile file =
+            diffFiles.stream()
+                .filter(diffFile -> diffFile.getIndex().equals(node.getFileIndex()))
+                .findFirst()
+                .get();
+        String fileType =
+            file.getBaseRelativePath().isEmpty()
+                ? Utils.getFileExtension(file.getBaseRelativePath())
+                : Utils.getFileExtension(file.getCurrentRelativePath());
+        if (!groupByFileType.containsKey(fileType)) {
+          groupByFileType.put(fileType, new HashSet<>());
+        }
+        groupByFileType.get(fileType).add(node);
+      }
+      for (Map.Entry<String, Set<DiffNode>> entry : groupByFileType.entrySet()) {
+        createGroup(result, entry.getValue(), GroupLabel.OTHER);
+      }
     }
-    for (Map.Entry<String, Set<String>> entry : diffHunksByFileType.entrySet()) {
-      createGroup(generatedGroups, entry.getValue(), GroupLabel.OTHER);
-    }
-    return generatedGroups;
-  }
-
-  private void updateIndexToGroupMap(Set<DiffNode> diffNodesSet, String groupID) {
-    for (DiffNode diffNode : diffNodesSet) {
-      this.indexToGroupMap.put(diffNode.getIndex(), groupID);
-    }
+    return result;
   }
 
   private GroupLabel getIntentFromEdges(List<DiffEdgeType> edgeTypes) {
@@ -480,65 +593,117 @@ public class GroupGenerator {
       case NONJAVA:
         return GroupLabel.NONJAVA;
       case CLOSE:
+      case DEPEND:
       default:
+        // TODO: only consider groups including new declaration nodes as new feature
         return GroupLabel.FEATURE;
+        // TODO: consider groups including simply add test cases/methods changes as test
+        // GroupLabel.TEST
     }
   }
 
-  /**
-   * Create a new group to group all diff hunk ids
-   *
-   * @param diffHunkIDs
-   */
+  /** Create a new group to group given diff hunks */
   private String createGroup(
-      Map<String, Group> groups, Set<String> diffHunkIDs, GroupLabel intent) {
-    if (!diffHunkIDs.isEmpty()) {
-      String groupID = "group" + groups.size();
-      Group group = new Group(repoID, repoName, groupID, new ArrayList<>(diffHunkIDs), intent);
+      Map<String, Group> groups, Set<DiffNode> diffNodes, GroupLabel intent) {
+    if (!diffNodes.isEmpty()) {
+      Integer maxInt = -1;
+      for (String k : groups.keySet()) {
+        maxInt =
+            Integer.parseInt(k.substring(5)) > maxInt ? Integer.parseInt(k.substring(5)) : maxInt;
+      }
+      String groupID = "group" + (maxInt + 1);
+      List<String> diffHunkIndices = new ArrayList<>();
+      List<String> diffHunkIDs = new ArrayList<>();
+      for (DiffNode node : diffNodes) {
+        diffHunkIndices.add(node.getIndex());
+        diffHunkIDs.add(node.getUUID());
+
+        // update stats
+        indexToGroupMap.put(node.getIndex(), groupID);
+      }
+      Group group = new Group(repoID, repoName, groupID, diffHunkIndices, diffHunkIDs, intent);
       group.setCommitMsg(intent.toString().toLowerCase() + ": " + intent.label + " ...");
+
+      // add to result groups
       groups.put(groupID, group);
-      return groupID;
+
+      return group.getGroupID();
     }
     return "";
   }
 
-  /** Add an individual diff hunk to its nearest group */
-  private void assignIndividuals(
-      Map<String, Group> groups, Map<String, String> idToIndexMap, Set<DiffNode> individuals) {
+  /**
+   * Merge source group into target group, return the id of merged group
+   *
+   * @return
+   */
+  private String mergeGroups(Map<String, Group> groups, Group g1, Group g2) {
+    for (String id : g1.getDiffHunkIDs()) {
+      g2.addByID(id);
+    }
+
+    for (String index : g1.getDiffHunkIndices()) {
+      g2.addByIndex(index);
+      indexToGroupMap.replace(index, g2.getGroupID());
+    }
+    // remove g1
+    groups.remove(g1.getGroupID());
+    return g2.getGroupID();
+  }
+
+  /**
+   * Add the node to the group
+   *
+   * @param node
+   * @param group
+   */
+  private String addToGroup(DiffNode node, Group group) {
+    group.addByID(node.getUUID());
+    group.addByIndex(node.getIndex());
+    if (indexToGroupMap.containsKey(node.getIndex())) {
+      indexToGroupMap.replace(node.getIndex(), group.getGroupID());
+    } else {
+      indexToGroupMap.put(node.getIndex(), group.getGroupID());
+    }
+    return group.getGroupID();
+  }
+
+  /**
+   * Add an individual diff hunk to its nearest group
+   *
+   * @param groups
+   * @param individuals
+   */
+  private void assignIndividuals(Map<String, Group> groups, Set<DiffNode> individuals) {
     Set<DiffNode> temp = new HashSet<>(individuals);
     for (DiffNode node : temp) {
-      // find the file index and diff hunk index by node
-      if (idToIndexMap.containsKey(node.getUUID())) {
-        String index = idToIndexMap.get(node.getUUID());
-        Pair<Integer, Integer> indices = Utils.parseIndices(index);
-        // find the group of the nearest diff hunk
-        // after sibling
-        String after = indices.getLeft() + ":" + (indices.getRight() + 1);
-        if (this.indexToGroupMap.containsKey(after)) {
-          Group group = groups.get(this.indexToGroupMap.get(after));
-          group.addDiffHunk(node.getUUID());
-          this.indexToGroupMap.put(index, group.getGroupID());
-          individuals.remove(node);
-          continue;
-        }
-        // before sibling
-        String before = indices.getLeft() + ":" + (indices.getRight() - 1);
-        if (this.indexToGroupMap.containsKey(before)) {
-          Group group = groups.get(this.indexToGroupMap.get(before));
-          group.addDiffHunk(node.getUUID());
-          this.indexToGroupMap.put(index, group.getGroupID());
-          individuals.remove(node);
-          continue;
-        }
-        // same parent file
-        String parent = indices.getLeft() + ":0";
-        if (this.indexToGroupMap.containsKey(parent)) {
-          Group group = groups.get(this.indexToGroupMap.get(parent));
-          group.addDiffHunk(node.getUUID());
-          this.indexToGroupMap.put(index, group.getGroupID());
-          individuals.remove(node);
-          continue;
-        }
+      // find the group of the nearest diff hunk
+      // after sibling
+      String after = node.getFileIndex() + ":" + (node.getDiffHunkIndex() + 1);
+      if (this.indexToGroupMap.containsKey(after)) {
+        Group group = groups.get(this.indexToGroupMap.get(after));
+        group.addByID(node.getUUID());
+        this.indexToGroupMap.put(node.getIndex(), group.getGroupID());
+        individuals.remove(node);
+        continue;
+      }
+      // before sibling
+      String before = node.getFileIndex() + ":" + (node.getDiffHunkIndex() - 1);
+      if (this.indexToGroupMap.containsKey(before)) {
+        Group group = groups.get(this.indexToGroupMap.get(before));
+        group.addByID(node.getUUID());
+        this.indexToGroupMap.put(node.getIndex(), group.getGroupID());
+        individuals.remove(node);
+        continue;
+      }
+      // same parent file
+      String parent = node.getFileIndex() + ":0";
+      if (this.indexToGroupMap.containsKey(parent)) {
+        Group group = groups.get(this.indexToGroupMap.get(parent));
+        group.addByID(node.getUUID());
+        this.indexToGroupMap.put(node.getIndex(), group.getGroupID());
+        individuals.remove(node);
+        continue;
       }
     }
   }
@@ -642,7 +807,7 @@ public class GroupGenerator {
     return nodeOpt.orElse(null);
   }
 
-  private Set<DiffHunk> groupRefactorings(Set<DiffHunk> refDiffHunks) {
+  private Set<DiffHunk> detectRefactorings(Set<DiffHunk> refDiffHunks) {
     //    Set<DiffHunk> refDiffHunks = new TreeSet<>(ascendingByIndexComparator());
 
     try {
@@ -686,8 +851,12 @@ public class GroupGenerator {
    *
    * @return
    */
-  private Comparator<DiffHunk> ascendingByIndexComparator() {
+  private Comparator<DiffHunk> diffHunkComparator() {
     return Comparator.comparing(DiffHunk::getFileIndex).thenComparing(DiffHunk::getIndex);
+  }
+
+  private Comparator<DiffNode> diffNodeComparator() {
+    return Comparator.comparing(DiffNode::getFileIndex).thenComparing(DiffNode::getDiffHunkIndex);
   }
 
   /**
@@ -697,7 +866,7 @@ public class GroupGenerator {
    * @param diffHunk1
    * @return
    */
-  private double estimateSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
+  private double detectSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
     // ignore special cases: imports, empty, blank_lines
     if (diffHunk.getFileType().equals(FileType.JAVA)
         && diffHunk1.getFileType().equals(FileType.JAVA)) {
@@ -725,7 +894,7 @@ public class GroupGenerator {
     return 0D;
   }
 
-  private double estimateCrossVersionSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
+  private double detectCrossVersionSimilarity(DiffHunk diffHunk, DiffHunk diffHunk1) {
     // TODO: use token similarity instead
     String left =
         Utils.convertListLinesToString(
@@ -747,7 +916,7 @@ public class GroupGenerator {
    * @param diffHunk1
    * @return
    */
-  private int estimateDistance(DiffHunk diffHunk, DiffHunk diffHunk1) {
+  private int detectProxmity(DiffHunk diffHunk, DiffHunk diffHunk1) {
     int distance = -1; // -1 means no way to compute distance
     if (diffHunk.getFileType().equals(FileType.JAVA)
         && diffHunk1.getFileType().equals(FileType.JAVA)) {
@@ -792,7 +961,7 @@ public class GroupGenerator {
    * @param diffHunk1
    * @return <source (test file), target>
    */
-  private Pair<String, String> checkIfTest(DiffHunk diffHunk, DiffHunk diffHunk1) {
+  private Pair<String, String> detectTesting(DiffHunk diffHunk, DiffHunk diffHunk1) {
     String leftPath =
         Utils.getFileNameFromPath(
                 diffHunk.getChangeType().equals(ChangeType.ADDED)
@@ -940,16 +1109,16 @@ public class GroupGenerator {
    * @param diffHunk
    * @return
    */
-  public boolean checkReformatting(DiffHunk diffHunk) {
-    return Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet())
-        .equals(Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet()));
+  public boolean detectReformatting(DiffHunk diffHunk) {
+    return Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet()).equalsIgnoreCase(
+            (Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet())));
   }
 
   public void enableRefDetection(boolean enable) {
     this.detectRefs = enable;
   }
 
-  public void processNonJavaChanges(boolean process) {
+  public void enableNonJavaChanges(boolean process) {
     this.processNonJava = process;
   }
 
