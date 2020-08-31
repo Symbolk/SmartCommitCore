@@ -813,7 +813,7 @@ public class GraphBuilder implements Callable<Graph<Node, Edge>> {
           .findAny();
     } else {
       return graph.vertexSet().stream()
-          .filter(node -> node.getType().equals(type) && node.getIdentifier().equals(name))
+          .filter(node -> node.getType().equals(type) && node.getIdentifier().endsWith(name))
           .findAny();
     }
   }
