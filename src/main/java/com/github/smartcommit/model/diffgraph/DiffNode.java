@@ -9,7 +9,7 @@ import java.util.Map;
 /** Nodes in the DiffViewGraph, which stand for one diff hunk */
 public class DiffNode {
   private Integer id;
-  private String index; // identifier (fileIndex:diffHunkIndex)
+  private String index; // unique identifier (fileIndex:diffHunkIndex)
   private Integer fileIndex; // index of the changed file
   private Integer diffHunkIndex; // index of the diff hunk
   private String uuid; // fileID:diffHunkID
