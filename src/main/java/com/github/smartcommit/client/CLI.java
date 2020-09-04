@@ -21,22 +21,63 @@ public class CLI {
   @Parameter(
       names = {"-r", "--repo"},
       arity = 1,
+      order = 0,
       description = "Absolute root path of the target Git repository.")
   String repoPath = "";
 
   @Parameter(
+      names = {"-w", "--working"},
+      arity = 0,
+      order = 1,
+      description = "Analyze the current working tree (default).")
+  Boolean analyzeWorkingTree = true;
+
+  @Parameter(
       names = {"-c", "--commit"},
       arity = 1,
-      description = "Commit ID to be analyzed.")
+      order = 2,
+      description = "Analyze a specific commit by providing its ID.")
   String commitID = "";
+
   // output path
   @Parameter(
       names = {"-o", "-output"},
       arity = 1,
+      order = 3,
       description = "Specify the path to output the result.")
   String outputPath =
       System.getProperty("user.home") + File.separator + ".smartcommit" + File.separator + "repos";
-  // configs
+
+  // optionas&args
+  @Parameter(
+      names = {"-ref", "--detect-refactoring"},
+      arity = 1,
+      description = "Whether to enable refactoring detection.")
+  Boolean detectRef = true;
+
+  @Parameter(
+      names = {"-nj", "--process-non-java"},
+      arity = 1,
+      description = "Whether to further process non-java changes.")
+  Boolean processNonJava = true;
+
+  @Parameter(
+      names = {"-wt", "--weight-threshold"},
+      arity = 1,
+      description = "Set the threshold for weight filtering (default: 0.6).")
+  Double weightThreshold = 0.6D;
+
+  @Parameter(
+      names = {"-ms", "--min-similarity"},
+      arity = 1,
+      description = "Set the minimum similarity (default: 0.8).")
+  Double minSimilarity = 0.8D;
+
+  @Parameter(
+      names = {"-md", "--max-distance"},
+      arity = 1,
+      description = "Set the maximum distance (default: 0).")
+  Integer maxDistance = 0;
 
   public static void main(String[] args) {
     // config the logger
@@ -69,17 +110,25 @@ public class CLI {
 
       SmartCommit smartCommit =
           new SmartCommit(generateRepoID(repoName), repoName, repoPath, outputPath);
-      smartCommit.setDetectRefactorings(true);
-      smartCommit.setProcessNonJavaChanges(false);
-      smartCommit.setMinSimilarity(Config.MIN_SIMILARITY);
-      smartCommit.setMaxDistance(Config.MAX_DISTANCE);
 
-      if (commitID.isEmpty()) {
-        Map<String, Group> groups = smartCommit.analyzeWorkingTree();
+      // apply options
+      smartCommit.setDetectRefactorings(detectRef);
+      smartCommit.setProcessNonJavaChanges(processNonJava);
+      smartCommit.setWeightThreshold(weightThreshold);
+      smartCommit.setMinSimilarity(minSimilarity);
+      smartCommit.setMaxDistance(maxDistance);
+
+      Map<String, Group> groups = null;
+      if (analyzeWorkingTree) {
+        groups = smartCommit.analyzeWorkingTree();
       } else {
-        Map<String, Group> groups = smartCommit.analyzeCommit(commitID);
+        groups = smartCommit.analyzeCommit(commitID);
       }
-      System.out.println("End analysis, results saved under: " + outputPath);
+      if (groups != null && !groups.isEmpty()) {
+        System.out.println("End analysis, results saved under: " + outputPath);
+      } else {
+        System.out.println("End analysis, but found no Changes.");
+      }
     } catch (ParameterException pe) {
       System.err.println(pe.getMessage());
       commandLineOptions.setProgramName("SmartCommit");
@@ -113,7 +162,8 @@ public class CLI {
    */
   private void checkArguments(CLI cli) {
     if (cli.repoPath.isEmpty()) {
-      throw new ParameterException("Please specify a Git repository root path to analyze.");
+      throw new ParameterException(
+          "Please at least specify the Git repository to analyze with -r.");
     } else {
       File d = new File(cli.repoPath);
       if (!d.exists()) {
@@ -124,6 +174,9 @@ public class CLI {
       }
       if (!checkRepoValid(cli.repoPath)) {
         throw new ParameterException(cli.repoPath + " is not a valid Git repository!");
+      }
+      if (!cli.commitID.isEmpty()) {
+        cli.analyzeWorkingTree = false;
       }
     }
   }

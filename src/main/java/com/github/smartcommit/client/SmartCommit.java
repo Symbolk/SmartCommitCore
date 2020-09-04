@@ -45,8 +45,31 @@ public class SmartCommit {
   // {hunk: 0 (default), member: 1, class: 2, package: 3}
   private int maxDistance = 0;
 
+  /**
+   * Initial setup for analysis
+   *
+   * @param repoID repo unique id (used for database)
+   * @param repoName repo name
+   * @param repoPath absolute local repo path
+   * @param tempDir temporary directory path for intermediate and final result
+   */
   public SmartCommit(String repoID, String repoName, String repoPath, String tempDir) {
     this.repoID = repoID;
+    this.repoName = repoName;
+    this.repoPath = repoPath;
+    this.tempDir = tempDir;
+    this.id2DiffHunkMap = new HashMap<>();
+  }
+
+  /**
+   * Initial setup for analysis
+   *
+   * @param repoName repo name
+   * @param repoPath absolute local repo path
+   * @param tempDir temporary directory path for intermediate and final result
+   */
+  public SmartCommit(String repoName, String repoPath, String tempDir) {
+    this.repoID = String.valueOf(repoName.hashCode());
     this.repoName = repoName;
     this.repoPath = repoPath;
     this.tempDir = tempDir;
@@ -93,9 +116,9 @@ public class SmartCommit {
   }
 
   /**
-   * Analyze the current working directory
+   * Analyze the current working directory of the repository
    *
-   * @return
+   * @return suggested groups <id:group>
    * @throws Exception
    */
   public Map<String, Group> analyzeWorkingTree() throws Exception {
@@ -142,10 +165,10 @@ public class SmartCommit {
   }
 
   /**
-   * Analyze a specific commit
+   * Analyze a specific commit of the repository for decomposition
    *
-   * @param commitID
-   * @return
+   * @param commitID the target commit hash id
+   * @return suggested groups <id:group>
    * @throws Exception
    */
   public Map<String, Group> analyzeCommit(String commitID) throws Exception {
@@ -251,9 +274,10 @@ public class SmartCommit {
   }
 
   /**
-   * Save generated group results into the target dir
+   * Save meta information of each group, including diff hunk ids, commit msgs, etc.
    *
-   * @param generatedGroups
+   * @param generatedGroups generated groups <id:group>
+   * @param outputDir output directory path
    */
   public void exportGroupResults(Map<String, Group> generatedGroups, String outputDir) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
@@ -274,9 +298,10 @@ public class SmartCommit {
   }
 
   /**
-   * Generate and save the details of the grouping results
+   * Generate and save the detailed content of diff hunks for each group
    *
-   * @param results
+   * @param results generated groups <id:group>
+   * @param outputDir output directory path
    */
   public void exportGroupDetails(Map<String, Group> results, String outputDir) {
     Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
