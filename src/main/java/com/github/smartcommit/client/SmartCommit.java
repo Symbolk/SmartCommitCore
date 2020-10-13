@@ -37,6 +37,10 @@ public class SmartCommit {
   private String tempDir;
   private Map<String, DiffHunk> id2DiffHunkMap;
 
+  // saved for analysis
+  Graph<Node, Edge> baseGraph;
+  Graph<Node, Edge> currentGraph;
+
   // options and default
   private boolean detectRefactorings = false;
   private boolean processNonJavaChanges = false;
@@ -58,6 +62,8 @@ public class SmartCommit {
     this.repoName = repoName;
     this.repoPath = repoPath;
     this.tempDir = tempDir;
+    this.baseGraph = null;
+    this.currentGraph = null;
     this.id2DiffHunkMap = new HashMap<>();
   }
 
@@ -73,6 +79,8 @@ public class SmartCommit {
     this.repoName = repoName;
     this.repoPath = repoPath;
     this.tempDir = tempDir;
+    this.baseGraph = null;
+    this.currentGraph = null;
     this.id2DiffHunkMap = new HashMap<>();
   }
 
@@ -211,20 +219,14 @@ public class SmartCommit {
    * @return
    */
   public Map<String, Group> analyze(
-      List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs)
-      throws ExecutionException, InterruptedException, TimeoutException {
+      List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs) {
 
-    // build the change semantic graph
-    ExecutorService executorService = Executors.newFixedThreadPool(2);
-    Future<Graph<Node, Edge>> baseBuilder =
-        executorService.submit(new GraphBuilder(srcDirs.getLeft(), diffFiles));
-    Future<Graph<Node, Edge>> currentBuilder =
-        executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
-    Graph<Node, Edge> baseGraph = baseBuilder.get(60 * 10, TimeUnit.SECONDS);
-    Graph<Node, Edge> currentGraph = currentBuilder.get(60 * 10, TimeUnit.SECONDS);
-    //            String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
-    //            String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
-    executorService.shutdown();
+    try {
+      buildRefGraphs(diffFiles, srcDirs);
+    } catch (Exception e) {
+      System.err.println("Exception during graph building:");
+      e.printStackTrace();
+    }
 
     GroupGenerator generator =
         new GroupGenerator(
@@ -235,6 +237,29 @@ public class SmartCommit {
     generator.enableNonJavaChanges(processNonJavaChanges);
     generator.buildDiffGraph();
     return generator.generateGroups(weightThreshold);
+  }
+
+  /**
+   * Build the Entity Reference Graphs for base and current versions
+   *
+   * @param diffFiles
+   * @param srcDirs
+   * @throws ExecutionException
+   * @throws InterruptedException
+   * @throws TimeoutException
+   */
+  private void buildRefGraphs(List<DiffFile> diffFiles, Pair<String, String> srcDirs)
+      throws ExecutionException, InterruptedException, TimeoutException {
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    Future<Graph<Node, Edge>> baseBuilder =
+        executorService.submit(new GraphBuilder(srcDirs.getLeft(), diffFiles));
+    Future<Graph<Node, Edge>> currentBuilder =
+        executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
+    baseGraph = baseBuilder.get(60 * 10, TimeUnit.SECONDS);
+    currentGraph = currentBuilder.get(60 * 10, TimeUnit.SECONDS);
+    //            String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
+    //            String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
+    executorService.shutdown();
   }
 
   /**
@@ -249,20 +274,15 @@ public class SmartCommit {
    * @throws TimeoutException
    */
   public Map<String, Group> analyzeWithCC(
-      List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs)
-      throws ExecutionException, InterruptedException, TimeoutException {
-
-    // build the change semantic graph
-    ExecutorService executorService = Executors.newFixedThreadPool(2);
-    Future<Graph<Node, Edge>> baseBuilder =
-        executorService.submit(new GraphBuilder(srcDirs.getLeft(), diffFiles));
-    Future<Graph<Node, Edge>> currentBuilder =
-        executorService.submit(new GraphBuilder(srcDirs.getRight(), diffFiles));
-    Graph<Node, Edge> baseGraph = baseBuilder.get(60 * 10, TimeUnit.SECONDS);
-    Graph<Node, Edge> currentGraph = currentBuilder.get(60 * 10, TimeUnit.SECONDS);
-    //            String baseDot = GraphExporter.exportAsDotWithType(baseGraph);
-    //            String currentDot = GraphExporter.exportAsDotWithType(currentGraph);
-    executorService.shutdown();
+      List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs) {
+    if (baseGraph == null && currentGraph == null) {
+      try {
+        buildRefGraphs(diffFiles, srcDirs);
+      } catch (Exception e) {
+        System.err.println("Exception during graph building:");
+        e.printStackTrace();
+      }
+    }
 
     // analyze the diff hunks
     GroupGenerator generator =
