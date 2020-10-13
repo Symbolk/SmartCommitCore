@@ -3,7 +3,9 @@ package com.github.smartcommit.model;
 import com.github.smartcommit.model.constant.GroupLabel;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /** The output result, one group for one commit */
 public class Group {
@@ -22,6 +24,10 @@ public class Group {
   // user choice
   private String commitID = "";
   private String commitMsg = "";
+
+  // record link categories for interpretability and ablation study
+  // transient?
+  private Set<Integer> linkCategories = new HashSet<>();
 
   public Group(
       String repoID, String repoName, String groupID, List<String> diffHunkIDs, GroupLabel label) {
@@ -106,6 +112,14 @@ public class Group {
     } else {
       diffHunkIndices.add(diffIndex);
     }
+  }
+
+  public Set<Integer> getLinkCategories() {
+    return linkCategories;
+  }
+
+  public void addLinkCategories(Set<Integer> categories){
+    this.linkCategories.addAll(categories);
   }
 
   public void setDiffHunkIDs(List<String> diffHunkIDs) {

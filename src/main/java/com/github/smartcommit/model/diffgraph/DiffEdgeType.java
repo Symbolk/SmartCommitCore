@@ -28,17 +28,17 @@ public enum DiffEdgeType {
 
   Boolean fixed;
   String label;
-  Integer kind;
+  Integer category; // category of the link, mainly for ablation study
 
   DiffEdgeType(Boolean fixed, String label) {
     this.fixed = fixed;
     this.label = label;
   }
 
-  DiffEdgeType(Boolean fixed, String label, Integer kind) {
+  DiffEdgeType(Boolean fixed, String label, Integer category) {
     this.fixed = fixed;
     this.label = label;
-    this.kind = kind;
+    this.category = category;
   }
 
   public String asString() {
@@ -49,7 +49,7 @@ public enum DiffEdgeType {
     return this.fixed;
   }
 
-  public Integer getKind() {
-    return this.kind;
+  public Integer getCategory() {
+    return this.category;
   }
 }
