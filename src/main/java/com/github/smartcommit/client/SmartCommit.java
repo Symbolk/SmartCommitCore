@@ -294,6 +294,46 @@ public class SmartCommit {
   }
 
   /**
+   * Analyze with one specific type of links for ablation
+   *
+   * @param diffFiles
+   * @param allDiffHunks
+   * @param srcDirs
+   * @param filters: filter one or several types of links: 0 hard, 1 soft, 2 pattern, 3 logical
+   * @return
+   * @throws ExecutionException
+   * @throws InterruptedException
+   * @throws TimeoutException
+   */
+  public Map<String, Group> analyzeWithAblation(
+      List<DiffFile> diffFiles,
+      List<DiffHunk> allDiffHunks,
+      Pair<String, String> srcDirs,
+      int... filters) {
+
+    // only build ref graphs if they are null
+    if (baseGraph == null && currentGraph == null) {
+      try {
+        buildRefGraphs(diffFiles, srcDirs);
+      } catch (Exception e) {
+        System.err.println("Exception during graph building:");
+        e.printStackTrace();
+      }
+    }
+
+    // analyze the diff hunks
+    GroupGenerator generator =
+        new GroupGenerator(
+            repoID, repoName, srcDirs, diffFiles, allDiffHunks, baseGraph, currentGraph);
+    generator.setMinSimilarity(minSimilarity);
+    generator.setMaxDistance(maxDistance);
+    generator.enableRefDetection(detectRefactorings);
+    generator.enableNonJavaChanges(processNonJavaChanges);
+    generator.buildDiffGraph();
+    return generator.generateGroups(weightThreshold, filters);
+  }
+
+  /**
    * Save meta information of each group, including diff hunk ids, commit msgs, etc.
    *
    * @param generatedGroups generated groups <id:group>

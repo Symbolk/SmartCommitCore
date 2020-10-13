@@ -398,6 +398,103 @@ public class GroupGenerator {
       pq.offer(edge);
     }
 
+    Set<Integer> linkCategories = new HashSet<>();
+    while (!pq.isEmpty()) {
+      DiffEdge edge = pq.poll();
+      linkCategories.add(edge.getType().getCategory());
+      if (edge.getWeight() < threshold) {
+        break;
+      }
+      DiffNode source = diffGraph.getEdgeSource(edge);
+      DiffNode target = diffGraph.getEdgeTarget(edge);
+      if (indexToGroupMap.containsKey(source.getIndex())
+          && indexToGroupMap.containsKey(target.getIndex())) {
+        String gID1 = indexToGroupMap.get(source.getIndex());
+        String gID2 = indexToGroupMap.get(target.getIndex());
+        if (gID1.equals(gID2)) {
+          continue;
+        } else {
+          // merge the later to the former group
+          Group g1 = result.get(indexToGroupMap.get(source.getIndex()));
+          Group g2 = result.get(indexToGroupMap.get(target.getIndex()));
+          if (Integer.parseInt(gID1.substring(5)) > Integer.parseInt(gID2.substring(5))) {
+            mergeGroups(result, g1, g2);
+          } else {
+            mergeGroups(result, g2, g1);
+          }
+        }
+      } else {
+        // add the later to the former group
+        if (indexToGroupMap.containsKey(source.getIndex())) {
+          addToGroup(target, result.get(indexToGroupMap.get(source.getIndex())));
+        } else if (indexToGroupMap.containsKey(target.getIndex())) {
+          addToGroup(source, result.get(indexToGroupMap.get(target.getIndex())));
+        } else {
+          // both not exist, create new group
+          Set<DiffNode> nodes = new TreeSet<>(diffNodeComparator());
+          nodes.add(source);
+          nodes.add(target);
+          createGroup(result, nodes, linkCategories, GroupLabel.OTHER);
+          linkCategories.clear();
+        }
+      }
+    }
+
+    Set<DiffNode> individuals = new TreeSet<>(diffNodeComparator());
+    for (DiffHunk diffHunk : diffHunks) {
+      if (!indexToGroupMap.containsKey(diffHunk.getUniqueIndex())) {
+        individuals.add(findNodeByIndex(diffHunk.getUniqueIndex()));
+      }
+    }
+    assignIndividuals(result, individuals);
+    Map<String, Set<DiffNode>> groupByFile = new HashMap<>();
+    for (DiffNode node : individuals) {
+      String fileIndex = node.getFileIndex().toString();
+      groupByFile.putIfAbsent(fileIndex, new HashSet<>());
+      groupByFile.get(fileIndex).add(node);
+    }
+    for (Map.Entry<String, Set<DiffNode>> entry : groupByFile.entrySet()) {
+      createGroup(result, entry.getValue(), new HashSet<>(), GroupLabel.OTHER);
+    }
+
+    return result;
+  }
+
+  /**
+   * Accept a filter to mask one specific link and regenerate the result
+   *
+   * @param threshold
+   */
+  public Map<String, Group> generateGroups(Double threshold, int... filters) {
+
+    Map<String, Group> result = new LinkedHashMap<>(); // generated groups, id:Group
+    Set<Integer> filteredCategories = new HashSet<>();
+    for (int f : filters) {
+      filteredCategories.add(f);
+    }
+
+    // add edges to priority queue
+    Comparator<DiffEdge> comparator =
+        (o1, o2) -> {
+          if (o1.getWeight() < o2.getWeight()) {
+            return 1;
+          } else if (o1.getWeight() > o2.getWeight()) {
+            return -1;
+          } else {
+            return 0;
+          }
+        };
+    Queue<DiffEdge> pq = new PriorityQueue<>(11, comparator);
+    for (DiffEdge edge : diffGraph.edgeSet()) {
+      // drop/mask specific types of links
+      if (filteredCategories.contains(edge.getType().getCategory())) {
+        continue;
+      } else {
+        pq.offer(edge);
+      }
+    }
+
+    HashSet<Integer> linkCategories = new HashSet<>();
     while (!pq.isEmpty()) {
       DiffEdge edge = pq.poll();
       linkCategories.add(edge.getType().getCategory());
