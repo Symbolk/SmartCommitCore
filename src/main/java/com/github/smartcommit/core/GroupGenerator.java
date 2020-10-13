@@ -400,6 +400,8 @@ public class GroupGenerator {
 
     while (!pq.isEmpty()) {
       DiffEdge edge = pq.poll();
+      linkCategories.add(edge.getType().getCategory());
+
       if (edge.getWeight() < threshold) {
         break;
       }
@@ -432,7 +434,7 @@ public class GroupGenerator {
           Set<DiffNode> nodes = new TreeSet<>(diffNodeComparator());
           nodes.add(source);
           nodes.add(target);
-          createGroup(result, nodes, GroupLabel.OTHER);
+          createGroup(result, nodes, linkCategories, GroupLabel.OTHER);
         }
       }
     }
@@ -451,7 +453,7 @@ public class GroupGenerator {
       groupByFile.get(fileIndex).add(node);
     }
     for (Map.Entry<String, Set<DiffNode>> entry : groupByFile.entrySet()) {
-      createGroup(result, entry.getValue(), GroupLabel.OTHER);
+      createGroup(result, entry.getValue(), new HashSet<>(), GroupLabel.OTHER);
     }
 
     return result;
@@ -474,6 +476,9 @@ public class GroupGenerator {
         diffGraph.removeEdge(edge);
       }
     }
+    Set<Integer> linkCategories = new HashSet<>();
+    linkCategories.add(DiffEdgeType.DEPEND.getCategory());
+    linkCategories.add(DiffEdgeType.TEST.getCategory());
 
     Set<DiffNode> individuals = new LinkedHashSet<>();
     ConnectivityInspector inspector = new ConnectivityInspector(diffGraph);
@@ -489,12 +494,12 @@ public class GroupGenerator {
                 .sorted(diffNodeComparator())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        createGroup(result, diffNodes, GroupLabel.OTHER);
+        createGroup(result, diffNodes, linkCategories, GroupLabel.OTHER);
       }
     }
 
     assignIndividuals(result, individuals);
-    createGroup(result, individuals, GroupLabel.OTHER);
+    createGroup(result, individuals, new HashSet<>(), GroupLabel.OTHER);
     return result;
   }
 
@@ -533,7 +538,7 @@ public class GroupGenerator {
               .forEach(diffEdge -> edgeTypes.add(diffEdge.getType()));
         }
         // get the most frequent edge type as the group label
-        createGroup(result, diffNodes, getIntentFromEdges(edgeTypes));
+        createGroup(result, diffNodes, new HashSet<>(), getIntentFromEdges(edgeTypes));
       }
     }
 
@@ -541,7 +546,7 @@ public class GroupGenerator {
     // group individuals with file type centrality
     if (individuals.size() <= 3) {
       for (DiffNode node : individuals) {
-        createGroup(result, new HashSet<>(Arrays.asList(node)), GroupLabel.OTHER);
+        createGroup(result, new HashSet<>(Arrays.asList(node)), new HashSet<>(), GroupLabel.OTHER);
       }
     } else {
       Map<String, Set<DiffNode>> groupByFileType = new HashMap<>();
@@ -561,7 +566,7 @@ public class GroupGenerator {
         groupByFileType.get(fileType).add(node);
       }
       for (Map.Entry<String, Set<DiffNode>> entry : groupByFileType.entrySet()) {
-        createGroup(result, entry.getValue(), GroupLabel.OTHER);
+        createGroup(result, entry.getValue(), new HashSet<>(), GroupLabel.OTHER);
       }
     }
     return result;
@@ -604,7 +609,10 @@ public class GroupGenerator {
 
   /** Create a new group to group given diff hunks */
   private String createGroup(
-      Map<String, Group> groups, Set<DiffNode> diffNodes, GroupLabel intent) {
+      Map<String, Group> groups,
+      Set<DiffNode> diffNodes,
+      Set<Integer> linkCategories,
+      GroupLabel intent) {
     if (!diffNodes.isEmpty()) {
       Integer maxInt = -1;
       for (String k : groups.keySet()) {
@@ -623,6 +631,8 @@ public class GroupGenerator {
       }
       Group group = new Group(repoID, repoName, groupID, diffHunkIndices, diffHunkIDs, intent);
       group.setCommitMsg(intent.toString().toLowerCase() + ": " + intent.label + " ...");
+
+      group.addLinkCategories(linkCategories);
 
       // add to result groups
       groups.put(groupID, group);
@@ -646,6 +656,9 @@ public class GroupGenerator {
       g2.addByIndex(index);
       indexToGroupMap.replace(index, g2.getGroupID());
     }
+
+    g2.addLinkCategories(g1.getLinkCategories());
+
     // remove g1
     groups.remove(g1.getGroupID());
     return g2.getGroupID();
@@ -1110,7 +1123,8 @@ public class GroupGenerator {
    * @return
    */
   public boolean detectReformatting(DiffHunk diffHunk) {
-    return Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet()).equalsIgnoreCase(
+    return Utils.convertListToStringNoFormat(diffHunk.getBaseHunk().getCodeSnippet())
+        .equalsIgnoreCase(
             (Utils.convertListToStringNoFormat(diffHunk.getCurrentHunk().getCodeSnippet())));
   }
 
