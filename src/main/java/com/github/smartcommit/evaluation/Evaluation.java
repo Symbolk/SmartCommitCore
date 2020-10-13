@@ -34,13 +34,13 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class Evaluation {
   private static final Logger logger = Logger.getLogger(Evaluation.class);
+  //  private static final String csvDir = "/Users/symbolk/coding/dev/visualization/";
+  private static final String csvDir = "/Users/symbolk/coding/data/viz/";
 
   public static void main(String[] args) {
     BasicConfigurator.configure();
@@ -49,12 +49,13 @@ public class Evaluation {
     String repoDir = "/Users/symbolk/coding/data/repos/";
     String tempDir = "/Users/symbolk/coding/data/results/";
 
-    // netty, nomulus, rocketmq, realm-java, glide, storm, elasticsearch, cassandra, antlr4, deeplearning4j
+    // netty, nomulus, rocketmq, realm-java, glide, storm, elasticsearch, cassandra, antlr4
+    // deeplearning4j
     // jruby, error-prone, RxJava
-    String repoName = "ksql";
+    String repoName = "glide";
     String repoPath = repoDir + repoName;
-    runOpenSrc(repoName, repoPath, tempDir + "/" + repoName, 3);
-//                debug(repoName, repoPath, tempDir + "/test/debug", "ada07cb_4bac044");
+    runOpenSrc(repoName, repoPath, tempDir + "/" + repoName, 2);
+    //                debug(repoName, repoPath, tempDir + "/test/debug", "ada07cb_4bac044");
     //            runRQ2(repoName, repoPath, tempDir + "/RQ2/" + repoName);
   }
 
@@ -66,9 +67,23 @@ public class Evaluation {
   private static void runOpenSrc(String repoName, String repoPath, String outputDir, int step) {
     System.out.println("Open Source Repo: " + repoName + " Step: " + step);
     String smartCommitOutput = initOutputCSV("SmartCommit", repoName, step);
-    String clusterChangesOutput = initOutputCSV("DefUse", repoName, step);
+    // ablations: remove one type of links
+    List<String> ablations =
+        Arrays.asList("WithoutHard", "WithoutSoft", "WithoutPattern", "WithoutLogical");
+
+    List<String> ablationCSVs = new ArrayList<>();
+    for (int f = 0; f < ablations.size(); ++f) {
+      ablationCSVs.add(initOutputCSV(ablations.get(f), repoName, step));
+    }
+
+    // only with hard links
+    String onlyHardOutput = initOutputCSV("OnlyHard", repoName, step);
+
+    // baselines
+    String clusterChangesOutput = initOutputCSV("ClusterChanges", repoName, step);
     String allInOneOutput = initOutputCSV("All", repoName, step);
     String fileInOneOutput = initOutputCSV("File", repoName, step);
+    String hunkInOneOutput = initOutputCSV("Hunk", repoName, step);
 
     String tempDir = outputDir + File.separator + step;
     Utils.clearDir(tempDir);
@@ -120,13 +135,14 @@ public class Evaluation {
     List<Double> ccAccuracies = new ArrayList<>();
     List<Double> allAccuracies = new ArrayList<>();
     List<Double> fileAccuracies = new ArrayList<>();
+    List<Double> hunkAccuracies = new ArrayList<>();
     int sampleNum = 0;
     for (Map.Entry<String, List<String>> entry : commitsByEmailAboveStep.entrySet()) {
       List<String> commits = entry.getValue();
 
       outerloop:
       for (int i = 0; i < commits.size(); i += step) {
-        if (sampleNum >= 100) {
+        if (sampleNum >= 50) {
           break outerloop;
         }
         // ordered map
@@ -194,9 +210,7 @@ public class Evaluation {
             break;
           }
         }
-        if (j < step
-            || unionDiffHunks.size() > step * 100
-            || checkPureNoJavaChanges(unionDiffHunks)) {
+        if (j < step || unionDiffHunks.size() > 200 || checkPureNoJavaChanges(unionDiffHunks)) {
           // the remaining commits for current committer is not enough
           FileUtils.deleteQuietly(new File(resultsDir));
           continue;
@@ -209,157 +223,235 @@ public class Evaluation {
             resultsDir + File.separator + Version.CURRENT.asString() + File.separator;
 
         System.out.print("[Batch " + sampleNum + ":" + dirNameHash + "]");
-        try {
-          stopwatch.reset().start();
-          Map<String, Group> scGroups =
-              smartCommit.analyze(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
-          stopwatch.stop();
+        stopwatch.reset().start();
+        Map<String, Group> scGroups =
+            smartCommit.analyze(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
+        stopwatch.stop();
 
-          long timeCost = stopwatch.elapsed(TimeUnit.MILLISECONDS);
-          System.out.println(
-              " Time="
-                  + timeCost
-                  + "ms"
-                  + " #diff_hunks="
-                  + unionDiffHunks.size()
-                  + " #LOC="
-                  + LOC);
+        long timeCost = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        System.out.println(
+            " Time=" + timeCost + "ms" + " #diff_hunks=" + unionDiffHunks.size() + " #LOC=" + LOC);
 
-          // generate "diffs" and "file_ids.json", which keeps diff info
-          dataCollector.collectDiffHunks(unionDiffFiles, resultsDir);
+        // generate "diffs" and "file_ids.json", which keeps diff info
+        dataCollector.collectDiffHunks(unionDiffFiles, resultsDir);
 
-          // export intermediate data of SC
-          smartCommit.exportGroupResults(scGroups, resultsDir);
-          smartCommit.setId2DiffHunkMap(unionDiffHunkMap);
+        // export intermediate data of SC
+        smartCommit.exportGroupResults(scGroups, resultsDir);
+        smartCommit.setId2DiffHunkMap(unionDiffHunkMap);
 
-          // export ground truth
-          Map<String, Group> groundTruthGroups = new HashMap<>();
-          int gid = 0;
-          for (Map.Entry en1 : groundTruth.entrySet()) {
-            Group group =
-                new Group(
-                    "",
-                    repoName,
-                    "group" + (gid++),
-                    new ArrayList<>((Set<String>) en1.getValue()),
-                    GroupLabel.OTHER);
-            group.setCommitID(en1.getKey().toString());
-            groundTruthGroups.put(group.getGroupID(), group);
-          }
-
-          // override the copy
-          FileUtils.deleteQuietly(new File(resultsDir + File.separator + "manual_groups"));
-          Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-          for (Map.Entry<String, Group> ent : groundTruthGroups.entrySet()) {
-            Utils.writeStringToFile(
-                gson.toJson(ent.getValue()),
-                resultsDir
-                    + File.separator
-                    + "manual_groups"
-                    + File.separator
-                    + ent.getKey()
-                    + ".json");
-          }
-          smartCommit.exportGroupDetails(
-              groundTruthGroups, resultsDir + File.separator + "manual_details");
-
-          smartCommit.exportGroupDetails(
-                  scGroups, resultsDir + File.separator + "generated_details");
-
-          // convert the group into map from groupid to diffhunkids
-          Map<String, Set<String>> scResults = new LinkedHashMap<>();
-          for (Map.Entry res : scGroups.entrySet()) {
-            Set<String> ids = new HashSet<>();
-            for (String s : ((Group) res.getValue()).getDiffHunkIDs()) {
-              ids.add(Utils.parseUUIDs(s).getRight());
-            }
-            scResults.put((String) res.getKey(), ids);
-          }
-          // smartcommit
-          Pair<List<Integer>, Double> scMetrics = computeMetrics(groundTruth, scResults);
-          exportMetrics(
-              "SmartCommit",
-              smartCommitOutput,
-              scMetrics,
-              scGroups.size(),
-              LOC,
-              sampleNum,
-              timeCost);
-          scAccuracies.add(scMetrics.getRight());
-
-          /* ---------------------baselines------------------------ */
-          Map<String, Group> ccGroups =
-              smartCommit.analyzeWithCC(
-                  unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
-          Map<String, Set<String>> ccResults = new LinkedHashMap<>();
-          for (Map.Entry res : ccGroups.entrySet()) {
-            Set<String> ids = new HashSet<>();
-            for (String s : ((Group) res.getValue()).getDiffHunkIDs()) {
-              ids.add(Utils.parseUUIDs(s).getRight());
-            }
-            ccResults.put((String) res.getKey(), ids);
-          }
-          Pair<List<Integer>, Double> ccMetrics = computeMetrics(groundTruth, ccResults);
-          exportMetrics(
-              "ClusterChanges",
-              clusterChangesOutput,
-              ccMetrics,
-              ccResults.size(),
-              LOC,
-              sampleNum,
-              0L);
-          ccAccuracies.add(ccMetrics.getRight());
-
-          // baseline1: all diff hunks in one group
-          Map<String, Set<String>> allResults = new LinkedHashMap<>();
-          Set<String> allDiffHunkIDs = unionDiffHunkMap.keySet();
-          allResults.put("group0", allDiffHunkIDs);
-          Pair<List<Integer>, Double> allMetrics = computeMetrics(groundTruth, allResults);
-          exportMetrics(
-              "All in one Group",
-              allInOneOutput,
-              allMetrics,
-              allResults.size(),
-              LOC,
-              sampleNum,
-              0L);
-          allAccuracies.add(allMetrics.getRight());
-
-          // baseline2: group according to file
-          Map<String, Set<String>> fileResults = new LinkedHashMap<>();
-          for (DiffFile diffFile : unionDiffFiles) {
-            Set<String> diffHunkIDs =
-                diffFile.getDiffHunks().stream()
-                    .map(DiffHunk::getDiffHunkID)
-                    .collect(Collectors.toSet());
-            // use path as the group id
-            String groupID =
-                diffFile.getBaseRelativePath().isEmpty()
-                    ? diffFile.getCurrentRelativePath()
-                    : diffFile.getBaseRelativePath();
-            if (fileResults.containsKey(groupID)) {
-              fileResults.get(groupID).addAll(diffHunkIDs);
-            } else {
-              fileResults.put(groupID, diffHunkIDs);
-            }
-          }
-
-          Pair<List<Integer>, Double> fileMetrics = computeMetrics(groundTruth, fileResults);
-
-          exportMetrics(
-              "One file one Group",
-              fileInOneOutput,
-              fileMetrics,
-              fileResults.size(),
-              LOC,
-              sampleNum,
-              0L);
-          fileAccuracies.add(fileMetrics.getRight());
-
-          sampleNum++;
-        } catch (ExecutionException | InterruptedException | TimeoutException e) {
-          e.printStackTrace();
+        // export ground truth
+        Map<String, Group> groundTruthGroups = new HashMap<>();
+        int gid = 0;
+        for (Map.Entry en1 : groundTruth.entrySet()) {
+          Group group =
+              new Group(
+                  "",
+                  repoName,
+                  "group" + (gid++),
+                  new ArrayList<>((Set<String>) en1.getValue()),
+                  GroupLabel.OTHER);
+          group.setCommitID(en1.getKey().toString());
+          groundTruthGroups.put(group.getGroupID(), group);
         }
+
+        // override the copy
+        FileUtils.deleteQuietly(new File(resultsDir + File.separator + "manual_groups"));
+        Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+        for (Map.Entry<String, Group> ent : groundTruthGroups.entrySet()) {
+          Utils.writeStringToFile(
+              gson.toJson(ent.getValue()),
+              resultsDir
+                  + File.separator
+                  + "manual_groups"
+                  + File.separator
+                  + ent.getKey()
+                  + ".json");
+        }
+        smartCommit.exportGroupDetails(
+            groundTruthGroups, resultsDir + File.separator + "manual_details");
+
+        smartCommit.exportGroupDetails(scGroups, resultsDir + File.separator + "generated_details");
+
+        /* ---------------------SmartCommit------------------------ */
+        // convert the group into map from groupid to diffhunkids
+        Map<String, Set<String>> scResults = new LinkedHashMap<>();
+        // all link categories of this batch (simulated composite changeset)
+        Set<Integer> linkCategories = new HashSet<>();
+        for (Map.Entry e : scGroups.entrySet()) {
+          Set<String> ids = new HashSet<>();
+          for (String s : ((Group) e.getValue()).getDiffHunkIDs()) {
+            ids.add(Utils.parseUUIDs(s).getRight());
+          }
+          scResults.put((String) e.getKey(), ids);
+          linkCategories.addAll(((Group) e.getValue()).getLinkCategories());
+        }
+        // smartcommit
+        Pair<List<Integer>, Double> scMetrics = computeMetrics(groundTruth, scResults);
+        exportMetrics(
+            "SmartCommit",
+            smartCommitOutput,
+            scMetrics,
+            scGroups.size(),
+            LOC,
+            sampleNum,
+            timeCost,
+            linkCategories);
+        scAccuracies.add(scMetrics.getRight());
+
+        /* ---------------------Baselines------------------------ */
+
+        /* ---------------------internal ablations------------------------ */
+        for (int f = 0; f < ablations.size(); ++f) {
+          linkCategories = new HashSet<>();
+          Map<String, Group> ablationGroups =
+              smartCommit.analyzeWithAblation(
+                  unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir), f);
+
+          Map<String, Set<String>> ablationResults = new LinkedHashMap<>();
+          for (Map.Entry e : ablationGroups.entrySet()) {
+            Set<String> ids = new HashSet<>();
+            for (String s : ((Group) e.getValue()).getDiffHunkIDs()) {
+              ids.add(Utils.parseUUIDs(s).getRight());
+            }
+            ablationResults.put((String) e.getKey(), ids);
+            linkCategories.addAll(((Group) e.getValue()).getLinkCategories());
+          }
+
+          Pair<List<Integer>, Double> ablationMetrics =
+              computeMetrics(groundTruth, ablationResults);
+          exportMetrics(
+              ablations.get(f),
+              ablationCSVs.get(f),
+              ablationMetrics,
+              ablationResults.size(),
+              LOC,
+              sampleNum,
+              0L,
+              linkCategories);
+        }
+
+        linkCategories = new HashSet<>();
+        Map<String, Group> onlyHardGroups =
+            smartCommit.analyzeWithAblation(
+                unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir), 1, 2, 3, 4);
+
+        Map<String, Set<String>> onlyHardResults = new LinkedHashMap<>();
+        for (Map.Entry e : onlyHardGroups.entrySet()) {
+          Set<String> ids = new HashSet<>();
+          for (String s : ((Group) e.getValue()).getDiffHunkIDs()) {
+            ids.add(Utils.parseUUIDs(s).getRight());
+          }
+          onlyHardResults.put((String) e.getKey(), ids);
+          linkCategories.addAll(((Group) e.getValue()).getLinkCategories());
+        }
+
+        Pair<List<Integer>, Double> onlyHardMetrics = computeMetrics(groundTruth, onlyHardResults);
+        exportMetrics(
+            "OnlyHard",
+            onlyHardOutput,
+            onlyHardMetrics,
+            onlyHardResults.size(),
+            LOC,
+            sampleNum,
+            0L,
+            linkCategories);
+
+        /* ---------------------other approaches------------------------ */
+        // baseline0: cluster changes
+        Map<String, Group> ccGroups =
+            smartCommit.analyzeWithCC(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
+        Map<String, Set<String>> ccResults = new LinkedHashMap<>();
+        linkCategories = new HashSet<>();
+
+        for (Map.Entry e : ccGroups.entrySet()) {
+          Set<String> ids = new HashSet<>();
+          for (String s : ((Group) e.getValue()).getDiffHunkIDs()) {
+            ids.add(Utils.parseUUIDs(s).getRight());
+          }
+          ccResults.put((String) e.getKey(), ids);
+          linkCategories.addAll(((Group) e.getValue()).getLinkCategories());
+        }
+
+        Pair<List<Integer>, Double> ccMetrics = computeMetrics(groundTruth, ccResults);
+        exportMetrics(
+            "ClusterChanges",
+            clusterChangesOutput,
+            ccMetrics,
+            ccResults.size(),
+            LOC,
+            sampleNum,
+            0L,
+            linkCategories);
+        ccAccuracies.add(ccMetrics.getRight());
+
+        // baseline1: all diff hunks in one group
+        Map<String, Set<String>> allResults = new LinkedHashMap<>();
+        Set<String> allDiffHunkIDs = unionDiffHunkMap.keySet();
+        allResults.put("group0", allDiffHunkIDs);
+        Pair<List<Integer>, Double> allMetrics = computeMetrics(groundTruth, allResults);
+        exportMetrics(
+            "All in one Group",
+            allInOneOutput,
+            allMetrics,
+            allResults.size(),
+            LOC,
+            sampleNum,
+            0L,
+            new HashSet<>());
+        allAccuracies.add(allMetrics.getRight());
+
+        // baseline2: group according to file
+        Map<String, Set<String>> fileResults = new LinkedHashMap<>();
+        for (DiffFile diffFile : unionDiffFiles) {
+          Set<String> diffHunkIDs =
+              diffFile.getDiffHunks().stream()
+                  .map(DiffHunk::getDiffHunkID)
+                  .collect(Collectors.toSet());
+          // use path as the group id
+          String groupID =
+              diffFile.getBaseRelativePath().isEmpty()
+                  ? diffFile.getCurrentRelativePath()
+                  : diffFile.getBaseRelativePath();
+          if (fileResults.containsKey(groupID)) {
+            fileResults.get(groupID).addAll(diffHunkIDs);
+          } else {
+            fileResults.put(groupID, diffHunkIDs);
+          }
+        }
+        Pair<List<Integer>, Double> fileMetrics = computeMetrics(groundTruth, fileResults);
+        exportMetrics(
+            "One file one Group",
+            fileInOneOutput,
+            fileMetrics,
+            fileResults.size(),
+            LOC,
+            sampleNum,
+            0L,
+            new HashSet<>());
+        fileAccuracies.add(fileMetrics.getRight());
+
+        // baseline3: each hunk as one group
+        Map<String, Set<String>> hunkResults = new LinkedHashMap<>();
+        for (DiffHunk hunk : unionDiffHunks) {
+          // use hunk id as group id
+          String groupID = hunk.getDiffHunkID();
+          Set<String> diffHunkIDs = new HashSet<>();
+          diffHunkIDs.add(hunk.getDiffHunkID());
+          hunkResults.put(groupID, diffHunkIDs);
+        }
+        Pair<List<Integer>, Double> hunkMetrics = computeMetrics(groundTruth, hunkResults);
+        exportMetrics(
+            "One hunk one Group",
+            hunkInOneOutput,
+            hunkMetrics,
+            hunkResults.size(),
+            LOC,
+            sampleNum,
+            0L,
+            new HashSet<>());
+        hunkAccuracies.add(hunkMetrics.getRight());
+
+        sampleNum++;
       }
     }
 
@@ -373,19 +465,16 @@ public class Evaluation {
         "One File One Group: Median Accuracy: "
             + Utils.formatDouble(getMedian(fileAccuracies))
             + "%");
+    System.out.println(
+        "One Hunk One Group: Median Accuracy: "
+            + Utils.formatDouble(getMedian(hunkAccuracies))
+            + "%");
   }
 
   private static String initOutputCSV(String methodName, String repoName, int step) {
-    String path =
-        "/Users/symbolk/coding/dev/visualization/"
-            + methodName
-            + "/"
-            + repoName
-            + "_"
-            + step
-            + ".csv";
+    String path = csvDir + methodName + "/" + repoName + "_" + step + ".csv";
     Utils.writeStringToFile(
-        "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime"
+        "batch,#diff_hunks,#LOC,#reassign,#reorder,accuracy,#operations,runtime,link_categories"
             + System.lineSeparator(),
         path);
     return path;
@@ -409,7 +498,8 @@ public class Evaluation {
       int groupsNum,
       int LOC,
       int sampleNum,
-      long timeCost) {
+      long timeCost,
+      Set<Integer> linkCategories) {
     int total = metrics.getLeft().get(0);
     int correct = metrics.getLeft().get(1);
     int reassignSteps = total - correct;
@@ -430,25 +520,21 @@ public class Evaluation {
             + accuracy
             + "%");
 
-    // save metrics (for visualization)
-    Utils.appendStringToFile(
-        csvPath,
-        sampleNum
-            + ","
-            + total
-            + ","
-            + LOC
-            + ","
-            + reassignSteps
-            + ","
-            + orderingSteps
-            + ","
-            + accuracy
-            + ","
-            + (reassignSteps + orderingSteps)
-            + ","
-            + timeCost
-            + System.lineSeparator());
+    StringBuilder builder = new StringBuilder();
+    builder.append(sampleNum).append(',');
+    builder.append(total).append(',');
+    builder.append(LOC).append(',');
+    builder.append(reassignSteps).append(',');
+    builder.append(orderingSteps).append(',');
+    builder.append(accuracy).append(',');
+    builder.append((reassignSteps + orderingSteps)).append(',');
+    builder.append(timeCost).append(',');
+    // convert link categories into a string splited by &
+    builder.append(linkCategories.stream().map(Object::toString).collect(Collectors.joining("&")));
+    builder.append(System.lineSeparator());
+
+    // save metrics (for statistics&visualization)
+    Utils.appendStringToFile(csvPath, builder.toString());
   }
 
   /**
@@ -1050,154 +1136,147 @@ public class Evaluation {
 
     System.out.println("Repo: " + repoName + " Step: " + commitIDs.length);
     System.out.println("[Batch X" + ":" + commitString + "]");
-    try {
-      stopwatch.reset().start();
-      Map<String, Group> results =
-          smartCommit.analyze(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
-      stopwatch.stop();
+    stopwatch.reset().start();
+    Map<String, Group> results =
+        smartCommit.analyze(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
+    stopwatch.stop();
 
-      // generate "diffs" and "file_ids.json", which keeps diff info
-      dataCollector.collectDiffHunks(unionDiffFiles, resultsDir);
+    // generate "diffs" and "file_ids.json", which keeps diff info
+    dataCollector.collectDiffHunks(unionDiffFiles, resultsDir);
 
-      long timeCost = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+    long timeCost = stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
-      // export for testing
-      smartCommit.exportGroupResults(results, resultsDir);
-      smartCommit.setId2DiffHunkMap(unionDiffHunkMap);
-      Map<String, Group> groundTruthGroups = new HashMap<>();
-      int gid = 0;
-      for (Map.Entry en1 : groundTruth.entrySet()) {
-        Group group =
-            new Group(
-                "",
-                repoName,
-                "group" + (gid++),
-                new ArrayList<>((Set<String>) en1.getValue()),
-                GroupLabel.OTHER);
-        group.setCommitID(en1.getKey().toString());
-        //        group.setCommitMsg(); // original commit msg
-        groundTruthGroups.put(group.getGroupID(), group);
-      }
-      smartCommit.exportGroupDetails(
-          groundTruthGroups, resultsDir + File.separator + "manual_details");
-      smartCommit.exportGroupDetails(results, resultsDir + File.separator + "generated_details");
-
-      // convert the group into map from groupid to diffhunkids
-      Map<String, Set<String>> generatedResults = new LinkedHashMap<>();
-      for (Map.Entry res : results.entrySet()) {
-        Set<String> ids = new HashSet<>();
-        for (String s : ((Group) res.getValue()).getDiffHunkIDs()) {
-          ids.add(Utils.parseUUIDs(s).getRight());
-        }
-        generatedResults.put((String) res.getKey(), ids);
-      }
-      // smartcommit results
-      Pair<List<Integer>, Double> resultMetrics = computeMetrics(groundTruth, generatedResults);
-
-      int total = resultMetrics.getLeft().get(0);
-      int correct = resultMetrics.getLeft().get(1);
-      int reassignSteps = total - correct;
-      int orderingSteps = resultMetrics.getLeft().get(2);
-      double accuracy = resultMetrics.getRight();
-      resultAccs.add(accuracy);
-      System.out.println(
-          "SmartCommit: \t"
-              + "#groups="
-              + results.size()
-              + " #diff_hunks="
-              + unionDiffHunks.size()
-              + " #LOC="
-              + LOC
-              + " (#Incorrect/#Total)="
-              + reassignSteps
-              + "/"
-              + total
-              + " Reordering="
-              + orderingSteps
-              + " Accuracy="
-              + accuracy
-              + "%"
-              + " Time="
-              + timeCost
-              + "ms");
-
-      // baseline1: all diff hunks in one group
-      Map<String, Set<String>> baselineResult1 = new LinkedHashMap<>();
-      Set<String> allDiffHunkIDs = unionDiffHunkMap.keySet();
-      baselineResult1.put("group0", allDiffHunkIDs);
-      Pair<List<Integer>, Double> baselineMetrics1 = computeMetrics(groundTruth, baselineResult1);
-
-      total = baselineMetrics1.getLeft().get(0);
-      correct = baselineMetrics1.getLeft().get(1);
-      reassignSteps = total - correct;
-      orderingSteps = baselineMetrics1.getLeft().get(2);
-      accuracy = baselineMetrics1.getRight();
-      baselineAccs1.add(accuracy);
-      System.out.println(
-          "All in one Group: \t"
-              + "#groups="
-              + baselineResult1.size()
-              + " #diff_hunks="
-              + unionDiffHunks.size()
-              + " #LOC="
-              + LOC
-              + " (#Incorrect/#Total)="
-              + reassignSteps
-              + "/"
-              + total
-              + " Reordering="
-              + orderingSteps
-              + " Accuracy="
-              + accuracy
-              + "%");
-
-      // baseline2: group according to file
-      Map<String, Set<String>> baselineResult2 = new LinkedHashMap<>();
-      for (DiffFile diffFile : unionDiffFiles) {
-        Set<String> diffHunkIDs =
-            diffFile.getDiffHunks().stream()
-                .map(DiffHunk::getDiffHunkID)
-                .collect(Collectors.toSet());
-        // use path as the group id
-        String groupID =
-            diffFile.getBaseRelativePath().isEmpty()
-                ? diffFile.getCurrentRelativePath()
-                : diffFile.getBaseRelativePath();
-        if (baselineResult2.containsKey(groupID)) {
-          baselineResult2.get(groupID).addAll(diffHunkIDs);
-        } else {
-          baselineResult2.put(groupID, diffHunkIDs);
-        }
-      }
-
-      Pair<List<Integer>, Double> baselineMetrics2 = computeMetrics(groundTruth, baselineResult2);
-
-      total = baselineMetrics2.getLeft().get(0);
-      correct = baselineMetrics2.getLeft().get(1);
-      reassignSteps = total - correct;
-      orderingSteps = baselineMetrics2.getLeft().get(2);
-      accuracy = baselineMetrics2.getRight();
-      baselineAccs2.add(accuracy);
-      System.out.println(
-          "One File One Group: \t"
-              + "#groups="
-              + baselineResult2.size()
-              + " #diff_hunks="
-              + unionDiffHunks.size()
-              + " #LOC="
-              + LOC
-              + " (#Incorrect/#Total)="
-              + reassignSteps
-              + "/"
-              + total
-              + " Reordering="
-              + orderingSteps
-              + " Accuracy="
-              + accuracy
-              + "%");
-
-    } catch (ExecutionException | InterruptedException | TimeoutException e) {
-      e.printStackTrace();
+    // export for testing
+    smartCommit.exportGroupResults(results, resultsDir);
+    smartCommit.setId2DiffHunkMap(unionDiffHunkMap);
+    Map<String, Group> groundTruthGroups = new HashMap<>();
+    int gid = 0;
+    for (Map.Entry en1 : groundTruth.entrySet()) {
+      Group group =
+          new Group(
+              "",
+              repoName,
+              "group" + (gid++),
+              new ArrayList<>((Set<String>) en1.getValue()),
+              GroupLabel.OTHER);
+      group.setCommitID(en1.getKey().toString());
+      //        group.setCommitMsg(); // original commit msg
+      groundTruthGroups.put(group.getGroupID(), group);
     }
+    smartCommit.exportGroupDetails(
+        groundTruthGroups, resultsDir + File.separator + "manual_details");
+    smartCommit.exportGroupDetails(results, resultsDir + File.separator + "generated_details");
+
+    // convert the group into map from groupid to diffhunkids
+    Map<String, Set<String>> generatedResults = new LinkedHashMap<>();
+    for (Map.Entry res : results.entrySet()) {
+      Set<String> ids = new HashSet<>();
+      for (String s : ((Group) res.getValue()).getDiffHunkIDs()) {
+        ids.add(Utils.parseUUIDs(s).getRight());
+      }
+      generatedResults.put((String) res.getKey(), ids);
+    }
+    // smartcommit results
+    Pair<List<Integer>, Double> resultMetrics = computeMetrics(groundTruth, generatedResults);
+
+    int total = resultMetrics.getLeft().get(0);
+    int correct = resultMetrics.getLeft().get(1);
+    int reassignSteps = total - correct;
+    int orderingSteps = resultMetrics.getLeft().get(2);
+    double accuracy = resultMetrics.getRight();
+    resultAccs.add(accuracy);
+    System.out.println(
+        "SmartCommit: \t"
+            + "#groups="
+            + results.size()
+            + " #diff_hunks="
+            + unionDiffHunks.size()
+            + " #LOC="
+            + LOC
+            + " (#Incorrect/#Total)="
+            + reassignSteps
+            + "/"
+            + total
+            + " Reordering="
+            + orderingSteps
+            + " Accuracy="
+            + accuracy
+            + "%"
+            + " Time="
+            + timeCost
+            + "ms");
+
+    // baseline1: all diff hunks in one group
+    Map<String, Set<String>> baselineResult1 = new LinkedHashMap<>();
+    Set<String> allDiffHunkIDs = unionDiffHunkMap.keySet();
+    baselineResult1.put("group0", allDiffHunkIDs);
+    Pair<List<Integer>, Double> baselineMetrics1 = computeMetrics(groundTruth, baselineResult1);
+
+    total = baselineMetrics1.getLeft().get(0);
+    correct = baselineMetrics1.getLeft().get(1);
+    reassignSteps = total - correct;
+    orderingSteps = baselineMetrics1.getLeft().get(2);
+    accuracy = baselineMetrics1.getRight();
+    baselineAccs1.add(accuracy);
+    System.out.println(
+        "All in one Group: \t"
+            + "#groups="
+            + baselineResult1.size()
+            + " #diff_hunks="
+            + unionDiffHunks.size()
+            + " #LOC="
+            + LOC
+            + " (#Incorrect/#Total)="
+            + reassignSteps
+            + "/"
+            + total
+            + " Reordering="
+            + orderingSteps
+            + " Accuracy="
+            + accuracy
+            + "%");
+
+    // baseline2: group according to file
+    Map<String, Set<String>> baselineResult2 = new LinkedHashMap<>();
+    for (DiffFile diffFile : unionDiffFiles) {
+      Set<String> diffHunkIDs =
+          diffFile.getDiffHunks().stream().map(DiffHunk::getDiffHunkID).collect(Collectors.toSet());
+      // use path as the group id
+      String groupID =
+          diffFile.getBaseRelativePath().isEmpty()
+              ? diffFile.getCurrentRelativePath()
+              : diffFile.getBaseRelativePath();
+      if (baselineResult2.containsKey(groupID)) {
+        baselineResult2.get(groupID).addAll(diffHunkIDs);
+      } else {
+        baselineResult2.put(groupID, diffHunkIDs);
+      }
+    }
+
+    Pair<List<Integer>, Double> baselineMetrics2 = computeMetrics(groundTruth, baselineResult2);
+
+    total = baselineMetrics2.getLeft().get(0);
+    correct = baselineMetrics2.getLeft().get(1);
+    reassignSteps = total - correct;
+    orderingSteps = baselineMetrics2.getLeft().get(2);
+    accuracy = baselineMetrics2.getRight();
+    baselineAccs2.add(accuracy);
+    System.out.println(
+        "One File One Group: \t"
+            + "#groups="
+            + baselineResult2.size()
+            + " #diff_hunks="
+            + unionDiffHunks.size()
+            + " #LOC="
+            + LOC
+            + " (#Incorrect/#Total)="
+            + reassignSteps
+            + "/"
+            + total
+            + " Reordering="
+            + orderingSteps
+            + " Accuracy="
+            + accuracy
+            + "%");
   }
 }
