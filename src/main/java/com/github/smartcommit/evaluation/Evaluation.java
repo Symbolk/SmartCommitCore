@@ -49,9 +49,6 @@ public class Evaluation {
     String repoDir = "/Users/symbolk/coding/data/repos/";
     String tempDir = "/Users/symbolk/coding/data/results/";
 
-    // netty, nomulus, rocketmq, realm-java, glide, storm, elasticsearch, cassandra, antlr4
-    // deeplearning4j
-    // jruby, error-prone, RxJava
     String repoName = "glide";
     String repoPath = repoDir + repoName;
     runOpenSrc(repoName, repoPath, tempDir + "/" + repoName, 2);
