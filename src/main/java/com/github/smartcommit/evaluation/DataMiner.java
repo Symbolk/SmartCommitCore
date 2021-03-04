@@ -35,9 +35,9 @@ public class DataMiner {
     BasicConfigurator.configure();
     org.apache.log4j.Logger.getRootLogger().setLevel(Level.WARN);
 
-    String repoDir = "/Users/symbolk/coding/data/repos/";
-    String resultsDir = "/Users/symbolk/coding/data/results/";
-    String tempDir = "/Users/symbolk/coding/data/temp/";
+    String repoDir = "~/coding/data/repos/";
+    String resultsDir = "~/coding/data/results/";
+    String tempDir = "~/coding/data/temp/";
 
     String repoName = "antlr4";
     String repoPath = repoDir + repoName;

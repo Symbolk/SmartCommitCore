@@ -39,15 +39,15 @@ import java.util.stream.Collectors;
 
 public class Evaluation {
   private static final Logger logger = Logger.getLogger(Evaluation.class);
-  //  private static final String csvDir = "/Users/symbolk/coding/dev/visualization/";
-  private static final String csvDir = "/Users/symbolk/coding/data/viz/";
+  //  private static final String csvDir = "~/coding/dev/visualization/";
+  private static final String csvDir = "~/coding/data/viz/";
 
   public static void main(String[] args) {
     BasicConfigurator.configure();
     org.apache.log4j.Logger.getRootLogger().setLevel(Level.INFO);
 
-    String repoDir = "/Users/symbolk/coding/data/repos/";
-    String tempDir = "/Users/symbolk/coding/data/results/";
+    String repoDir = "~/coding/data/repos/";
+    String tempDir = "~/coding/data/results/";
 
     String repoName = "glide";
     String repoPath = repoDir + repoName;
@@ -86,7 +86,7 @@ public class Evaluation {
     Utils.clearDir(tempDir);
 
     // read samples from db
-    // mongod --dbpath /Users/symbolk/database/mongo
+    // mongod --dbpath ~/database/mongo
     MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
     MongoClient mongoClient = new MongoClient(connectionString);
     MongoDatabase db = mongoClient.getDatabase("atomic");
@@ -715,7 +715,8 @@ public class Evaluation {
     MongoClientURI local = new MongoClientURI("mongodb://localhost:27017");
     // !product env
     MongoClientURI server =
-        new MongoClientURI("mongodb://symbol:98eukk5age@47.113.179.146:29107/smartcommit");
+        new MongoClientURI("mongodb://XXX/smartcommit");
+//        new MongoClientURI("mongodb://symbol:98eukk5age@47.113.179.146:29107/smartcommit");
     String tempFilesDir = "/root/data/temp/RQ1/" + repoName;
     //         !local test env
     //    MongoClientURI server = new MongoClientURI("mongodb://localhost:27017/smartcommit");
@@ -932,7 +933,8 @@ public class Evaluation {
   private static void getAllEmails(String repoName) {
     System.out.println("Repo: " + repoName);
     MongoClientURI server =
-        new MongoClientURI("mongodb://symbol:98eukk5age@47.113.179.146:29107/smartcommit");
+        new MongoClientURI("mongodb://XXX/smartcommit");
+    // symbol:98eukk5age@47.113.179.146:29107
     MongoClient serverClient = new MongoClient(server);
 
     try {

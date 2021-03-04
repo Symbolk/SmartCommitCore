@@ -1,8 +1,9 @@
 # SmartCommitCore
 
-## The core algorithm for SmartCommit, a tool to assist developers to follow the *best practice* (https://google.github.io/eng-practices/) for commits.
+## The core algorithm for SmartCommit, a tool to assist developers to follow the *best practice of cohesive and focused commits* encouraged by [Google] and [Git].
 
-[SmartCommit]: https://github.com/Symbolk/SmartCommit
+[Google]: https://google.github.io/eng-practices/
+[Git]: https://git-scm.com/docs/gitworkflows#_separate_changes
 
 ## As a User
 
@@ -16,7 +17,9 @@
 
 ### 1. JAR Usage
 
-Download the latest jar from: https://github.com/Symbolk/SmartCommit/releases, and run the following command:
+Download the latest jar from [releases], and run the following command:
+
+[releases]: https://github.com/Symbolk/SmartCommit/releases
 
 ```sh
 java -jar SmartCommit-xxx.jar [OPTIONS]
