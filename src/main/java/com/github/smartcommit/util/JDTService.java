@@ -417,7 +417,7 @@ public class JDTService {
   /**
    * Collect information from a MethodDeclaration
    *
-   * @thanks_to https://github.com/linzeqipku/SnowGraph
+   *
    * @param node
    * @param belongTo
    * @return
@@ -773,7 +773,7 @@ public class JDTService {
   /**
    * Parse the method body block to collect useful information
    *
-   * @thanks_to https://github.com/linzeqipku/SnowGraph
+   *
    * @param methodBody
    */
   private void parseMethodBody(MethodInfo methodInfo, Block methodBody) {
@@ -951,7 +951,7 @@ public class JDTService {
   /**
    * Parse the expressions to get method calls and filed uses
    *
-   * @thanks_to https://github.com/linzeqipku/SnowGraph
+   *
    * @param expression
    */
   private void parseExpressionInMethod(MethodInfo methodInfo, Expression expression) {

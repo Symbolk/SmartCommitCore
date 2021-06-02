@@ -1,13 +1,14 @@
 package com.github.smartcommit.evaluation;
 
 import com.github.smartcommit.util.Utils;
+import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.bson.Document;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.Repository;
@@ -29,17 +30,16 @@ import java.util.regex.Pattern;
 
 /** Mine atomic commits and also composite commits from specified repos */
 public class DataMiner {
-  private static final Logger logger = Logger.getLogger(DataMiner.class);
+  private static final String homeDir = System.getProperty("user.home") + File.separator;
+  private static final String mongoDBUrl = "mongodb://localhost:27017";
 
   public static void main(String[] args) {
     BasicConfigurator.configure();
     org.apache.log4j.Logger.getRootLogger().setLevel(Level.WARN);
 
-    String repoDir = "/Users/symbolk/coding/data/repos/";
-    String resultsDir = "/Users/symbolk/coding/data/results/";
-    String tempDir = "/Users/symbolk/coding/data/temp/";
+    String repoDir = homeDir + "/coding/data/repos/";
 
-    String repoName = "antlr4";
+    String repoName = "rocketmq";
     String repoPath = repoDir + repoName;
     // number of examined commits
     int numCommits = 0;
@@ -158,7 +158,7 @@ public class DataMiner {
    * @param commits
    */
   private static void saveSamplesInDB(String repoName, String dbName, List<RevCommit> commits) {
-    MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
+    MongoClientURI connectionString = new MongoClientURI(mongoDBUrl);
     MongoClient mongoClient = new MongoClient(connectionString);
     MongoDatabase db = mongoClient.getDatabase(dbName);
     MongoCollection<Document> col = db.getCollection(repoName);
@@ -220,6 +220,32 @@ public class DataMiner {
         System.out.println(commit.getAuthorIdent());
         System.out.println(commit.getFullMessage());
       }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  private static void getAllEmails(String repoName) {
+    System.out.println("Repo: " + repoName);
+    MongoClientURI server = new MongoClientURI(mongoDBUrl);
+    MongoClient serverClient = new MongoClient(server);
+
+    try {
+      MongoDatabase db = serverClient.getDatabase("smartcommit");
+      MongoCollection<Document> col = db.getCollection("contacts");
+      BasicDBObject condition =
+          new BasicDBObject(
+              "repos", new BasicDBObject("$elemMatch", new BasicDBObject("repo", repoName)));
+      //      Bson condition = Filters.elemMatch("repos", Fil);
+
+      try (MongoCursor<Document> cursor = col.find(condition).iterator()) {
+        while (cursor.hasNext()) {
+          Document doc = cursor.next();
+          System.out.println((doc.get("email").toString()));
+        }
+      }
+
+      serverClient.close();
     } catch (Exception e) {
       e.printStackTrace();
     }

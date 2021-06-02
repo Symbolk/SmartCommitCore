@@ -7,7 +7,7 @@ import java.util.Set;
 /**
  * Evaluates fully qualified name of TypeDeclaration, Type and Name objects.
  *
- * @thanks_to https://github.com/linzeqipku/SnowGraph
+ *
  */
 public class NameResolver {
 

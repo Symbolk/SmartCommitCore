@@ -1,6 +1,28 @@
-# SmartCommitCore
+<div align="center">
+  <a href="" target="_blank">
+    <img width="160" src="https://github.com/Symbolk/SmartCommit/blob/master/assets/icon.png" alt="logo">
+  </a>
+  <h1 id="smartcommit"><a href="" target="_blank">SmartCommit</a></h1>
 
-## The core algorithm for SmartCommit, a tool to assist developers to follow the *best practice* (https://google.github.io/eng-practices/) for commits.
+</div>
+
+#### SmartCommit aims at making "code commit" an elegant and decent daily work for developers.
+
+As advocated by many communities (e.g., [Git official doc], [Angular contribution instructions]) and companies (e.g., [Google's engineering practices]), developers are encouraged to submit cohesive and self-contained commits, accompanying with clear and informative commit messages.
+
+SmartCommit is the assistant for you to follow this best practice.
+
+Specifically, it helps you to:
+
+- Organize your local changes into groups, each of which is expected to focus on one specific task.
+- Review and stage fine-grained code changes within an intuitive GUI, in the forms of code hunks or files.
+- Commit and push multiple commits with one single click, saving the effort to type `git-status`, `git-diff`, `git-add`, `git-commit` and `git-push` commands.
+
+[Git official doc]: https://git-scm.com/docs/gitworkflows#_separate_changes
+[Angular contribution instructions]:  https://github.com/angular/angular/blob/master/CONTRIBUTING.md
+[Google's engineering practices]: https://github.com/google/eng-practices/blob/master/review/developer/small-cls.md
+
+This repo is the change decomposition suggestion algorithm of SmartCommit, check the [SmartCommit] repo for the demo GUI client.
 
 [SmartCommit]: https://github.com/Symbolk/SmartCommit
 
@@ -9,14 +31,16 @@
 ## Requirements
 
 - macOS/Windows/Linux
-- Java 8/11
+- Java JRE 8/11
 - Git ^2.20.0
 
 ## Usage
 
 ### 1. JAR Usage
 
-Download the latest jar from: https://github.com/Symbolk/SmartCommit/releases, and run the following command:
+Download the latest jar from [releases], and run the following command:
+
+[releases]: https://github.com/Symbolk/SmartCommitCore/releases
 
 ```sh
 java -jar SmartCommit-xxx.jar [OPTIONS]
@@ -77,6 +101,7 @@ SmartCommit(String repoName, String repoPath, String tempDir)
 #### API for analyzing changes:
 
 ```java
+
 /**
 * Analyze the current working directory of the repository
 *
@@ -115,6 +140,7 @@ void exportGroupResults(Map<String, Group> generatedGroups, String outputDir)
 */
 void exportGroupDetails(Map<String, Group> results, String outputDir)
 ```
+
 ### Options & Arguments:
 
 ```java
@@ -139,7 +165,7 @@ void setMaxDistance(int maxDistance)
 ### Requirements
 
 - maxOS/Windows/Linux
-- JDK 8/11
+- Java JDK 8/11
 - Git ^2.20.0
 - Gradle ^6.2.1
 - IntelliJ IDEA 2020 (with Gradle integration)

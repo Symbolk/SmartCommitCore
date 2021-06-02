@@ -38,25 +38,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Evaluation {
-  private static final Logger logger = Logger.getLogger(Evaluation.class);
-  //  private static final String csvDir = "/Users/symbolk/coding/dev/visualization/";
-  private static final String csvDir = "/Users/symbolk/coding/data/viz/";
+  private static final String homeDir = System.getProperty("user.home") + File.separator;
+  private static final String mongoDBUrl = "mongodb://localhost:27017";
+  private static final String csvDir = homeDir + "/coding/data/viz/";
 
   public static void main(String[] args) {
     BasicConfigurator.configure();
     org.apache.log4j.Logger.getRootLogger().setLevel(Level.INFO);
 
-    String repoDir = "/Users/symbolk/coding/data/repos/";
-    String tempDir = "/Users/symbolk/coding/data/results/";
+    String repoDir = homeDir + "/coding/data/repos/";
+    String tempDir = homeDir + "/coding/data/results/";
 
-    // netty, nomulus, rocketmq, realm-java, glide, storm, elasticsearch, cassandra, antlr4
-    // deeplearning4j
-    // jruby, error-prone, RxJava
     String repoName = "glide";
     String repoPath = repoDir + repoName;
     runOpenSrc(repoName, repoPath, tempDir + "/" + repoName, 2);
-    //                debug(repoName, repoPath, tempDir + "/test/debug", "ada07cb_4bac044");
-    //            runRQ2(repoName, repoPath, tempDir + "/RQ2/" + repoName);
   }
 
   /**
@@ -89,8 +84,8 @@ public class Evaluation {
     Utils.clearDir(tempDir);
 
     // read samples from db
-    // mongod --dbpath /Users/symbolk/database/mongo
-    MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
+    // mongod --dbpath ~/database/mongo
+    MongoClientURI connectionString = new MongoClientURI(mongoDBUrl);
     MongoClient mongoClient = new MongoClient(connectionString);
     MongoDatabase db = mongoClient.getDatabase("atomic");
     MongoCollection<Document> col = db.getCollection(repoName);
@@ -715,15 +710,10 @@ public class Evaluation {
     System.out.println("Online evaluation: " + repoName);
 
     // read samples from db
-    MongoClientURI local = new MongoClientURI("mongodb://localhost:27017");
+    MongoClientURI local = new MongoClientURI(mongoDBUrl);
     // !product env
-    MongoClientURI server =
-        new MongoClientURI("mongodb://symbol:98eukk5age@47.113.179.146:29107/smartcommit");
-    String tempFilesDir = "/root/data/temp/RQ1/" + repoName;
-    //         !local test env
-    //    MongoClientURI server = new MongoClientURI("mongodb://localhost:27017/smartcommit");
-    //    String tempFilesDir = tempDir + File.separator;
-    //    Utils.clearDir(tempDir);
+    MongoClientURI server = new MongoClientURI(mongoDBUrl);
+    String tempFilesDir = tempDir + repoName;
 
     MongoClient localClient = new MongoClient(local);
     MongoClient serverClient = new MongoClient(server);
@@ -873,7 +863,7 @@ public class Evaluation {
     System.out.println("Industrial Statistics: " + repoName);
 
     // read data from db
-    MongoClientURI connectionString = new MongoClientURI("mongodb://localhost:27017");
+    MongoClientURI connectionString = new MongoClientURI(mongoDBUrl);
     MongoClient mongoClient = new MongoClient(connectionString);
     MongoDatabase db = mongoClient.getDatabase("smartcommit");
     MongoCollection<Document> col = db.getCollection(repoName);
@@ -930,33 +920,6 @@ public class Evaluation {
       result.put(groupID, diffHunks);
     }
     return result;
-  }
-
-  private static void getAllEmails(String repoName) {
-    System.out.println("Repo: " + repoName);
-    MongoClientURI server =
-        new MongoClientURI("mongodb://symbol:98eukk5age@47.113.179.146:29107/smartcommit");
-    MongoClient serverClient = new MongoClient(server);
-
-    try {
-      MongoDatabase db = serverClient.getDatabase("smartcommit");
-      MongoCollection<Document> col = db.getCollection("contacts");
-      BasicDBObject condition =
-          new BasicDBObject(
-              "repos", new BasicDBObject("$elemMatch", new BasicDBObject("repo", repoName)));
-      //      Bson condition = Filters.elemMatch("repos", Fil);
-
-      try (MongoCursor<Document> cursor = col.find(condition).iterator()) {
-        while (cursor.hasNext()) {
-          Document doc = cursor.next();
-          System.out.println((doc.get("email").toString()));
-        }
-      }
-
-      serverClient.close();
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
   }
 
   /**
@@ -1029,11 +992,6 @@ public class Evaluation {
     } else {
       return (double) intersection.size() / union.size();
     }
-  }
-
-  private static double getMean(List<Double> numList) {
-    Double average = numList.stream().mapToDouble(val -> val).average().orElse(0.0);
-    return average;
   }
 
   private static double getMedian(List<Double> numList) {
