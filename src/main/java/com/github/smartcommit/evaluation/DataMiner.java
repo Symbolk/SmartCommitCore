@@ -30,14 +30,17 @@ import java.util.regex.Pattern;
 
 /** Mine atomic commits and also composite commits from specified repos */
 public class DataMiner {
+  // home dir of the local machine
   private static final String homeDir = System.getProperty("user.home") + File.separator;
+  // root dir of all data and results
+  private static final String dataDir = homeDir + "/smartcommit/";
   private static final String mongoDBUrl = "mongodb://localhost:27017";
 
   public static void main(String[] args) {
     BasicConfigurator.configure();
     org.apache.log4j.Logger.getRootLogger().setLevel(Level.WARN);
 
-    String repoDir = homeDir + "/coding/data/repos/";
+    String repoDir = dataDir + "repos/";
 
     String repoName = "rocketmq";
     String repoPath = repoDir + repoName;

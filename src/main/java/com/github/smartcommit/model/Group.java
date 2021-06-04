@@ -25,7 +25,7 @@ public class Group {
   private String commitID = "";
   private String commitMsg = "";
 
-  // record link categories for interpretability and ablation study
+  // record link categories for interpretability
   // transient?
   private Set<Integer> linkCategories = new HashSet<>();
 
@@ -118,7 +118,7 @@ public class Group {
     return linkCategories;
   }
 
-  public void addLinkCategories(Set<Integer> categories){
+  public void addLinkCategories(Set<Integer> categories) {
     this.linkCategories.addAll(categories);
   }
 
@@ -129,9 +129,11 @@ public class Group {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append(intentLabel).append("\n");
-    builder.append(commitMsg).append("\n");
-    diffHunkIDs.forEach(diffHunk -> builder.append(diffHunk).append("\n"));
+//    builder.append(intentLabel).append("\n");
+    //    builder.append(commitMsg).append("\n");
+    builder.append("Changes: {");
+    builder.append(String.join(", ", diffHunkIndices));
+    builder.append("}\n");
     return builder.toString();
   }
 }

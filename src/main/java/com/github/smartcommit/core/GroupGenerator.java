@@ -398,10 +398,12 @@ public class GroupGenerator {
       pq.offer(edge);
     }
 
+    List<DiffEdgeType> edgeTypes = new ArrayList<>();
     Set<Integer> linkCategories = new HashSet<>();
     while (!pq.isEmpty()) {
       DiffEdge edge = pq.poll();
       linkCategories.add(edge.getType().getCategory());
+      edgeTypes.add(edge.getType());
       if (edge.getWeight() < threshold) {
         break;
       }
@@ -434,8 +436,9 @@ public class GroupGenerator {
           Set<DiffNode> nodes = new TreeSet<>(diffNodeComparator());
           nodes.add(source);
           nodes.add(target);
-          createGroup(result, nodes, linkCategories, GroupLabel.OTHER);
+          createGroup(result, nodes, linkCategories, getIntentFromEdges(edgeTypes));
           linkCategories.clear();
+          edgeTypes.clear();
         }
       }
     }
