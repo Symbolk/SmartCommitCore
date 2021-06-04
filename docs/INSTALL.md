@@ -1,0 +1,53 @@
+## Installation
+
+1. Clone the SmartCommitCore project from GitHub:
+
+   `````
+   git clone https://github.com/Symbolk/SmartCommitCore
+   `````
+
+2. Configure the requirements as listed in REQUIREMENTS;
+
+3. Open SmartCommitCore in IntelliJ IDEA, and resolve dependencies with the Gradle reload:
+
+   ![image-20210602165205875](/Users/symbolk/Library/Application Support/typora-user-images/image-20210602165205875.png)
+
+4. Build the project with `Build-->Build Project` of IDEA, expected output:
+
+   ![image-20210602113556766](/Users/symbolk/Library/Application Support/typora-user-images/image-20210602113556766.png)
+
+5. Right click on `src/main/java/com/github/smartcommit/client/CLI.java` and click `Run 'CLI.main()'`to verify the correct setup, expected output:
+
+```sh
+   Please at least specify the Git repository to analyze with -r.
+   Usage: SmartCommit [options]
+     Options:
+       -r, --repo
+         Absolute root path of the target Git repository.
+         Default: <empty string>
+       -w, --working
+         Analyze the current working tree (default).
+         Default: true
+       -c, --commit
+         Analyze a specific commit by providing its ID.
+         Default: <empty string>
+       -o, -output
+         Specify the path to output the result.
+         Default: /Users/USERNAME/.smartcommit/repos
+       -ref, --detect-refactoring
+         Whether to enable refactoring detection.
+         Default: true
+       -md, --max-distance
+         Set the maximum distance (default: 0).
+         Default: 0
+       -ms, --min-similarity
+         Set the minimum similarity (default: 0.8).
+         Default: 0.8
+       -nj, --process-non-java
+         Whether to further process non-java changes.
+         Default: true
+       -wt, --weight-threshold
+         Set the threshold for weight filtering (default: 0.6).
+         Default: 0.6
+```
+
