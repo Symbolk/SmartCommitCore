@@ -29,11 +29,11 @@ The artifact is publicly available on GitHub:
 
 3. Open SmartCommitCore in IntelliJ IDEA, and resolve dependencies with the Gradle reload:
 
-   ![image-20210602165205875](/Users/symbolk/Library/Application Support/typora-user-images/image-20210602165205875.png)
+   ![image-20210602165205875](/imgs/image-20210602165205875.png?raw=true)
 
 4. Build the project with `Build-->Build Project` of IDEA, expected output:
 
-   ![image-20210602113556766](/Users/symbolk/Library/Application Support/typora-user-images/image-20210602113556766.png)
+   ![image-20210602113556766](/imgs/image-20210602113556766.png?raw=true)
 
 5. Right click on `src/main/java/com/github/smartcommit/client/CLI.java` and click `Run 'CLI.main()'`to verify the correct setup, expected output:
 ```sh
@@ -76,7 +76,7 @@ The artifact is publicly available on GitHub:
 1. Right click on `src/main/java/com/github/smartcommit/client/Main.java`and run `Main.main()` to analyze a historical commit of SmartCommitCore itself (that is, dog-food itself);
 2. The expected Run output:
 
-![image-20210602175747210](/Users/symbolk/Library/Application Support/typora-user-images/image-20210602175747210.png)
+![image-20210602175747210](/imgs/image-20210602175747210.png?raw=true)
 
 
 

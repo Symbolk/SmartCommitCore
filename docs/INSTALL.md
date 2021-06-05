@@ -10,11 +10,11 @@
 
 3. Open SmartCommitCore in IntelliJ IDEA, and resolve dependencies with the Gradle reload:
 
-   ![image-20210602165205875](/Users/symbolk/Library/Application Support/typora-user-images/image-20210602165205875.png)
+   ![image-20210602165205875](/imgs/image-20210602165205875.png?raw=true)
 
 4. Build the project with `Build-->Build Project` of IDEA, expected output:
 
-   ![image-20210602113556766](/Users/symbolk/Library/Application Support/typora-user-images/image-20210602113556766.png)
+   ![image-20210602113556766](/imgs/image-20210602113556766.png?raw=true)
 
 5. Right click on `src/main/java/com/github/smartcommit/client/CLI.java` and click `Run 'CLI.main()'`to verify the correct setup, expected output:
 
