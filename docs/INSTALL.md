@@ -10,15 +10,19 @@
 
 [REQUIREMENTS]: /docs/REQUIREMENTS.md
 
-3. Open SmartCommitCore in IntelliJ IDEA, and resolve dependencies with the Gradle reload:
+3. Open SmartCommitCore in IntelliJ IDEA, set the Gradle version to use in `Preferences->Build,Execution,Deployment->Build Tools->Gradle`:
+   
+   ![image-20210602165205875](/docs/imgs/gradle_setting.png?raw=true)
 
-   ![image-20210602165205875](/docs/imgs/image-20210602165205875.png?raw=true)
+4. Resolve dependencies by clicking the `Reload All Gradle Projects` on the Gradle tool window:
 
-4. Build the project with `Build-->Build Project` of IDEA, expected output:
+   ![image-20210602165205875](/docs/imgs/dependency_resolution.png?raw=true)
 
-   ![image-20210602113556766](/docs/imgs/image-20210602113556766.png?raw=true)
+5. After the dependency resolution finishes, build the project with `Build->Build Project` of IDEA, expected output:
 
-5. Right click on `src/main/java/com/github/smartcommit/client/CLI.java` and click `Run 'CLI.main()'`to verify the correct setup, expected output:
+   ![image-20210602113556766](/docs/imgs/build_output.png?raw=true)
+
+6. Right click on `src/main/java/com/github/smartcommit/client/CLI.java` and click `Run 'CLI.main()'`to verify the correct setup, expected output:
 
 ```sh
    Please at least specify the Git repository to analyze with -r.
