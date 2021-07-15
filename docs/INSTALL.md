@@ -6,7 +6,9 @@
    git clone https://github.com/Symbolk/SmartCommitCore
    `````
 
-2. Configure the requirements as listed in REQUIREMENTS;
+2. Configure the environment as described in [REQUIREMENTS];
+
+[REQUIREMENTS]: /docs/REQUIREMENTS.md
 
 3. Open SmartCommitCore in IntelliJ IDEA, and resolve dependencies with the Gradle reload:
 
