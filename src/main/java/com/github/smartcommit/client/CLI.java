@@ -48,7 +48,7 @@ public class CLI {
   String outputPath =
       System.getProperty("user.home") + File.separator + ".smartcommit" + File.separator + "repos";
 
-  // optionas&args
+  // options&args
   @Parameter(
       names = {"-ref", "--detect-refactoring"},
       arity = 1,
@@ -97,7 +97,6 @@ public class CLI {
   /**
    * Run merging according to given options
    *
-   * @param args
    */
   private void run(String[] args) throws Exception {
     JCommander commandLineOptions = new JCommander(this);
@@ -118,7 +117,7 @@ public class CLI {
       smartCommit.setMinSimilarity(minSimilarity);
       smartCommit.setMaxDistance(maxDistance);
 
-      Map<String, Group> groups = null;
+      Map<String, Group> groups;
       if (analyzeWorkingTree) {
         groups = smartCommit.analyzeWorkingTree();
       } else {
@@ -158,7 +157,6 @@ public class CLI {
   /**
    * Check if args are valid
    *
-   * @param cli
    */
   private void checkArguments(CLI cli) {
     if (cli.repoPath.isEmpty()) {
@@ -182,10 +180,6 @@ public class CLI {
   }
 
   private boolean checkRepoValid(String repoPath) {
-    if (RepositoryCache.FileKey.isGitRepository(new File(repoPath, ".git"), FS.DETECTED)) {
-      return true;
-    } else {
-      return false;
-    }
+    return RepositoryCache.FileKey.isGitRepository(new File(repoPath, ".git"), FS.DETECTED);
   }
 }

@@ -31,10 +31,10 @@ import java.util.concurrent.*;
 /** API entry */
 public class SmartCommit {
   private static final Logger logger = Logger.getLogger(SmartCommit.class);
-  private String repoID;
-  private String repoName;
-  private String repoPath;
-  private String tempDir;
+  private final String repoID;
+  private final String repoName;
+  private final String repoPath;
+  private final String tempDir;
   private Map<String, DiffHunk> id2DiffHunkMap;
 
   // saved for analysis
@@ -59,23 +59,6 @@ public class SmartCommit {
    */
   public SmartCommit(String repoID, String repoName, String repoPath, String tempDir) {
     this.repoID = repoID;
-    this.repoName = repoName;
-    this.repoPath = repoPath;
-    this.tempDir = tempDir;
-    this.baseGraph = null;
-    this.currentGraph = null;
-    this.id2DiffHunkMap = new HashMap<>();
-  }
-
-  /**
-   * Initial setup for analysis
-   *
-   * @param repoName repo name
-   * @param repoPath absolute local repo path
-   * @param tempDir temporary directory path for intermediate and final result
-   */
-  public SmartCommit(String repoName, String repoPath, String tempDir) {
-    this.repoID = String.valueOf(repoName.hashCode());
     this.repoName = repoName;
     this.repoPath = repoPath;
     this.tempDir = tempDir;
@@ -115,7 +98,6 @@ public class SmartCommit {
   /**
    * Clear the temp dir and create the logs dir
    *
-   * @param dir
    */
   private void prepareTempDir(String dir) {
     Utils.clearDir(dir);
@@ -127,9 +109,8 @@ public class SmartCommit {
    * Analyze the current working directory of the repository
    *
    * @return suggested groups <id:group>
-   * @throws Exception
    */
-  public Map<String, Group> analyzeWorkingTree() throws Exception {
+  public Map<String, Group> analyzeWorkingTree() {
     prepareTempDir(tempDir);
     // 1. analyze the repo
     RepoAnalyzer repoAnalyzer = new RepoAnalyzer(repoID, repoName, repoPath);
@@ -155,7 +136,7 @@ public class SmartCommit {
 
     Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
 
-    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunks(diffFiles, tempDir);
+    dataCollector.collectDiffHunks(diffFiles, tempDir);
 
     // generate commit message
     if (results != null) {
@@ -177,9 +158,8 @@ public class SmartCommit {
    *
    * @param commitID the target commit hash id
    * @return suggested groups <id:group>
-   * @throws Exception
    */
-  public Map<String, Group> analyzeCommit(String commitID) throws Exception {
+  public Map<String, Group> analyzeCommit(String commitID) {
     String resultsDir = tempDir + File.separator + commitID;
     prepareTempDir(resultsDir);
 
@@ -202,7 +182,7 @@ public class SmartCommit {
 
     Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
 
-    Map<String, String> fileIDToPathMap = dataCollector.collectDiffHunks(diffFiles, resultsDir);
+    dataCollector.collectDiffHunks(diffFiles, resultsDir);
 
     exportGroupResults(results, resultsDir);
     exportGroupDetails(results, resultsDir + File.separator + "details");
@@ -213,10 +193,6 @@ public class SmartCommit {
   /**
    * Analyze the changes collected
    *
-   * @param diffFiles
-   * @param allDiffHunks
-   * @param srcDirs
-   * @return
    */
   public Map<String, Group> analyze(
       List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs) {
@@ -243,11 +219,6 @@ public class SmartCommit {
   /**
    * Build the Entity Reference Graphs for base and current versions
    *
-   * @param diffFiles
-   * @param srcDirs
-   * @throws ExecutionException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   private void buildRefGraphs(List<DiffFile> diffFiles, Pair<String, String> srcDirs)
       throws ExecutionException, InterruptedException, TimeoutException {
@@ -266,13 +237,6 @@ public class SmartCommit {
   /**
    * Solely for evaluation with ClusterChanges
    *
-   * @param diffFiles
-   * @param allDiffHunks
-   * @param srcDirs
-   * @return
-   * @throws ExecutionException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   public Map<String, Group> analyzeWithCC(
       List<DiffFile> diffFiles, List<DiffHunk> allDiffHunks, Pair<String, String> srcDirs) {
@@ -296,14 +260,7 @@ public class SmartCommit {
   /**
    * Analyze with one specific type of links for ablation
    *
-   * @param diffFiles
-   * @param allDiffHunks
-   * @param srcDirs
    * @param filters: filter one or several types of links: 0 hard, 1 soft, 2 pattern, 3 logical
-   * @return
-   * @throws ExecutionException
-   * @throws InterruptedException
-   * @throws TimeoutException
    */
   public Map<String, Group> analyzeWithAblation(
       List<DiffFile> diffFiles,
@@ -379,7 +336,7 @@ public class SmartCommit {
         }
         groupedDiffHunks.add(id);
         String[] pair = id.split(":");
-        String diffHunkID = "";
+        String diffHunkID;
         if (pair.length == 2) {
           diffHunkID = pair[1];
         } else if (pair.length == 1) {
@@ -411,8 +368,6 @@ public class SmartCommit {
    * Read selected group json file, generate patches that can be applied incrementally for
    * inter-versions
    *
-   * @param selectedGroupIDs
-   * @throws FileNotFoundException
    */
   public void exportPatches(List<String> selectedGroupIDs) throws FileNotFoundException {
     String manualGroupsDir = tempDir + File.separator + "manual_groups";
@@ -431,18 +386,14 @@ public class SmartCommit {
       Map<String, List<String>> fileID2hunkIDsMap = new HashMap<>();
       for (String id : group.getDiffHunkIDs()) {
         Pair<String, String> idPair = Utils.parseUUIDs(id);
-        if (idPair != null) {
-          String fileID = idPair.getLeft();
-          String diffHunkID = idPair.getRight();
-          if (fileID2hunkIDsMap.containsKey(fileID)) {
-            fileID2hunkIDsMap.get(fileID).add(diffHunkID);
-          } else {
-            List<String> temp = new ArrayList<>();
-            temp.add(diffHunkID);
-            fileID2hunkIDsMap.put(fileID, temp);
-          }
+        String fileID = idPair.getLeft();
+        String diffHunkID = idPair.getRight();
+        if (fileID2hunkIDsMap.containsKey(fileID)) {
+          fileID2hunkIDsMap.get(fileID).add(diffHunkID);
         } else {
-          logger.error("Null idPair with " + id);
+          List<String> temp = new ArrayList<>();
+          temp.add(diffHunkID);
+          fileID2hunkIDsMap.put(fileID, temp);
         }
       }
 
@@ -475,8 +426,6 @@ public class SmartCommit {
   /**
    * Generate commit message for a given group
    *
-   * @param group
-   * @return
    */
   public List<String> generateCommitMsg(Group group) {
     // get the ast actions and refactoring actions
@@ -501,9 +450,7 @@ public class SmartCommit {
   /**
    * Commit all the selected groups with the given commit messages
    *
-   * @param selectedGroupIDs
    * @param commitMsgs "group1":"Feature ...."
-   * @return
    */
   public boolean commit(List<String> selectedGroupIDs, Map<String, String> commitMsgs) {
     GitServiceCGit gitService = new GitServiceCGit();
