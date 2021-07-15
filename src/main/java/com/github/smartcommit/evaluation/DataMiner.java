@@ -96,18 +96,15 @@ public class DataMiner {
 
       System.out.println("[Total]: " + numCommits);
       System.out.println(
-          "[Composite]: "
-              + compositeCommits.size()
+          "[Atomic]: "
+              + atomicCommits.size()
               + "("
-              + Utils.formatDouble((double) compositeCommits.size() * 100 / numCommits)
+              + Utils.formatDouble((double) atomicCommits.size() * 100 / numCommits)
               + "%)");
-      System.out.println("[Atomic]: " + atomicCommits.size());
       // save results into mongodb
       saveSamplesInDB(repoName, "atomic", atomicCommits);
-      //      saveSamplesInDB(repoName, "composite", compositeCommits);
       // write results into csv file
       //      saveSamplesInCSV(atomicCommits, resultsDir + repoName + "_atomic.csv");
-      //      saveSamplesInCSV(compositeCommits, resultsDir + repoName + "_composite.csv");
     } catch (Exception e) {
       e.printStackTrace();
     }

@@ -91,7 +91,7 @@ The artifact is publicly available on GitHub:
    cd ~/smartcommit
    `````
 
-2. Clone the repo containing the dataset and the visualization scripts:
+2. Clone the repo containing the dataset (dumped database) and the visualization scripts:
 
    ```
    git clone https://github.com/Symbolk/SmartCommitEvaluation-Viz
@@ -135,21 +135,21 @@ The artifact is publicly available on GitHub:
    storm
    ```
 
-6. Clone the 10 repos under evaluation:
+6. Clone the 10 repos under evaluation and checkout to the branch and commit on which we conducted the evaluation:
 
    ```
    mkdir repos
    cd repos
-   git clone https://github.com/netty/netty.git
-   git clone https://github.com/google/nomulus.git
-   git clone https://github.com/bumptech/glide.git
-   git clone https://github.com/apache/rocketmq.git
-   git clone https://github.com/realm/realm-java.git
-   git clone https://github.com/elastic/elasticsearch.git
-   git clone https://github.com/antlr/antlr4.git
-   git clone https://github.com/eclipse/deeplearning4j.git
-   git clone https://github.com/apache/storm.git
-   git clone https://github.com/apache/cassandra.git
+   git clone https://github.com/netty/netty.git && git checkout 4.1 && git checkout 91a7f49f0d
+   git clone https://github.com/google/nomulus.git && git checkout master && git checkout c5aa0125a
+   git clone https://github.com/bumptech/glide.git && git checkout master && git checkout 1caeff4bf
+   git clone https://github.com/apache/rocketmq.git && git checkout master && git checkout 8ef01a6c
+   git clone https://github.com/realm/realm-java.git && git checkout master && git checkout c1c45b46a
+   git clone https://github.com/elastic/elasticsearch.git && git checkout master && git checkout b58e95d25cf
+   git clone https://github.com/antlr/antlr4.git && git checkout master && git checkout 38b1b9ac7
+   git clone https://github.com/eclipse/deeplearning4j.git && git checkout master && git checkout 722d5a052a
+   git clone https://github.com/apache/storm.git && git checkout master && git checkout c33ae620e
+   git clone https://github.com/apache/cassandra.git && git checkout trunk && git checkout 001deb069f
    ```
 
 7. Edit the main method in `src/main/java/com/github/smartcommit/evaluation/Evaluation.java` to config the data directory, repo name and step (the number of merged atomic commits) to test;
@@ -175,7 +175,7 @@ The artifact is publicly available on GitHub:
 
 8. Right click on `src/main/java/com/github/smartcommit/evaluation/Evaluation.java`  and `Run Evaluation.main()` for evaluation on a specific repo at a specific step;
 
-9. Check the output in console for results, expected output (P.S. the numbers could be different):
+9. Check the output in console for results, expected output example (P.S. the numbers in results could be different as the sampling&merging depends on the visiting order of MongoCursor):
 
    ```
    Open Source Repo: nomulus Step: 5
