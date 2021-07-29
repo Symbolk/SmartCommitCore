@@ -1,6 +1,6 @@
 ## Artifact Description
 
-This artifact is the core algorithm of SmartCommit---a tool to lead and help developers follow the best practice of cohesive and focused commits, which is advocated by many companies (like Google and Facebook) and open source communities (like Git and Angular). A cohesive commit should focus on a development or maintenance activity, such as feature addition, bugfix or refactoring. Cohesive commits form a clear change history that facilitates software maintenance and team collaboration. To help the developer make cohesive commits, SmartCommit suggests the decomposition (groups of related and self-contained code changes) to their code changes, and allows the developer to interactively adjust the suggested decomposition, until it reaches a state that the developer feels reasonable to submit code change groups as commits.
+This artifact is the core algorithm of SmartCommit---an assistant tool to lead and help developers follow the best practice of cohesive and focused commits, which is advocated by many companies (like Google and Facebook) and open source communities (like Git and Angular). A cohesive commit should focus on a development or maintenance activity, such as feature addition, bugfix or refactoring. Cohesive commits form a clear change history that facilitates software maintenance and team collaboration. To help the developer make cohesive commits, SmartCommit can suggest a decomposition (groups of related and self-contained code changes) to their code changes, and allows the developer to interactively adjust the suggested decomposition, until it reaches a state that the developer feels reasonable to submit code change groups as commits.
 
 To evaluate the accuracy and effectiveness of SmartCommit, we have conducted 2 sets of extensive experiments in the paper: 1) Industrial Field Study and 2) Controlled Open Source Experiment. This artifact can be used to replicate the evaluation results in the Controlled Open Source Experiment as well as the visualization of industrial use data in the Industrial Field Study. It consists of the core algorithm,  the dataset, the evaluation program, and the statistics and visualization program to generate results and figures presented in the paper. 
 
@@ -29,7 +29,7 @@ The artifact is publicly available on GitHub:
 
 [REQUIREMENTS]: /docs/REQUIREMENTS.md
 
-3. Open SmartCommitCore in IntelliJ IDEA, set the Gradle version to use in `Preferences->Build,Execution,Deployment->Build Tools->Gradle`:
+3. Open SmartCommitCore in IntelliJ IDEA, set the Gradle runner to use in `Preferences->Build,Execution,Deployment->Build Tools->Gradle`:
 
    ![image-20210602165205875](/docs/imgs/gradle_setting.png?raw=true)
 
@@ -41,7 +41,7 @@ The artifact is publicly available on GitHub:
 
    ![image-20210602113556766](/docs/imgs/build_output.png?raw=true)
 
-6. Right click on `src/main/java/com/github/smartcommit/client/CLI.java` and click `Run 'CLI.main()'`to verify the correct setup, expected output:
+6. Right click on `src/main/java/com/github/smartcommit/client/CLI.java` and click `Run 'CLI.main()'`to verify the correct setup, expected output in the terminal:
 ```sh
    Please at least specify the Git repository to analyze with -r.
    Usage: SmartCommit [options]
@@ -211,7 +211,7 @@ The artifact is publicly available on GitHub:
    One Hunk One Group: Median Accuracy: 35.56%
    ```
 
-10. If interested, check he detailed intermediate data and results generated under `~\smartcommit\results` and `~\smartcommit\viz`, including:
+10. The detailed intermediate data and results are generated under `~\smartcommit\results` and `~\smartcommit\viz`, including:
 
    - results: the intermediate data that will be consumed by the evaluation script and the GUI, including the base/current versions of code (i.e., relevant source files before and after the change), detailed code changes (diffs), and the suggested code change groups, etc.
    - viz: the statistics data as input to the visualization script to draw figures, including the number of diff hunks, lines of code, the computed operation number, the accuracy, and the runtime, etc.
