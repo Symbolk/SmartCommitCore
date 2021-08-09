@@ -8,6 +8,9 @@ import com.github.smartcommit.model.Action;
 import com.github.smartcommit.model.DiffFile;
 import com.github.smartcommit.model.DiffHunk;
 import com.github.smartcommit.model.Group;
+import com.github.smartcommit.model.constant.ChangeType;
+import com.github.smartcommit.model.constant.GroupLabel;
+import com.github.smartcommit.model.constant.Version;
 import com.github.smartcommit.model.graph.Edge;
 import com.github.smartcommit.model.graph.Node;
 import com.github.smartcommit.util.GitServiceCGit;
@@ -22,11 +25,9 @@ import org.jgrapht.Graph;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 /** API entry */
 public class SmartCommit {
@@ -121,9 +122,43 @@ public class SmartCommit {
       return new HashMap<>();
     }
 
+    boolean onlyEncodingChange = false;
     if (allDiffHunks.isEmpty()) {
       logger.info("Changes exist, but not in file contents.");
-      return new HashMap<>();
+      onlyEncodingChange = true;
+
+      // mock one dummy diff hunk for each diff file to continue commit
+      for (DiffFile diffFile : diffFiles) {
+        List<DiffHunk> diffHunksInFile = new ArrayList<>();
+
+        DiffHunk diffHunk =
+            new DiffHunk(
+                0,
+                diffFile.getFileType(),
+                ChangeType.MODIFIED,
+                new com.github.smartcommit.model.Hunk(
+                    Version.BASE,
+                    diffFile.getBaseRelativePath(),
+                    0,
+                    0,
+                    Utils.checkContentType(Utils.convertStringToList(diffFile.getBaseContent())),
+                    new ArrayList<>()),
+                new com.github.smartcommit.model.Hunk(
+                    Version.CURRENT,
+                    diffFile.getCurrentRelativePath(),
+                    0,
+                    0,
+                    Utils.checkContentType(Utils.convertStringToList(diffFile.getCurrentContent())),
+                    new ArrayList<>()),
+                "file/line encodings change");
+        diffHunk.setRawDiffs(new ArrayList<>());
+        // bind diff file with diff hunks
+        diffHunk.setFileIndex(diffFile.getIndex());
+        diffHunksInFile.add(diffHunk);
+        diffFile.setDiffHunks(diffHunksInFile);
+
+        allDiffHunks.add(diffHunk);
+      }
     }
 
     this.id2DiffHunkMap = repoAnalyzer.getIdToDiffHunkMap();
@@ -134,7 +169,16 @@ public class SmartCommit {
     // dirs that keeps the source code of diff files
     Pair<String, String> srcDirs = dataCollector.collectDiffFilesWorking(diffFiles);
 
-    Map<String, Group> results = analyze(diffFiles, allDiffHunks, srcDirs);
+    Map<String, Group> results = new HashMap<>();
+    if (onlyEncodingChange) {
+      List<String> allDiffHunkIDs =
+          allDiffHunks.stream().map(DiffHunk::getDiffHunkID).collect(Collectors.toList());
+      Group group = new Group(repoID, repoName, "group0", allDiffHunkIDs, GroupLabel.OTHER);
+      group.setRecommendedCommitMsgs(Collections.singletonList("Change file/line encodings."));
+      results.put("group0", group);
+    } else {
+      results = analyze(diffFiles, allDiffHunks, srcDirs);
+    }
 
     dataCollector.collectDiffHunks(diffFiles, tempDir);
 
