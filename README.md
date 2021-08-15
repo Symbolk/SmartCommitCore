@@ -38,7 +38,7 @@ This repo is the change decomposition suggestion algorithm of SmartCommit, check
 
 ### 1. JAR Usage
 
-Download the latest jar from [releases], and run the following command:
+Download the latest jar from [releases], or build one with `gradle fatJar -x test`, and run the following command:
 
 [releases]: https://github.com/Symbolk/SmartCommitCore/releases
 

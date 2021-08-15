@@ -37,9 +37,10 @@ jar {
 
 task fatJar(type: Jar) {
     manifest.from jar.manifest
-//    classifier = 'all'
+    archiveClassifier = 'all'
     from {
         configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.compileClasspath.findAll { it.name.endsWith('jar') }.collect { zipTree(it) }
     } {
         exclude "META-INF/*.SF"
         exclude "META-INF/*.DSA"
