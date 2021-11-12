@@ -381,19 +381,8 @@ public class GroupGenerator {
     Map<String, Group> result = new LinkedHashMap<>(); // generated groups, id:Group
 
     // add edges to priority queue
-    Comparator<DiffEdge> comparator =
-        new Comparator<DiffEdge>() {
-          public int compare(DiffEdge o1, DiffEdge o2) {
-            if (o1.getWeight() < o2.getWeight()) {
-              return 1;
-            } else if (o1.getWeight() > o2.getWeight()) {
-              return -1;
-            } else {
-              return 0;
-            }
-          }
-        };
-    Queue<DiffEdge> pq = new PriorityQueue<DiffEdge>(11, comparator);
+    Comparator<DiffEdge> comparator = (o1, o2) -> o2.getWeight().compareTo(o1.getWeight());
+    Queue<DiffEdge> pq = new PriorityQueue<>(11, comparator);
     for (DiffEdge edge : diffGraph.edgeSet()) {
       pq.offer(edge);
     }
