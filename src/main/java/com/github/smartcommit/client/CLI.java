@@ -22,6 +22,7 @@ public class CLI {
       names = {"-r", "--repo"},
       arity = 1,
       order = 0,
+      required = true,
       description = "Absolute root path of the target Git repository.")
   String repoPath = "";
 
@@ -72,13 +73,13 @@ public class CLI {
       names = {"-wt", "--weight-threshold"},
       arity = 1,
       description =
-          "Set the threshold for partitioning (if not specified, use dynamic threshold), [0, 1].")
-  Double weightThreshold = -1D;
+          "Set the threshold for partitioning (if not specified or 0.0, use the max-gap splitter), [0.0, 1.0].")
+  Double weightThreshold = 0D;
 
   @Parameter(
       names = {"-ms", "--min-similarity"},
       arity = 1,
-      description = "Set the minimum similarity, [0, 1].")
+      description = "Set the minimal similarity between change, [0.0, 1.0].")
   Double minSimilarity = 0.8D;
 
   public static void main(String[] args) {

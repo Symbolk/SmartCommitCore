@@ -374,7 +374,7 @@ public class GroupGenerator {
     Queue<DiffEdge> pq = new PriorityQueue<>(comparator);
     List<DiffEdge> edgeList = new ArrayList<>();
 
-    if (threshold < 0) {
+    if (threshold <= 0) {
       // use dynamic threshold
       // fill into the PQ
       for (DiffEdge edge : diffGraph.edgeSet()) {

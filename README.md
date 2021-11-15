@@ -60,25 +60,26 @@ Usage: SmartCommit [options]
     -c, --commit
       Analyze a specific commit by providing its ID.
       Default: <empty string>
-    -o, -output
+    -o, --output
       Specify the path to output the result.
-      Default: /Users/user/.smartcommit/repos
+      Default: /Users/symbolk/.smartcommit/repos
     -ref, --detect-refactoring
-      Whether to enable refactoring detection.
+      Whether to enable refactoring detection, true/false.
       Default: true
-    -md, --max-distance
-      Set the maximum distance (default: 0).
+    -gr, --granularity
+      Set the atomic unit/granularity of change: {hunk: 0 (default), member: 
+      1, class: 2, package: 3}.
       Default: 0
     -ms, --min-similarity
-      Set the minimum similarity (default: 0.8).
+      Set the minimal similarity between change, [0.0, 1.0].
       Default: 0.8
     -nj, --process-non-java
-      Whether to further process non-java changes.
+      Whether to further process non-java changes,  true/false.
       Default: true
     -wt, --weight-threshold
-      Set the threshold for weight filtering (default: 0.6).
-      Default: 0.6
-
+      Set the threshold for partitioning (if not specified or 0.0, use the 
+      max-gap splitter), [0.0, 1.0].
+      Default: 0.0
 ```
 
 ### 2. API Usage
@@ -150,13 +151,13 @@ void setDetectRefactorings(boolean detectRefactorings)
 // whether to group changes in non-java textual files by type
 void setProcessNonJavaChanges(boolean processNonJavaChanges)
 
-// override the threshold for edge weight filtering (default: 0.6)
+// override the threshold for edge weight filtering (default: 0.0, use the dynamic threshold)
 void setWeightThreshold(Double weightThreshold) 
 
-// override the minimum similarity considered (default: 0.8)
+// override the minimum similarity considered (default: 0.8, high-similarity)
 void setMinSimilarity(double minSimilarity) 
 
-// override the maximum distance between diff hunks (default: 0)
+// override the maximum distance between diff hunks (default: 0, hunk-level)
 void setMaxDistance(int maxDistance)
 ```
 

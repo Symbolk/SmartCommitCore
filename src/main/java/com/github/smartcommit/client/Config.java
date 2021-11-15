@@ -13,7 +13,7 @@ public final class Config {
   //  public static final String REPO_PATH = "~/coding/dev" + File.separator + REPO_NAME;
 
   // arguments
-  public static final Double WEIGHT_THRESHOLD = -1.0D;
+  public static final Double WEIGHT_THRESHOLD = 0D;
   public static final Double MIN_SIMILARITY = 0.8D;
   // {hunk: 0 (default), member: 1, class: 2, package: 3}
   public static final Integer MAX_DISTANCE = 2;
