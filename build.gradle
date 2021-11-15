@@ -78,6 +78,7 @@ dependencies {
 
     implementation 'org.apache.logging.log4j:log4j-core:2.14.0'
     implementation 'com.googlecode.juniversalchardet:juniversalchardet:1.0.3'
+    implementation 'com.github.haifengl:smile-kotlin:2.6.0'
 
     testImplementation 'org.assertj:assertj-core:3.18.1'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.0'

@@ -30,9 +30,11 @@ import org.bson.conversions.Bson;
 import org.jgrapht.alg.matching.MaximumWeightBipartiteMatching;
 import org.jgrapht.graph.DefaultUndirectedWeightedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
+import smile.validation.metric.AdjustedRandIndex;
 
 import java.io.File;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -40,8 +42,8 @@ public class Evaluation {
   // home dir of the local machine
   private static final String homeDir = System.getProperty("user.home") + File.separator;
   // root dir of all data and results
-//  private static final String dataDir = homeDir + "/coding/data/";
-  private static final String dataDir = homeDir + "/smartcommit/";
+  private static final String dataDir = homeDir + "/coding/data/";
+  //  private static final String dataDir = homeDir + "/smartcommit/";
   private static final String mongoDBUrl = "mongodb://localhost:27017";
   private static final String csvDir = dataDir + "viz/";
 
@@ -53,7 +55,7 @@ public class Evaluation {
     String tempDir = dataDir + "results/";
 
     // name of the repo under test
-    String repoName = "realm-java";
+    String repoName = "netty";
     // number of merged atomic commits to produce one composite commit
     int step = 2;
     String repoPath = repoDir + repoName;
@@ -61,10 +63,9 @@ public class Evaluation {
   }
 
   /**
-   * Run open source experiments on one repo and collect data for:
-   * 1. Decomposition accuracy
-   * 2. Distance to ground truth (the original changes in merged commits)
-   * 3. Runtime performance
+   * Run open source experiments on one repo and collect data for: 1. Decomposition accuracy 2.
+   * Distance to ground truth (the original changes in merged commits) 3. Runtime performance
+   *
    * @param repoPath
    */
   private static void runOpenSrc(String repoName, String repoPath, String outputDir, int step) {
@@ -111,13 +112,13 @@ public class Evaluation {
     Map<String, List<String>> commitsByEmailAboveStep =
         commitsByEmail.entrySet().stream()
             .filter(a -> a.getValue().size() >= step)
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 
     SmartCommit smartCommit =
         new SmartCommit(String.valueOf(repoName.hashCode()), repoName, repoPath, tempDir);
     smartCommit.setDetectRefactorings(true);
     smartCommit.setProcessNonJavaChanges(false);
-    smartCommit.setWeightThreshold(0.6D);
+    //    smartCommit.setWeightThreshold(0.6D);
     smartCommit.setMinSimilarity(0.8D);
     smartCommit.setMaxDistance(1);
     Stopwatch stopwatch = Stopwatch.createStarted();
@@ -130,7 +131,7 @@ public class Evaluation {
     List<Double> fileAccuracies = new ArrayList<>();
     List<Double> hunkAccuracies = new ArrayList<>();
     int sampleNum = 0;
-    for (Map.Entry<String, List<String>> entry : commitsByEmailAboveStep.entrySet()) {
+    for (Entry<String, List<String>> entry : commitsByEmailAboveStep.entrySet()) {
       List<String> commits = entry.getValue();
 
       outerloop:
@@ -235,7 +236,7 @@ public class Evaluation {
         // export ground truth
         Map<String, Group> groundTruthGroups = new HashMap<>();
         int gid = 0;
-        for (Map.Entry en1 : groundTruth.entrySet()) {
+        for (Entry en1 : groundTruth.entrySet()) {
           Group group =
               new Group(
                   "",
@@ -250,7 +251,7 @@ public class Evaluation {
         // override the copy
         FileUtils.deleteQuietly(new File(resultsDir + File.separator + "manual_groups"));
         Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-        for (Map.Entry<String, Group> ent : groundTruthGroups.entrySet()) {
+        for (Entry<String, Group> ent : groundTruthGroups.entrySet()) {
           Utils.writeStringToFile(
               gson.toJson(ent.getValue()),
               resultsDir
@@ -268,7 +269,7 @@ public class Evaluation {
         /* ---------------------SmartCommit------------------------ */
         // convert the group into map from groupid to diffhunkids
         Map<String, Set<String>> scResults = new LinkedHashMap<>();
-        for (Map.Entry e : scGroups.entrySet()) {
+        for (Entry e : scGroups.entrySet()) {
           Set<String> ids = new HashSet<>();
           for (String s : ((Group) e.getValue()).getDiffHunkIDs()) {
             ids.add(Utils.parseUUIDs(s).getRight());
@@ -289,7 +290,7 @@ public class Evaluation {
             smartCommit.analyzeWithCC(unionDiffFiles, unionDiffHunks, Pair.of(baseDir, currentDir));
         Map<String, Set<String>> ccResults = new LinkedHashMap<>();
 
-        for (Map.Entry e : ccGroups.entrySet()) {
+        for (Entry e : ccGroups.entrySet()) {
           Set<String> ids = new HashSet<>();
           for (String s : ((Group) e.getValue()).getDiffHunkIDs()) {
             ids.add(Utils.parseUUIDs(s).getRight());
@@ -465,7 +466,8 @@ public class Evaluation {
   }
 
   /**
-   * Compare with the original commits by uuid to evaluate the grouping generatedResult
+   * Compare with the original commits by uuid to evaluate the grouping generatedResult Metrics:
+   * Rand Index, #reorder_steps, #reassign_steps
    *
    * @param groundTruth
    * @param generatedResult
@@ -495,14 +497,12 @@ public class Evaluation {
     // pairs of diff hunk ids within the same group in the ground truth, generated result
     Set<Pair<String, String>> groundTruthPairs = new LinkedHashSet();
     Set<Pair<String, String>> resultPairs = new LinkedHashSet();
-    // pairs across different groups in ground truth
-    Set<Pair<String, String>> crossGroupPairs = new LinkedHashSet();
 
     // bipartite node id
     int id = 0;
 
     List<List<String>> groupsInGroundTruth = new ArrayList<>();
-    for (Map.Entry entry : groundTruth.entrySet()) {
+    for (Entry entry : groundTruth.entrySet()) {
       BipartiteNode n = new BipartiteNode(id++, (Set<String>) entry.getValue());
       partition1.add(n);
       List<String> temp = new ArrayList<>((Set<String>) entry.getValue());
@@ -514,7 +514,7 @@ public class Evaluation {
         }
       }
     }
-    for (Map.Entry entry : generatedResult.entrySet()) {
+    for (Entry entry : generatedResult.entrySet()) {
       Set<String> ids = (Set<String>) entry.getValue();
       BipartiteNode n = new BipartiteNode(id++, ids);
       partition2.add(n);
@@ -566,17 +566,8 @@ public class Evaluation {
     int reorderingSteps = (int) Math.floor(editDistance(list1, list2) / 2.0);
 
     // Metric3: Accuracy
-    int correctlyGroupedPairs = 0;
-    for (Pair<String, String> p1 : groundTruthPairs) {
-      for (Pair<String, String> p2 : resultPairs) {
-        if ((p1.getLeft().equals(p2.getLeft()) && p1.getRight().equals(p2.getRight()))
-            || (p1.getLeft().equals(p2.getRight()) && p1.getRight().equals(p2.getLeft()))) {
-          correctlyGroupedPairs += 1;
-          continue; // unique in set so find and continue
-        }
-      }
-    }
-
+    // pairs across different groups in ground truth
+    Set<Pair<String, String>> crossGroupPairs = new LinkedHashSet();
     for (int i = 0; i < groupsInGroundTruth.size() - 1; ++i) {
       // select two groups
       for (int j = i + 1; j < groupsInGroundTruth.size(); ++j) {
@@ -590,6 +581,79 @@ public class Evaluation {
         }
       }
     }
+    //    double accuracy = computeRandIndex(groundTruthPairs, resultPairs, crossGroupPairs,
+    // totalChangesNum);
+    double accuracy = computeAdjustedRandIndex(groundTruth, generatedResult, totalChangesNum);
+
+    List<Integer> res = new ArrayList<>();
+    res.add(totalChangesNum);
+    res.add(correctChangesNum);
+    res.add(reorderingSteps);
+
+    return Pair.of(res, accuracy);
+  }
+
+  private static double computeAdjustedRandIndex(
+      Map<String, Set<String>> groundTruth, Map<String, Set<String>> result, int totalChangesNum) {
+    // convert clusters into map of diffHunkID: GroupID
+    Map<String, String> a = convertClusterToMap(groundTruth);
+    Map<String, String> b = convertClusterToMap(result);
+
+    // Q: does group id from the two clusters have correspondence? since order matters a lot for ARI
+    // group id:index
+    Map<String, Integer> aa = convertGroupIDToMap(groundTruth);
+    Map<String, Integer> bb = convertGroupIDToMap(result);
+
+    int[] aaa = new int[totalChangesNum];
+    int[] bbb = new int[totalChangesNum];
+    int i = 0;
+    for (Entry entry : a.entrySet()) {
+      aaa[i] = aa.get(entry.getValue());
+      bbb[i] = bb.get(b.get(entry.getKey()));
+      i++;
+    }
+
+    // index = diff hunk index, value = assigned group id/label
+    double ari = AdjustedRandIndex.of(aaa, bbb);
+    return ari;
+  }
+
+  private static Map<String, String> convertClusterToMap(Map<String, Set<String>> cluster) {
+    Map<String, String> result = new LinkedHashMap<>();
+    cluster.forEach(
+        (key, value) -> {
+          for (String id : value) {
+            result.put(id, key);
+          }
+        });
+    return result;
+  }
+
+  private static Map<String, Integer> convertGroupIDToMap(Map<String, Set<String>> cluster) {
+    Map<String, Integer> result = new LinkedHashMap<>();
+    int i = 0;
+    for (Entry entry : cluster.entrySet()) {
+      result.put((String) entry.getKey(), i++);
+    }
+    return result;
+  }
+
+  private static double computeRandIndex(
+      Set<Pair<String, String>> groundTruthPairs,
+      Set<Pair<String, String>> resultPairs,
+      Set<Pair<String, String>> crossGroupPairs,
+      int totalChangesNum) {
+    int correctlyGroupedPairs = 0;
+    for (Pair<String, String> p1 : groundTruthPairs) {
+      for (Pair<String, String> p2 : resultPairs) {
+        if ((p1.getLeft().equals(p2.getLeft()) && p1.getRight().equals(p2.getRight()))
+            || (p1.getLeft().equals(p2.getRight()) && p1.getRight().equals(p2.getLeft()))) {
+          correctlyGroupedPairs += 1;
+          continue; // unique in set so find and continue
+        }
+      }
+    }
+
     int correctlySeparatedPairs = crossGroupPairs.size();
 
     for (Pair<String, String> p1 : crossGroupPairs) {
@@ -601,18 +665,12 @@ public class Evaluation {
       }
     }
 
-    double accuracy =
+    double randIndex =
         Utils.formatDouble(
             (correctlyGroupedPairs + correctlySeparatedPairs)
                 * 100
                 / ((double) (totalChangesNum * (totalChangesNum - 1) / 2)));
-
-    List<Integer> res = new ArrayList<>();
-    res.add(totalChangesNum);
-    res.add(correctChangesNum);
-    res.add(reorderingSteps);
-
-    return Pair.of(res, accuracy);
+    return randIndex;
   }
 
   /**
@@ -704,7 +762,7 @@ public class Evaluation {
                   .append("committer_name", committerName)
                   .append("committer_email", committerEmail);
               List<Document> groupDocs = new ArrayList<>();
-              for (Map.Entry<String, Group> entry : results.entrySet()) {
+              for (Entry<String, Group> entry : results.entrySet()) {
                 Group group = entry.getValue();
                 Document groupDoc = new Document("group_id", group.getGroupID());
                 groupDoc.append("group_label", group.getIntentLabel().label);
@@ -1026,7 +1084,7 @@ public class Evaluation {
     smartCommit.setId2DiffHunkMap(unionDiffHunkMap);
     Map<String, Group> groundTruthGroups = new HashMap<>();
     int gid = 0;
-    for (Map.Entry en1 : groundTruth.entrySet()) {
+    for (Entry en1 : groundTruth.entrySet()) {
       Group group =
           new Group(
               "",
@@ -1044,7 +1102,7 @@ public class Evaluation {
 
     // convert the group into map from groupid to diffhunkids
     Map<String, Set<String>> generatedResults = new LinkedHashMap<>();
-    for (Map.Entry res : results.entrySet()) {
+    for (Entry res : results.entrySet()) {
       Set<String> ids = new HashSet<>();
       for (String s : ((Group) res.getValue()).getDiffHunkIDs()) {
         ids.add(Utils.parseUUIDs(s).getRight());
