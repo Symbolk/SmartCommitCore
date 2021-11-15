@@ -22,7 +22,8 @@ Specifically, it helps you to:
 [Angular contribution instructions]:  https://github.com/angular/angular/blob/master/CONTRIBUTING.md
 [Google's engineering practices]: https://github.com/google/eng-practices/blob/master/review/developer/small-cls.md
 
-This repo is the change decomposition suggestion algorithm of SmartCommit, check the [SmartCommit] repo for the demo GUI client.
+> Note: This repo is the change decomposition&suggestion algorithm of SmartCommit, some additional features (like intent classification and message suggestion) are excluded in the public version.
+> Check the [SmartCommit] repo for the demo GUI client.
 
 [SmartCommit]: https://github.com/Symbolk/SmartCommit
 
