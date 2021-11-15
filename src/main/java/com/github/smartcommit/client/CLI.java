@@ -41,7 +41,7 @@ public class CLI {
 
   // output path
   @Parameter(
-      names = {"-o", "-output"},
+      names = {"-o", "--output"},
       arity = 1,
       order = 3,
       description = "Specify the path to output the result.")
@@ -50,34 +50,36 @@ public class CLI {
 
   // options&args
   @Parameter(
+      names = {"-gr", "--granularity"},
+      arity = 1,
+      description =
+          "Set the atomic unit/granularity of change: {hunk: 0 (default), member: 1, class: 2, package: 3}.")
+  Integer granularity = 0;
+
+  @Parameter(
       names = {"-ref", "--detect-refactoring"},
       arity = 1,
-      description = "Whether to enable refactoring detection.")
+      description = "Whether to enable refactoring detection, true/false.")
   Boolean detectRef = true;
 
   @Parameter(
       names = {"-nj", "--process-non-java"},
       arity = 1,
-      description = "Whether to further process non-java changes.")
+      description = "Whether to further process non-java changes,  true/false.")
   Boolean processNonJava = true;
 
   @Parameter(
       names = {"-wt", "--weight-threshold"},
       arity = 1,
-      description = "Set the threshold for weight filtering (default: 0.6).")
-  Double weightThreshold = 0.6D;
+      description =
+          "Set the threshold for partitioning (if not specified, use dynamic threshold), [0, 1].")
+  Double weightThreshold = -1D;
 
   @Parameter(
       names = {"-ms", "--min-similarity"},
       arity = 1,
-      description = "Set the minimum similarity (default: 0.8).")
+      description = "Set the minimum similarity, [0, 1].")
   Double minSimilarity = 0.8D;
-
-  @Parameter(
-      names = {"-md", "--max-distance"},
-      arity = 1,
-      description = "Set the maximum distance (default: 0).")
-  Integer maxDistance = 0;
 
   public static void main(String[] args) {
     // config the logger
@@ -94,11 +96,8 @@ public class CLI {
     }
   }
 
-  /**
-   * Run merging according to given options
-   *
-   */
-  private void run(String[] args) throws Exception {
+  /** Run merging according to given options */
+  private void run(String[] args) {
     JCommander commandLineOptions = new JCommander(this);
     try {
       commandLineOptions.parse(args);
@@ -115,7 +114,7 @@ public class CLI {
       smartCommit.setProcessNonJavaChanges(processNonJava);
       smartCommit.setWeightThreshold(weightThreshold);
       smartCommit.setMinSimilarity(minSimilarity);
-      smartCommit.setMaxDistance(maxDistance);
+      smartCommit.setMaxDistance(granularity); // use the distance on the tree to limit granularity
 
       Map<String, Group> groups;
       if (analyzeWorkingTree) {
@@ -154,10 +153,7 @@ public class CLI {
     return repoName;
   }
 
-  /**
-   * Check if args are valid
-   *
-   */
+  /** Check if args are valid */
   private void checkArguments(CLI cli) {
     if (cli.repoPath.isEmpty()) {
       throw new ParameterException(

@@ -358,40 +358,61 @@ public class GroupGenerator {
   }
 
   /**
-   * Generate groups of related changes from the graph
-   *
-   * @return
-   */
-  public Map<String, Group> generateGroups() {
-    return generateGroups(0.6D); // default threshold
-  }
-
-  /**
-   * Accept a threshold to adjust and regenerate the result
+   * Generate groups of changes either with a dynamic or fixed threshold
    *
    * @param threshold
    */
   public Map<String, Group> generateGroups(Double threshold) {
     //    String diffGraphString = DiffGraphExporter.exportAsDotWithType(diffGraph);
-
-    Map<String, Group> result = new LinkedHashMap<>(); // generated groups, id:Group
-
-    // add edges to priority queue
-    Comparator<DiffEdge> comparator = (o1, o2) -> o2.getWeight().compareTo(o1.getWeight());
-    Queue<DiffEdge> pq = new PriorityQueue<>(11, comparator);
-    for (DiffEdge edge : diffGraph.edgeSet()) {
-      pq.offer(edge);
-    }
-
+    Map<String, Group> result = new LinkedHashMap<>(); // id:Group
+    // save the edge info for intent classification
     List<DiffEdgeType> edgeTypes = new ArrayList<>();
     Set<Integer> linkCategories = new HashSet<>();
-    while (!pq.isEmpty()) {
-      DiffEdge edge = pq.poll();
+
+    // sort edges by weight, srcindex, dstindex
+    Comparator<DiffEdge> comparator = (o1, o2) -> o2.getWeight().compareTo(o1.getWeight());
+    Queue<DiffEdge> pq = new PriorityQueue<>(comparator);
+    List<DiffEdge> edgeList = new ArrayList<>();
+
+    if (threshold < 0) {
+      // use dynamic threshold
+      // fill into the PQ
+      for (DiffEdge edge : diffGraph.edgeSet()) {
+        pq.offer(edge);
+      }
+      List<DiffEdge> temp = new ArrayList<>();
+      while (!pq.isEmpty()) {
+        temp.add(pq.poll());
+      }
+      //  compute delta and remember max-gap index
+      double maxGap = 0;
+      int maxGapIndex = -1;
+      for (int i = 0; i < temp.size() - 1; ++i) {
+        double delta = temp.get(i).getWeight() - temp.get(i + 1).getWeight();
+        if (delta > maxGap) {
+          maxGap = delta;
+          maxGapIndex = i;
+        }
+      }
+      //    drop edges under the max-gap
+      for (int i = 0; i <= maxGapIndex; ++i) {
+        edgeList.add(temp.get(i));
+      }
+    } else { // use user-provided threshold
+      for (DiffEdge edge : diffGraph.edgeSet()) {
+        if (edge.getWeight() >= threshold) {
+          pq.offer(edge);
+        }
+        while (!pq.isEmpty()) {
+          edgeList.add(pq.poll());
+        }
+      }
+    }
+
+    for (DiffEdge edge : edgeList) {
       linkCategories.add(edge.getType().getCategory());
       edgeTypes.add(edge.getType());
-      if (edge.getWeight() < threshold) {
-        break;
-      }
+
       DiffNode source = diffGraph.getEdgeSource(edge);
       DiffNode target = diffGraph.getEdgeTarget(edge);
       if (indexToGroupMap.containsKey(source.getIndex())
@@ -442,7 +463,6 @@ public class GroupGenerator {
     for (Map.Entry<String, Set<DiffNode>> entry : groupByFile.entrySet()) {
       createGroup(result, entry.getValue(), new HashSet<>(), GroupLabel.OTHER);
     }
-
     return result;
   }
 
@@ -461,10 +481,11 @@ public class GroupGenerator {
 
     // add edges to priority queue
     Comparator<DiffEdge> comparator = (o1, o2) -> o2.getWeight().compareTo(o1.getWeight());
-    Queue<DiffEdge> pq = new PriorityQueue<>(11, comparator);
+    Queue<DiffEdge> pq = new PriorityQueue<>(comparator);
     for (DiffEdge edge : diffGraph.edgeSet()) {
       // drop/mask specific types of links
-      if (!filteredCategories.contains(edge.getType().getCategory())) {
+      if (!filteredCategories.contains(edge.getType().getCategory())
+          && edge.getWeight() >= threshold) {
         pq.offer(edge);
       }
     }
@@ -474,9 +495,6 @@ public class GroupGenerator {
       DiffEdge edge = pq.poll();
       linkCategories.add(edge.getType().getCategory());
 
-      if (edge.getWeight() < threshold) {
-        break;
-      }
       DiffNode source = diffGraph.getEdgeSource(edge);
       DiffNode target = diffGraph.getEdgeTarget(edge);
       if (indexToGroupMap.containsKey(source.getIndex())
