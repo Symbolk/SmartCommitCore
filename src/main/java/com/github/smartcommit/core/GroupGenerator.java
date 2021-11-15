@@ -33,8 +33,8 @@ public class GroupGenerator {
   private static final Logger logger = Logger.getLogger(GroupGenerator.class);
 
   // meta data
-  private String repoID;
-  private String repoName;
+  private final String repoID;
+  private final String repoName;
   private Pair<String, String> srcDirs; // dirs to store the collected files
   private List<DiffFile> diffFiles;
   private List<DiffHunk> diffHunks;
@@ -182,9 +182,9 @@ public class GroupGenerator {
         f.get(300, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
         f.cancel(true);
-        logger.warn(String.format("Ignore refactoring detection due to RM timeout: "), e);
+        logger.warn("Ignore refactoring detection due to RM timeout: ", e);
       } catch (ExecutionException | InterruptedException e) {
-        logger.warn(String.format("Ignore refactoring detection due to RM error: "), e);
+        logger.warn("Ignore refactoring detection due to RM error: ", e);
         e.printStackTrace();
       } finally {
         service.shutdown();
@@ -317,9 +317,7 @@ public class GroupGenerator {
     visited.add(node);
     for (Edge edge : inEdges) {
       Node srcNode = graph.getEdgeSource(edge);
-      if (srcNode == node || visited.contains(node)) {
-        continue;
-      } else {
+      if (srcNode != node && !visited.contains(node)) {
         if (srcNode.isInDiffHunk) {
           res.add(srcNode.diffHunkIndex);
         }
@@ -349,9 +347,7 @@ public class GroupGenerator {
     visited.add(node);
     for (Edge edge : outEdges) {
       Node tgtNode = graph.getEdgeTarget(edge);
-      if (tgtNode == node || visited.contains(tgtNode)) {
-        continue;
-      } else {
+      if (tgtNode != node && !visited.contains(tgtNode)) {
         if (tgtNode.isInDiffHunk) {
           res.add(tgtNode.diffHunkIndex);
         }
@@ -402,9 +398,7 @@ public class GroupGenerator {
           && indexToGroupMap.containsKey(target.getIndex())) {
         String gID1 = indexToGroupMap.get(source.getIndex());
         String gID2 = indexToGroupMap.get(target.getIndex());
-        if (gID1.equals(gID2)) {
-          continue;
-        } else {
+        if (!gID1.equals(gID2)) {
           // merge the later to the former group
           Group g1 = result.get(indexToGroupMap.get(source.getIndex()));
           Group g2 = result.get(indexToGroupMap.get(target.getIndex()));
@@ -466,22 +460,11 @@ public class GroupGenerator {
     }
 
     // add edges to priority queue
-    Comparator<DiffEdge> comparator =
-        (o1, o2) -> {
-          if (o1.getWeight() < o2.getWeight()) {
-            return 1;
-          } else if (o1.getWeight() > o2.getWeight()) {
-            return -1;
-          } else {
-            return 0;
-          }
-        };
+    Comparator<DiffEdge> comparator = (o1, o2) -> o2.getWeight().compareTo(o1.getWeight());
     Queue<DiffEdge> pq = new PriorityQueue<>(11, comparator);
     for (DiffEdge edge : diffGraph.edgeSet()) {
       // drop/mask specific types of links
-      if (filteredCategories.contains(edge.getType().getCategory())) {
-        continue;
-      } else {
+      if (!filteredCategories.contains(edge.getType().getCategory())) {
         pq.offer(edge);
       }
     }
@@ -500,9 +483,7 @@ public class GroupGenerator {
           && indexToGroupMap.containsKey(target.getIndex())) {
         String gID1 = indexToGroupMap.get(source.getIndex());
         String gID2 = indexToGroupMap.get(target.getIndex());
-        if (gID1.equals(gID2)) {
-          continue;
-        } else {
+        if (!gID1.equals(gID2)) {
           // merge the later to the former group
           Group g1 = result.get(indexToGroupMap.get(source.getIndex()));
           Group g2 = result.get(indexToGroupMap.get(target.getIndex()));
@@ -623,7 +604,8 @@ public class GroupGenerator {
         List<DiffEdgeType> edgeTypes = new ArrayList<>();
         for (DiffNode diffNode : diffNodesSet) {
           diffNodes.add(diffNode);
-          diffGraph.outgoingEdgesOf(diffNode).stream()
+          diffGraph
+              .outgoingEdgesOf(diffNode)
               .forEach(diffEdge -> edgeTypes.add(diffEdge.getType()));
         }
         // get the most frequent edge type as the group label
