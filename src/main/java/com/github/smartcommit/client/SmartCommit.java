@@ -45,7 +45,7 @@ public class SmartCommit {
   // options and default
   private boolean detectRefactorings = false;
   private boolean processNonJavaChanges = false;
-  private double weightThreshold = -1D;
+  private double weightThreshold = 0D;
   private double minSimilarity = 0.8D;
   private int maxDistance = 0;
 
