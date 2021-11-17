@@ -599,8 +599,7 @@ public class Evaluation {
     Map<String, String> a = convertClusterToMap(groundTruth);
     Map<String, String> b = convertClusterToMap(result);
 
-    // Q: does group id from the two clusters have correspondence? since order matters a lot for ARI
-    // group id:index
+    // convert cluster labels into map of group id:index
     Map<String, Integer> aa = convertGroupIDToMap(groundTruth);
     Map<String, Integer> bb = convertGroupIDToMap(result);
 
@@ -630,10 +629,17 @@ public class Evaluation {
   }
 
   private static Map<String, Integer> convertGroupIDToMap(Map<String, Set<String>> cluster) {
+    // desendingly sort the cluster by #nodes to align labels between multiple clusters
+    List<String> idList =
+        cluster.entrySet().stream()
+            .sorted(Comparator.comparingInt(k -> -k.getValue().size()))
+            .map(Entry::getKey)
+            .collect(Collectors.toList());
+
     Map<String, Integer> result = new LinkedHashMap<>();
     int i = 0;
-    for (Entry entry : cluster.entrySet()) {
-      result.put((String) entry.getKey(), i++);
+    for (String id : idList) {
+      result.put(id, i++);
     }
     return result;
   }
