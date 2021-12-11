@@ -76,7 +76,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'com.ibm.icu:icu4j:68.2'
 
-    implementation 'org.apache.logging.log4j:log4j-core:2.14.0'
+    implementation 'org.apache.logging.log4j:log4j-core:2.15.0'
     implementation 'com.googlecode.juniversalchardet:juniversalchardet:1.0.3'
     implementation 'com.github.haifengl:smile-kotlin:2.6.0'
 
