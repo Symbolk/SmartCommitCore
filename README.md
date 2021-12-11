@@ -32,7 +32,7 @@ Specifically, it helps you to:
 ## Requirements
 
 - macOS/Windows/Linux
-- Java JRE 8/11
+- Java JRE 8+
 - Git ^2.20.0
 
 ## Usage
@@ -167,7 +167,7 @@ void setMaxDistance(int maxDistance)
 ### Requirements
 
 - maxOS/Windows/Linux
-- Java JDK 8/11
+- Java JDK 8+
 - Git ^2.20.0
 - Gradle ^6.2.1
 - IntelliJ IDEA 2020 (with Gradle integration)
