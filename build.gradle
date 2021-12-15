@@ -72,7 +72,7 @@ dependencies {
     implementation 'info.debatty:java-string-similarity:2.0.0'
 
     implementation 'org.eclipse.jgit:org.eclipse.jgit:5.10.0.202012080955-r'
-    implementation 'org.mongodb:mongo-java-driver:3.12.7'
+    implementation 'org.mongodb:mongo-java-driver:3.12.8'
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'com.ibm.icu:icu4j:68.2'
 
